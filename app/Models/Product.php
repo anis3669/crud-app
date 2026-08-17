@@ -15,4 +15,11 @@ class Product extends Model
         'price',
         'quantity',
     ];
+    
+    public function index()
+{
+    $products = Product::all();
+
+    return response()->json($products);
+}
 }

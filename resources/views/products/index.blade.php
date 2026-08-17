@@ -6,286 +6,269 @@
 
 <div class="mx-auto max-w-7xl">
 
-    {{-- Header --}}
-    <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+<!-- header  -->
 
-        <div>
-            <div class="flex items-center gap-3">
+<div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900">
-                    Products
-                </h1>
+    <div>
 
-                <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600">
-                    {{ $products->count() }}
-                </span>
+        <div class="flex items-center gap-3">
 
-            </div>
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">
+                Products
+            </h1>
 
-            <p class="mt-1 text-sm text-gray-500">
-                Manage your product inventory.
-            </p>
-        </div>
-
-
-        {{-- Add Product --}}
-        <a
-            href="{{ route('products.create') }}"
-            class="inline-flex items-center justify-center rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
-        >
-            <span class="mr-2 text-base">+</span>
-            Add Product
-        </a>
-
-    </div>
-
-
-    {{-- Success Message --}}
-    @if(session('success'))
-
-        <div
-            id="success-message"
-            class="fixed right-6 top-6 z-50 rounded-lg border border-green-200 bg-green-50 px-5 py-3 text-sm font-medium text-green-800 shadow-lg"
-        >
-            {{ session('success') }}
-        </div>
-
-        <script>
-            setTimeout(() => {
-
-                const message =
-                    document.getElementById('success-message');
-
-                if (message) {
-                    message.remove();
-                }
-
-            }, 3000);
-        </script>
-
-    @endif
-
-
-    {{-- Error Message --}}
-    @if(session('error'))
-
-        <div
-            id="error-message"
-            class="fixed right-6 top-6 z-50 rounded-lg border border-red-200 bg-red-50 px-5 py-3 text-sm font-medium text-red-800 shadow-lg"
-        >
-            {{ session('error') }}
-        </div>
-
-        <script>
-            setTimeout(() => {
-
-                const message =
-                    document.getElementById('error-message');
-
-                if (message) {
-                    message.remove();
-                }
-
-            }, 3000);
-        </script>
-
-    @endif
-
-
-    {{-- Bulk Actions --}}
-    <div
-        id="bulk-actions"
-        class="mb-4 hidden items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
-    >
-
-        {{-- Selected Count --}}
-        <div>
-
-            <span
-                id="selected-count"
-                class="text-sm font-medium text-gray-700"
-            >
-                0 selected
+            <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600">
+                {{ $products->count() }}
             </span>
 
         </div>
 
-
-        {{-- Bulk Buttons --}}
-        <div class="flex items-center gap-2">
-
-            {{-- Edit Selected --}}
-            <button
-                type="button"
-                id="bulk-edit-button"
-                class="rounded-lg bg-gray-900 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
-            >
-                Edit Selected
-            </button>
-
-
-            {{-- Delete Selected --}}
-            <button
-                type="button"
-                id="bulk-delete-button"
-                class="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-medium text-white transition hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
-            >
-                Delete Selected
-            </button>
-
-        </div>
+        <p class="mt-1 text-sm text-gray-500">
+            Manage your product inventory.
+        </p>
 
     </div>
 
 
-    {{-- Product Table --}}
-    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+    {{-- Add Product --}}
+    <a
+        href="{{ route('products.create') }}"
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+    >
+        <svg
+            class="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+        >
+            <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+            />
+        </svg>
 
-        <div class="overflow-x-auto">
+        Add Product
+    </a>
 
-            <table class="w-full text-left text-sm">
+</div>
 
-                {{-- Table Header --}}
-                <thead class="border-b border-gray-200 bg-gray-50/80">
+<!-- Bulk Actions -->
 
-                    <tr>
+<div
+    id="bulk-actions"
+    class="mb-4 hidden items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
+>
 
-                        {{-- Select All --}}
-                        <th class="w-12 px-6 py-4">
+    <div class="flex items-center gap-3">
+
+        <span
+            id="selected-count"
+            class="text-sm font-semibold text-gray-700"
+        >
+            0 selected
+        </span>
+
+    </div>
+
+
+    <div class="flex items-center gap-2">
+
+        {{-- Bulk Edit --}}
+        <button
+            type="button"
+            id="bulk-edit-button"
+            class="rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+        >
+            Edit Selected
+        </button>
+
+
+        {{-- Bulk Delete --}}
+        <button
+            type="button"
+            id="bulk-delete-button"
+            class="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
+        >
+            Delete Selected
+        </button>
+
+    </div>
+
+</div>
+
+<!-- Product Table -->
+
+<div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+
+    <div class="overflow-x-auto">
+
+        <table class="w-full min-w-[900px] text-left text-sm">
+
+            {{-- Table Header --}}
+            <thead class="border-b border-gray-200 bg-gray-50">
+
+                <tr>
+
+                    {{-- Select All --}}
+                    <th class="w-12 px-6 py-4">
+
+                        <input
+                            type="checkbox"
+                            id="select-all"
+                            class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                        >
+
+                    </th>
+
+
+                    <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Product
+                    </th>
+
+
+                    <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Description
+                    </th>
+
+
+                    <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Price
+                    </th>
+
+
+                    <th class="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Stock
+                    </th>
+
+
+                    <th class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
+                        Actions
+                    </th>
+
+                </tr>
+
+            </thead>
+
+
+            {{-- Table Body --}}
+            <tbody class="divide-y divide-gray-100">
+
+                @forelse($products as $product)
+
+                    <tr class="group hover:bg-gray-50">
+
+                        {{-- Checkbox --}}
+                        <td class="px-6 py-4">
 
                             <input
                                 type="checkbox"
-                                id="select-all"
-                                class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                                value="{{ $product->id }}"
+                                class="product-checkbox h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                             >
 
-                        </th>
+                        </td>
 
 
                         {{-- Product --}}
-                        <th class="px-6 py-4 font-semibold text-gray-900">
-                            Product
-                        </th>
+                        <td class="px-6 py-4">
+
+                            <div class="flex items-center gap-3">
+
+                                {{-- Product Initial --}}
+                                <div
+                                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-700"
+                                >
+                                    {{ strtoupper(substr($product->name, 0, 1)) }}
+                                </div>
+
+
+                                <div class="min-w-0">
+
+                                    <div class="truncate font-semibold text-gray-900">
+                                        {{ $product->name }}
+                                    </div>
+
+                                    <div class="mt-0.5 text-xs text-gray-400">
+                                        Product #{{ $loop->iteration }}
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </td>
 
 
                         {{-- Description --}}
-                        <th class="px-6 py-4 font-semibold text-gray-900">
-                            Description
-                        </th>
+                        <td class="max-w-xs px-6 py-4">
+
+                            <p class="truncate text-gray-500">
+                                {{ $product->description ?: 'No description' }}
+                            </p>
+
+                        </td>
 
 
                         {{-- Price --}}
-                        <th class="px-6 py-4 font-semibold text-gray-900">
-                            Price
-                        </th>
+                        <td class="whitespace-nowrap px-6 py-4">
+
+                            <span class="font-semibold text-gray-900">
+                                Rs. {{ number_format($product->price, 2) }}
+                            </span>
+
+                        </td>
 
 
                         {{-- Stock --}}
-                        <th class="px-6 py-4 font-semibold text-gray-900">
-                            Stock
-                        </th>
+                        <td class="whitespace-nowrap px-6 py-4">
+
+                            @if($product->quantity == 0)
+
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+
+                                    <span class="h-1.5 w-1.5 rounded-full bg-red-500"></span>
+
+                                    Out of stock
+
+                                </span>
+
+                            @elseif($product->quantity <= 5)
+
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-semibold text-yellow-700">
+
+                                    <span class="h-1.5 w-1.5 rounded-full bg-yellow-500"></span>
+
+                                    {{ $product->quantity }} left
+
+                                </span>
+
+                            @else
+
+                                <span class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
+
+                                    <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+
+                                    {{ $product->quantity }} in stock
+
+                                </span>
+
+                            @endif
+
+                        </td>
 
 
                         {{-- Actions --}}
-                        <th class="px-6 py-4 text-right font-semibold text-gray-900">
-                            Actions
-                        </th>
+                        <td class="px-6 py-4">
 
-                    </tr>
-
-                </thead>
-
-
-                {{-- Table Body --}}
-                <tbody class="divide-y divide-gray-100">
-
-                    @forelse($products as $product)
-
-                        <tr class="transition hover:bg-gray-50">
-
-                            {{-- Product Checkbox --}}
-                            <td class="px-6 py-4">
-
-                                <input
-                                    type="checkbox"
-                                    value="{{ $product->id }}"
-                                    class="product-checkbox h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                                >
-
-                            </td>
-
-
-                            {{-- Product --}}
-                            <td class="whitespace-nowrap px-6 py-4">
-
-                                <div class="font-medium text-gray-900">
-                                    {{ $product->name }}
-                                </div>
-
-                                <div class="mt-1 text-xs text-gray-400">
-                                    Product #{{ $loop->iteration }}
-                                </div>
-
-                            </td>
-
-
-                            {{-- Description --}}
-                            <td class="max-w-xs px-6 py-4">
-
-                                <p class="truncate text-gray-600">
-                                    {{ $product->description ?: 'No description' }}
-                                </p>
-
-                            </td>
-
-
-                            {{-- Price --}}
-                            <td class="whitespace-nowrap px-6 py-4 font-medium text-gray-900">
-
-                                Rs. {{ number_format($product->price, 2) }}
-
-                            </td>
-
-
-                            {{-- Stock --}}
-                            <td class="whitespace-nowrap px-6 py-4">
-
-                                @if($product->quantity == 0)
-
-                                    <span
-                                        class="inline-flex rounded-full bg-red-50 px-2.5 py-1 text-xs font-medium text-red-700"
-                                    >
-                                        Out of stock
-                                    </span>
-
-                                @elseif($product->quantity <= 5)
-
-                                    <span
-                                        class="inline-flex rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-medium text-yellow-700"
-                                    >
-                                        {{ $product->quantity }} left
-                                    </span>
-
-                                @else
-
-                                    <span
-                                        class="inline-flex rounded-full bg-green-50 px-2.5 py-1 text-xs font-medium text-green-700"
-                                    >
-                                        {{ $product->quantity }} in stock
-                                    </span>
-
-                                @endif
-
-                            </td>
-
-
-                            {{-- Actions --}}
-                            <td class="whitespace-nowrap px-6 py-4 text-right">
+                            <div class="flex items-center justify-end gap-3">
 
                                 {{-- View --}}
                                 <a
                                     href="{{ route('products.show', $product) }}"
-                                    class="font-medium text-gray-700 transition hover:text-gray-900"
+                                    class="text-sm font-medium text-gray-500 hover:text-gray-900"
                                 >
                                     View
                                 </a>
@@ -294,7 +277,7 @@
                                 {{-- Edit --}}
                                 <a
                                     href="{{ route('products.edit', $product) }}"
-                                    class="ml-4 font-medium text-blue-600 transition hover:text-blue-800"
+                                    class="text-sm font-medium text-blue-600 hover:text-blue-800"
                                 >
                                     Edit
                                 </a>
@@ -304,76 +287,115 @@
                                 <form
                                     action="{{ route('products.destroy', $product) }}"
                                     method="POST"
-                                    class="ml-4 inline"
+                                    class="inline"
                                     onsubmit="return confirm('Are you sure you want to delete {{ $product->name }}?');"
                                 >
 
                                     @csrf
-
                                     @method('DELETE')
 
                                     <button
                                         type="submit"
-                                        class="font-medium text-red-600 transition hover:text-red-800"
+                                        class="text-sm font-medium text-red-600 hover:text-red-800"
                                     >
                                         Delete
                                     </button>
 
                                 </form>
 
-                            </td>
+                            </div>
 
-                        </tr>
+                        </td>
+
+                    </tr>
 
 
-                    @empty
+                @empty
 
-                        {{-- Empty State --}}
-                        <tr>
+<!-- empty state -->
 
-                            <td
-                                colspan="6"
-                                class="px-6 py-12 text-center"
-                            >
+                    <tr>
 
-                                <div class="text-gray-500">
+                        <td
+                            colspan="6"
+                            class="px-6 py-16 text-center"
+                        >
 
-                                    <p class="text-base font-medium text-gray-900">
-                                        No products found
-                                    </p>
+                            <div class="mx-auto max-w-sm">
 
-                                    <p class="mt-1 text-sm">
-                                        Get started by adding your first product.
-                                    </p>
+                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
 
-                                    <a
-                                        href="{{ route('products.create') }}"
-                                        class="mt-4 inline-block text-sm font-medium text-gray-900 underline"
+                                    <svg
+                                        class="h-6 w-6 text-gray-500"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
                                     >
-                                        Add your first product
-                                    </a>
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.8"
+                                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                        />
+                                    </svg>
 
                                 </div>
 
-                            </td>
 
-                        </tr>
+                                <h3 class="mt-4 text-base font-semibold text-gray-900">
+                                    No products found
+                                </h3>
 
-                    @endforelse
 
-                </tbody>
+                                <p class="mt-1 text-sm text-gray-500">
+                                    Get started by adding your first product.
+                                </p>
 
-            </table>
 
-        </div>
+                                <a
+                                    href="{{ route('products.create') }}"
+                                    class="mt-5 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+                                >
+
+                                    <svg
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="2"
+                                            d="M12 4v16m8-8H4"
+                                        />
+                                    </svg>
+
+                                    Add Product
+
+                                </a>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+
+                @endforelse
+
+            </tbody>
+
+        </table>
 
     </div>
 
 </div>
 
 
+</div>
 
 <!-- bulk delete form -->
+
 <form
     id="bulk-delete-form"
     action="{{ route('products.bulkDelete') }}"
@@ -381,217 +403,10 @@
     class="hidden"
 >
 
-    @csrf
+@csrf
 
-    @method('DELETE')
+@method('DELETE')
 
 </form>
-<!-- javascript -->
-<script>
-// elements
-    const selectAll =
-        document.getElementById('select-all');
-
-    const productCheckboxes =
-        document.querySelectorAll('.product-checkbox');
-
-    const bulkActions =
-        document.getElementById('bulk-actions');
-
-    const selectedCount =
-        document.getElementById('selected-count');
-
-// update bulk actions based on selected checkboxes
-    function updateBulkActions() {
-
-        const checkedBoxes =
-            document.querySelectorAll(
-                '.product-checkbox:checked'
-            );
-
-        const count =
-            checkedBoxes.length;
-// update selected count text
-        selectedCount.textContent =
-            `${count} selected`;
-// show or hide bulk actions based on selection
-
-        if (count > 0) {
-
-            bulkActions.classList.remove('hidden');
-
-            bulkActions.classList.add('flex');
-
-        } else {
-
-            bulkActions.classList.add('hidden');
-
-            bulkActions.classList.remove('flex');
-
-        }
-// update select all checkbox state
-
-        if (selectAll) {
-
-            selectAll.checked =
-                count === productCheckboxes.length &&
-                productCheckboxes.length > 0;
-
-        }
-
-    }
-// select all checkbox
-
-    selectAll?.addEventListener(
-        'change',
-        function () {
-
-            productCheckboxes.forEach(
-                checkbox => {
-
-                    checkbox.checked =
-                        this.checked;
-
-                }
-            );
-
-            updateBulkActions();
-
-        }
-    );
-// individual product checkboxes
-
-    productCheckboxes.forEach(
-        checkbox => {
-
-            checkbox.addEventListener(
-                'change',
-                function () {
-
-                    updateBulkActions();
-
-                }
-            );
-
-        }
-    );
-// edit selected products
-    document
-        .getElementById('bulk-edit-button')
-        ?.addEventListener(
-            'click',
-            function () {
-
-                const checkedBoxes =
-                    document.querySelectorAll(
-                        '.product-checkbox:checked'
-                    );
-// no products selected
-                if (checkedBoxes.length === 0) {
-
-                    return;
-
-                }
-// create a form to submit selected product IDs to the bulk edit route
-                const form =
-                    document.createElement('form');
-
-                form.method = 'GET';
-
-                form.action =
-                    "{{ route('products.bulkEdit') }}";
-// add selected product IDs to the form
-                checkedBoxes.forEach(
-                    checkbox => {
-
-                        const input =
-                            document.createElement('input');
-
-                        input.type =
-                            'hidden';
-
-                        input.name =
-                            'selected_products[]';
-
-                        input.value =
-                            checkbox.value;
-
-                        form.appendChild(input);
-
-                    }
-                );
-    // submit the form
-                document.body.appendChild(form);
-
-                form.submit();
-
-            }
-        );
-// delete selected products
-
-    document
-        .getElementById('bulk-delete-button')
-        ?.addEventListener(
-            'click',
-            function () {
-
-                const checkedBoxes =
-                    document.querySelectorAll(
-                        '.product-checkbox:checked'
-                    );
-// No products selected
-
-                if (checkedBoxes.length === 0) {
-
-                    return;
-
-                }
-// confirm deletion
-
-                const confirmed =
-                    confirm(
-                        `Are you sure you want to delete ${checkedBoxes.length} selected product(s)?`
-                    );
-
-
-                if (!confirmed) {
-
-                    return;
-
-                }
-// bulk delete form
-                const form =
-                    document.getElementById(
-                        'bulk-delete-form'
-                    );
-// Add selected product IDs to the form
-
-                checkedBoxes.forEach(
-                    checkbox => {
-
-                        const input =
-                            document.createElement('input');
-
-                        input.type =
-                            'hidden';
-
-                        input.name =
-                            'selected_products[]';
-
-                        input.value =
-                            checkbox.value;
-
-                        form.appendChild(input);
-
-                    }
-                );
-// submit the form
-
-                form.submit();
-
-            }
-        );
-
-</script>
 
 @endsection
