@@ -14,7 +14,6 @@
     <div class="min-h-screen">
 
         <!-- Top Navigation -->
-        <!-- Top Navigation -->
 <header class="border-b border-gray-200 bg-white">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 
@@ -31,6 +30,19 @@
                 ProductHub
             </span>
         </a>
+        <!--logout -->
+        @auth
+    <form action="{{ route('logout') }}" method="POST">
+        @csrf
+
+        <button
+            type="submit"
+            class="text-sm font-medium text-gray-600 transition hover:text-red-600"
+        >
+            Logout
+        </button>
+    </form>
+   @endauth
 
     </div>
 </header>
@@ -55,6 +67,18 @@
             }
         }, 3000);
     </script>
+    @auth
+    <form action="{{ route('logout') }}" method="POST">
+        @csrf
+
+        <button
+            type="submit"
+            class="text-sm font-medium text-gray-600 hover:text-red-600"
+        >
+            Logout
+        </button>
+    </form>
+@endauth
 @endif
 
             @yield('content')
