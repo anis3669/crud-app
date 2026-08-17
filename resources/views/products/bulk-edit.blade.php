@@ -9,11 +9,10 @@
     {{-- Header --}}
     <div class="mb-8">
 
-          <a
-                  href="{{ route('products.index') }}"
-                 class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
->
-          Back to Products
+        <a
+            href="{{ route('products.index') }}"
+            class="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2">
+            Back to Products
         </a>
 
         <h1 class="text-2xl font-bold tracking-tight text-gray-900">
@@ -30,8 +29,7 @@
     {{-- Edit Form --}}
     <form
         action="{{ route('products.bulkUpdate') }}"
-        method="POST"
-    >
+        method="POST">
 
         @csrf
         @method('PUT')
@@ -69,118 +67,110 @@
 
                         @foreach($products as $index => $product)
 
-                            <tr>
+                        <tr>
 
-                                {{-- Product --}}
-                                 <td class="px-6 py-5">
+                            {{-- Product --}}
+                            <td class="px-6 py-5">
 
-    <input
-        type="hidden"
-        name="products[{{ $index }}][id]"
-        value="{{ $product->id }}"
-    >
+                                <input
+                                    type="hidden"
+                                    name="products[{{ $index }}][id]"
+                                    value="{{ $product->id }}">
 
-    <label
-        for="name-{{ $product->id }}"
-        class="sr-only"
-    >
-        Product Name
-    </label>
+                                <label
+                                    for="name-{{ $product->id }}"
+                                    class="sr-only">
+                                    Product Name
+                                </label>
 
-    <input
-        type="text"
-        id="name-{{ $product->id }}"
-        name="products[{{ $index }}][name]"
-        value="{{ old("products.$index.name", $product->name) }}"
-        maxlength="255"
-        required
-        class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-    >
+                                <input
+                                    type="text"
+                                    id="name-{{ $product->id }}"
+                                    name="products[{{ $index }}][name]"
+                                    value="{{ old("products.$index.name", $product->name) }}"
+                                    maxlength="255"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10">
 
-    @error("products.$index.name")
+                                @error("products.$index.name")
 
-        <p class="mt-1 text-xs text-red-600">
-            {{ $message }}
-        </p>
+                                <p class="mt-1 text-xs text-red-600">
+                                    {{ $message }}
+                                </p>
 
-    @enderror
+                                @enderror
 
-</td>
+                            </td>
 
 
-                                {{-- Price --}}
-                                <td class="px-6 py-5">
+                            {{-- Price --}}
+                            <td class="px-6 py-5">
 
-                                    <label
-                                        for="price-{{ $product->id }}"
-                                        class="sr-only"
-                                    >
-                                        Price
-                                    </label>
+                                <label
+                                    for="price-{{ $product->id }}"
+                                    class="sr-only">
+                                    Price
+                                </label>
 
-                                    <div class="relative">
+                                <div class="relative">
 
-                                        <span
-                                            class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500"
-                                        >
-                                            Rs.
-                                        </span>
-
-                                        <input
-                                            type="number"
-                                            id="price-{{ $product->id }}"
-                                            name="products[{{ $index }}][price]"
-                                            value="{{ old("products.$index.price", $product->price) }}"
-                                            step="0.01"
-                                            min="0"
-                                            required
-                                            class="w-full rounded-lg border border-gray-300 py-2.5 pl-11 pr-3 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-                                        >
-
-                                    </div>
-
-                                    @error("products.$index.price")
-
-                                        <p class="mt-1 text-xs text-red-600">
-                                            {{ $message }}
-                                        </p>
-
-                                    @enderror
-
-                                </td>
-
-
-                                {{-- Quantity --}}
-                                <td class="px-6 py-5">
-
-                                    <label
-                                        for="quantity-{{ $product->id }}"
-                                        class="sr-only"
-                                    >
-                                        Quantity
-                                    </label>
+                                    <span
+                                        class="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
+                                        Rs.
+                                    </span>
 
                                     <input
                                         type="number"
-                                        id="quantity-{{ $product->id }}"
-                                        name="products[{{ $index }}][quantity]"
-                                        value="{{ old("products.$index.quantity", $product->quantity) }}"
+                                        id="price-{{ $product->id }}"
+                                        name="products[{{ $index }}][price]"
+                                        value="{{ old("products.$index.price", $product->price) }}"
+                                        step="0.01"
                                         min="0"
                                         required
-                                        class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10"
-                                    >
+                                        class="w-full rounded-lg border border-gray-300 py-2.5 pl-11 pr-3 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10">
 
-                                    @error("products.$index.quantity")
+                                </div>
 
-                                        <p class="mt-1 text-xs text-red-600">
-                                            {{ $message }}
-                                        </p>
+                                @error("products.$index.price")
 
-                                    @enderror
+                                <p class="mt-1 text-xs text-red-600">
+                                    {{ $message }}
+                                </p>
 
-                                </td>
+                                @enderror
 
-                            </tr>
+                            </td>
+
+
+                            {{-- Quantity --}}
+                            <td class="px-6 py-5">
+
+                                <label
+                                    for="quantity-{{ $product->id }}"
+                                    class="sr-only">
+                                    Quantity
+                                </label>
+
+                                <input
+                                    type="number"
+                                    id="quantity-{{ $product->id }}"
+                                    name="products[{{ $index }}][quantity]"
+                                    value="{{ old("products.$index.quantity", $product->quantity) }}"
+                                    min="0"
+                                    required
+                                    class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900/10">
+
+                                @error("products.$index.quantity")
+
+                                <p class="mt-1 text-xs text-red-600">
+                                    {{ $message }}
+                                </p>
+
+                                @enderror
+
+                            </td>
+
+                        </tr>
 
                         @endforeach
 
@@ -203,15 +193,13 @@
 
                     <a
                         href="{{ route('products.index') }}"
-                        class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                    >
+                        class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50">
                         Cancel
                     </a>
 
                     <button
                         type="submit"
-                        class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
-                    >
+                        class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2">
                         Update Products
                     </button>
 
