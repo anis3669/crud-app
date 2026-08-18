@@ -12,7 +12,7 @@ class AuthController extends Controller
     {
         return view('auth.register');
     }
-
+// register method
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -45,7 +45,7 @@ class AuthController extends Controller
 {
     return view('auth.login');
 }
-
+// login method
 public function login(Request $request)
 {
     $credentials = $request->validate([
@@ -71,6 +71,7 @@ public function login(Request $request)
         'email' => 'The email or password you entered is incorrect.',
     ])->onlyInput('email');
 }
+// logout method
 public function logout(Request $request)
 {
     Auth::logout();
@@ -79,5 +80,29 @@ public function logout(Request $request)
     $request->session()->regenerateToken();
 
     return redirect()->route('login');
+}
+// api login method
+public function apiLogin(Request $request)
+{
+    $credentials = $request->validate([
+        'email' => [
+            'required',
+            'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/',
+        ],
+        'password' => 'required|min:8',
+    ]);
+
+    if (!Auth::attempt($credentials)) {
+        return response()->json([
+            'message' => 'The email or password you entered is incorrect.',
+        ], 401);
+    }
+
+    $request->session()->regenerate();
+
+    return response()->json([
+        'message' => 'Login successful.',
+        'user' => Auth::user(),
+    ]);
 }
 }
