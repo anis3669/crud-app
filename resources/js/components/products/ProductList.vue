@@ -1,4 +1,3 @@
-```vue
 <script setup>
 import { computed, ref } from 'vue';
 
@@ -11,8 +10,11 @@ const props = defineProps({
 
 const emit = defineEmits([
     'add-product',
+    'view-product',
     'edit-product',
     'delete-product',
+    'bulk-delete',
+    'bulk-edit',
 ]);
 
 const selectedProducts = ref([]);
@@ -78,9 +80,7 @@ function bulkEdit() {
         return;
     }
 
-    alert(
-        `${productsToEdit.length} products selected. Bulk edit will be added next.`
-    );
+    emit('bulk-edit', productsToEdit);
 }
 
 function bulkDelete() {
@@ -166,14 +166,10 @@ function bulkDelete() {
             v-if="selectedCount > 0"
             class="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
         >
-            <div class="flex items-center gap-3">
-
-                <span
-                    class="text-sm font-semibold text-gray-700"
-                >
+            <div>
+                <span class="text-sm font-semibold text-gray-700">
                     {{ selectedCount }} selected
                 </span>
-
             </div>
 
             <div class="flex items-center gap-2">
@@ -209,19 +205,16 @@ function bulkDelete() {
 
                     <!-- Table Header -->
                     <thead class="border-b border-gray-200 bg-gray-50">
-
                         <tr>
 
                             <!-- Select All -->
                             <th class="w-12 px-6 py-4">
-
                                 <input
                                     type="checkbox"
                                     :checked="allSelected"
                                     @change="toggleSelectAll"
                                     class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                                 />
-
                             </th>
 
                             <th
@@ -255,7 +248,6 @@ function bulkDelete() {
                             </th>
 
                         </tr>
-
                     </thead>
 
                     <!-- Table Body -->
@@ -267,16 +259,16 @@ function bulkDelete() {
                             class="group hover:bg-gray-50"
                         >
 
-                            <!-- Product Checkbox -->
+                            <!-- Checkbox -->
                             <td class="px-6 py-4">
-
                                 <input
                                     type="checkbox"
-                                    :checked="selectedProducts.includes(product.id)"
+                                    :checked="
+                                        selectedProducts.includes(product.id)
+                                    "
                                     @change="toggleProduct(product.id)"
                                     class="product-checkbox h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                                 />
-
                             </td>
 
                             <!-- Product -->
@@ -312,23 +304,22 @@ function bulkDelete() {
 
                             <!-- Description -->
                             <td class="max-w-xs px-6 py-4">
-
                                 <p class="truncate text-gray-500">
-                                    {{ product.description || 'No description' }}
+                                    {{
+                                        product.description ||
+                                        'No description'
+                                    }}
                                 </p>
-
                             </td>
 
                             <!-- Price -->
                             <td class="whitespace-nowrap px-6 py-4">
-
-                                <span
-                                    class="font-semibold text-gray-900"
-                                >
+                                <span class="font-semibold text-gray-900">
                                     Rs.
-                                    {{ Number(product.price).toLocaleString() }}
+                                    {{
+                                        Number(product.price).toLocaleString()
+                                    }}
                                 </span>
-
                             </td>
 
                             <!-- Stock -->
@@ -336,7 +327,7 @@ function bulkDelete() {
 
                                 <!-- Out of stock -->
                                 <span
-                                    v-if="product.quantity === 0"
+                                    v-if="Number(product.quantity) === 0"
                                     class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700"
                                 >
                                     <span
@@ -348,7 +339,7 @@ function bulkDelete() {
 
                                 <!-- Low stock -->
                                 <span
-                                    v-else-if="product.quantity <= 5"
+                                    v-else-if="Number(product.quantity) <= 5"
                                     class="inline-flex items-center gap-1.5 rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-semibold text-yellow-700"
                                 >
                                     <span
@@ -382,6 +373,12 @@ function bulkDelete() {
                                     <!-- View -->
                                     <button
                                         type="button"
+                                        @click="
+                                            emit(
+                                                'view-product',
+                                                product
+                                            )
+                                        "
                                         class="text-sm font-medium text-gray-500 hover:text-gray-900"
                                     >
                                         View
@@ -390,7 +387,12 @@ function bulkDelete() {
                                     <!-- Edit -->
                                     <button
                                         type="button"
-                                        @click="emit('edit-product', product)"
+                                        @click="
+                                            emit(
+                                                'edit-product',
+                                                product
+                                            )
+                                        "
                                         class="text-sm font-medium text-blue-600 hover:text-blue-800"
                                     >
                                         Edit
@@ -446,7 +448,8 @@ function bulkDelete() {
                                     </h3>
 
                                     <p class="mt-1 text-sm text-gray-500">
-                                        Get started by adding your first product.
+                                        Get started by adding your first
+                                        product.
                                     </p>
 
                                     <button
@@ -478,7 +481,6 @@ function bulkDelete() {
                         </tr>
 
                     </tbody>
-
                 </table>
 
             </div>
@@ -486,4 +488,3 @@ function bulkDelete() {
 
     </div>
 </template>
-```
