@@ -1,20 +1,25 @@
 <?php
 
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\ProductApiController;
 
 // Authentication
-Route::post('/login', [AuthController::class, 'apiLogin'])
- ->middleware('web');
-
-Route::post('/register', [AuthController::class, 'register'])
-    ->middleware('web');
+Route::post('/login', [AuthController::class, 'apiLogin']);
+Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout'])
-    ->middleware('web');
+    ->middleware('auth:sanctum');
 
+// Authenticated user
+Route::get('/user', function (Request $request) {
+    return $request->user();
+})->middleware('auth:sanctum');
+
+// Protected routes
 Route::middleware('auth:sanctum')->group(function () {
-     // Bulk actions
+
+    // Bulk actions
     Route::delete(
         '/products/bulk-delete',
         [ProductApiController::class, 'bulkDelete']
@@ -24,11 +29,11 @@ Route::middleware('auth:sanctum')->group(function () {
         '/products/bulk-update',
         [ProductApiController::class, 'bulkUpdate']
     );
+
     // Products
     Route::get('/products', [ProductApiController::class, 'index']);
     Route::post('/products', [ProductApiController::class, 'store']);
     Route::get('/products/{product}', [ProductApiController::class, 'show']);
     Route::put('/products/{product}', [ProductApiController::class, 'update']);
     Route::delete('/products/{product}', [ProductApiController::class, 'destroy']);
-
 });

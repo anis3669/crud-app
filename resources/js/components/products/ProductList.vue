@@ -1,127 +1,253 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
     products: {
         type: Array,
-        required: true,
+        default: () => [],
     },
-});
+})
 
 const emit = defineEmits([
-    "add-product",
-    "view-product",
-    "edit-product",
-    "delete-product",
-    "bulk-delete",
-    "bulk-edit",
-]);
+    'add-product',
+    'view-product',
+    'edit-product',
+    'delete-product',
+    'bulk-delete',
+    'bulk-edit',
+])
 
-const selectedProducts = ref([]);
+const selectedProducts = ref([])
+
+/*
+|--------------------------------------------------------------------------
+| Computed
+|--------------------------------------------------------------------------
+*/
+
+const productCount = computed(() => {
+    return Array.isArray(props.products)
+        ? props.products.length
+        : 0
+})
 
 const allSelected = computed(() => {
     return (
-        props.products.length > 0 &&
-        selectedProducts.value.length === props.products.length
-    );
-});
+        productCount.value > 0 &&
+        selectedProducts.value.length === productCount.value
+    )
+})
 
 const selectedCount = computed(() => {
-    return selectedProducts.value.length;
-});
+    return selectedProducts.value.length
+})
+
+const hasSelectedProducts = computed(() => {
+    return selectedCount.value > 0
+})
+
+/*
+|--------------------------------------------------------------------------
+| Keep selected products synchronized with the current product list
+|--------------------------------------------------------------------------
+*/
+
+watch(
+    () => props.products,
+    (products) => {
+        const productIds = new Set(
+            Array.isArray(products)
+                ? products.map(product => product.id)
+                : []
+        )
+
+        selectedProducts.value =
+            selectedProducts.value.filter(id =>
+                productIds.has(id)
+            )
+    },
+    {
+        deep: true,
+    }
+)
+
+/*
+|--------------------------------------------------------------------------
+| Selection
+|--------------------------------------------------------------------------
+*/
 
 function toggleSelectAll() {
     if (allSelected.value) {
-        selectedProducts.value = [];
-    } else {
-        selectedProducts.value = props.products.map((product) => product.id);
+        selectedProducts.value = []
+        return
     }
+
+    selectedProducts.value = props.products.map(
+        product => product.id
+    )
 }
 
 function toggleProduct(productId) {
     if (selectedProducts.value.includes(productId)) {
-        selectedProducts.value = selectedProducts.value.filter(
-            (id) => id !== productId,
-        );
-    } else {
-        selectedProducts.value.push(productId);
+        selectedProducts.value =
+            selectedProducts.value.filter(
+                id => id !== productId
+            )
+
+        return
     }
+
+    selectedProducts.value.push(productId)
 }
+
+/*
+|--------------------------------------------------------------------------
+| Product Actions
+|--------------------------------------------------------------------------
+*/
 
 function deleteProduct(product) {
     const confirmed = confirm(
-        `Are you sure you want to delete "${product.name}"?`,
-    );
+        `Are you sure you want to delete "${product.name}"?`
+    )
 
     if (!confirmed) {
-        return;
+        return
     }
 
-    emit("delete-product", product);
+    emit('delete-product', product)
 
-    selectedProducts.value = selectedProducts.value.filter(
-        (id) => id !== product.id,
-    );
+    selectedProducts.value =
+        selectedProducts.value.filter(
+            id => id !== product.id
+        )
 }
+
+function viewProduct(product) {
+    emit('view-product', product)
+}
+
+function editProduct(product) {
+    emit('edit-product', product)
+}
+
+/*
+|--------------------------------------------------------------------------
+| Bulk Edit
+|--------------------------------------------------------------------------
+*/
 
 function bulkEdit() {
-    if (selectedProducts.value.length === 0) {
-        return;
+    if (!hasSelectedProducts.value) {
+        return
     }
 
-    const productsToEdit = props.products.filter((product) =>
-        selectedProducts.value.includes(product.id),
-    );
+    const productsToEdit = props.products.filter(product =>
+        selectedProducts.value.includes(product.id)
+    )
 
     if (productsToEdit.length === 1) {
-        emit("edit-product", productsToEdit[0]);
-        return;
+        emit('edit-product', productsToEdit[0])
+        return
     }
 
-    emit("bulk-edit", productsToEdit);
+    emit('bulk-edit', productsToEdit)
 }
 
+/*
+|--------------------------------------------------------------------------
+| Bulk Delete
+|--------------------------------------------------------------------------
+*/
+
 function bulkDelete() {
-    if (selectedProducts.value.length === 0) {
-        return;
+    if (!hasSelectedProducts.value) {
+        return
     }
 
     const confirmed = confirm(
-        `Are you sure you want to delete ${selectedProducts.value.length} selected product(s)?`,
-    );
+        `Are you sure you want to delete ${selectedProducts.value.length} selected product(s)?`
+    )
 
     if (!confirmed) {
-        return;
+        return
     }
 
-    const productsToDelete = props.products.filter((product) =>
-        selectedProducts.value.includes(product.id),
-    );
+    const productsToDelete = props.products.filter(product =>
+        selectedProducts.value.includes(product.id)
+    )
 
-    productsToDelete.forEach((product) => {
-        emit("delete-product", product);
-    });
+    emit('bulk-delete', productsToDelete)
 
-    selectedProducts.value = [];
+    selectedProducts.value = []
+}
+
+/*
+|--------------------------------------------------------------------------
+| Formatting
+|--------------------------------------------------------------------------
+*/
+
+function formatPrice(price) {
+    const amount = Number(price)
+
+    if (Number.isNaN(amount)) {
+        return '0.00'
+    }
+
+    return amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })
+}
+
+function stockStatus(quantity) {
+    const amount = Number(quantity) || 0
+
+    if (amount === 0) {
+        return {
+            text: 'Out of stock',
+            wrapper: 'bg-red-50 text-red-700',
+            dot: 'bg-red-500',
+        }
+    }
+
+    if (amount <= 5) {
+        return {
+            text: `${amount} left`,
+            wrapper: 'bg-yellow-50 text-yellow-700',
+            dot: 'bg-yellow-500',
+        }
+    }
+
+    return {
+        text: `${amount} in stock`,
+        wrapper: 'bg-green-50 text-green-700',
+        dot: 'bg-green-500',
+    }
 }
 </script>
 
 <template>
-    <div class="mx-auto max-w-7xl">
+    <div>
+
         <!-- Header -->
         <div
             class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
         >
             <div>
                 <div class="flex items-center gap-3">
-                    <h1 class="text-2xl font-bold tracking-tight text-gray-900">
+                    <h1
+                        class="text-2xl font-bold tracking-tight text-gray-900"
+                    >
                         Products
                     </h1>
 
                     <span
                         class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600"
                     >
-                        {{ products.length }}
+                        {{ productCount }}
                     </span>
                 </div>
 
@@ -130,11 +256,10 @@ function bulkDelete() {
                 </p>
             </div>
 
-            <!-- Add Product -->
             <button
                 type="button"
                 @click="emit('add-product')"
-                class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+                class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-gray-800"
             >
                 <svg
                     class="h-4 w-4"
@@ -156,46 +281,46 @@ function bulkDelete() {
 
         <!-- Bulk Actions -->
         <div
-            v-if="selectedCount > 0"
+            v-if="hasSelectedProducts"
             class="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm"
         >
-            <div>
-                <span class="text-sm font-semibold text-gray-700">
-                    {{ selectedCount }} selected
-                </span>
-            </div>
+            <span class="text-sm font-semibold text-gray-700">
+                {{ selectedCount }} selected
+            </span>
 
-            <div class="flex items-center gap-2">
-                <!-- Bulk Edit -->
+            <div class="flex gap-2">
                 <button
                     type="button"
                     @click="bulkEdit"
-                    class="rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2"
+                    class="rounded-lg border border-gray-300 bg-white px-3.5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
                 >
                     Edit Selected
                 </button>
 
-                <!-- Bulk Delete -->
                 <button
                     type="button"
                     @click="bulkDelete"
-                    class="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
+                    class="rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white hover:bg-red-700"
                 >
                     Delete Selected
                 </button>
             </div>
         </div>
 
-        <!-- Product Table -->
+        <!-- Table -->
         <div
             class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
         >
             <div class="overflow-x-auto">
+
                 <table class="w-full min-w-[900px] text-left text-sm">
+
                     <!-- Table Header -->
-                    <thead class="border-b border-gray-200 bg-gray-50">
+                    <thead
+                        class="border-b border-gray-200 bg-gray-50"
+                    >
                         <tr>
-                            <!-- Select All -->
+
                             <th class="w-12 px-6 py-4">
                                 <input
                                     type="checkbox"
@@ -234,109 +359,129 @@ function bulkDelete() {
                             >
                                 Actions
                             </th>
+
                         </tr>
                     </thead>
 
                     <!-- Table Body -->
                     <tbody class="divide-y divide-gray-100">
+
+                        <!-- Products -->
                         <tr
-                            v-for="(product, index) in products"
+                            v-for="(product, index) in props.products"
                             :key="product.id"
-                            class="group hover:bg-gray-50"
+                            class="hover:bg-gray-50"
                         >
+
                             <!-- Checkbox -->
                             <td class="px-6 py-4">
                                 <input
                                     type="checkbox"
                                     :checked="
-                                        selectedProducts.includes(product.id)
+                                        selectedProducts.includes(
+                                            product.id
+                                        )
                                     "
-                                    @change="toggleProduct(product.id)"
-                                    class="product-checkbox h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
+                                    @change="
+                                        toggleProduct(product.id)
+                                    "
+                                    class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
                                 />
                             </td>
 
                             <!-- Product -->
                             <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
+                                <div
+                                    class="flex items-center gap-3"
+                                >
+
                                     <div
                                         class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-700"
                                     >
                                         {{
-                                            product.name.charAt(0).toUpperCase()
+                                            product.name
+                                                ?.charAt(0)
+                                                ?.toUpperCase()
                                         }}
                                     </div>
 
                                     <div class="min-w-0">
+
                                         <div
                                             class="truncate font-semibold text-gray-900"
                                         >
-                                            {{ product.name }}
+                                            {{
+                                                product.name ||
+                                                'Unnamed Product'
+                                            }}
                                         </div>
 
-                                        <!-- Display number -->
                                         <div
                                             class="mt-0.5 text-xs text-gray-400"
                                         >
                                             Product #{{ index + 1 }}
                                         </div>
+
                                     </div>
                                 </div>
                             </td>
 
                             <!-- Description -->
                             <td class="max-w-xs px-6 py-4">
-                                <p class="truncate text-gray-500">
+                                <p
+                                    class="truncate text-gray-500"
+                                >
                                     {{
-                                        product.description || "No description"
+                                        product.description ||
+                                        'No description'
                                     }}
                                 </p>
                             </td>
 
                             <!-- Price -->
-                            <td class="whitespace-nowrap px-6 py-4">
-                                <span class="font-semibold text-gray-900">
+                            <td
+                                class="whitespace-nowrap px-6 py-4"
+                            >
+                                <span
+                                    class="font-semibold text-gray-900"
+                                >
                                     Rs.
-                                    {{ Number(product.price).toLocaleString() }}
+                                    {{
+                                        formatPrice(
+                                            product.price
+                                        )
+                                    }}
                                 </span>
                             </td>
 
                             <!-- Stock -->
-                            <td class="whitespace-nowrap px-6 py-4">
-                                <!-- Out of stock -->
+                            <td
+                                class="whitespace-nowrap px-6 py-4"
+                            >
                                 <span
-                                    v-if="Number(product.quantity) === 0"
-                                    class="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700"
+                                    :class="
+                                        stockStatus(
+                                            product.quantity
+                                        ).wrapper
+                                    "
+                                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
                                 >
+
                                     <span
-                                        class="h-1.5 w-1.5 rounded-full bg-red-500"
+                                        :class="
+                                            stockStatus(
+                                                product.quantity
+                                            ).dot
+                                        "
+                                        class="h-1.5 w-1.5 rounded-full"
                                     ></span>
 
-                                    Out of stock
-                                </span>
+                                    {{
+                                        stockStatus(
+                                            product.quantity
+                                        ).text
+                                    }}
 
-                                <!-- Low stock -->
-                                <span
-                                    v-else-if="Number(product.quantity) <= 5"
-                                    class="inline-flex items-center gap-1.5 rounded-full bg-yellow-50 px-2.5 py-1 text-xs font-semibold text-yellow-700"
-                                >
-                                    <span
-                                        class="h-1.5 w-1.5 rounded-full bg-yellow-500"
-                                    ></span>
-
-                                    {{ product.quantity }} left
-                                </span>
-
-                                <!-- In stock -->
-                                <span
-                                    v-else
-                                    class="inline-flex items-center gap-1.5 rounded-full bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700"
-                                >
-                                    <span
-                                        class="h-1.5 w-1.5 rounded-full bg-green-500"
-                                    ></span>
-
-                                    {{ product.quantity }} in stock
                                 </span>
                             </td>
 
@@ -345,40 +490,52 @@ function bulkDelete() {
                                 <div
                                     class="flex items-center justify-end gap-4"
                                 >
-                                    <!-- View -->
+
                                     <button
                                         type="button"
-                                        @click="emit('view-product', product)"
+                                        @click="
+                                            viewProduct(product)
+                                        "
                                         class="text-sm font-medium text-gray-500 hover:text-gray-900"
                                     >
                                         View
                                     </button>
 
-                                    <!-- Edit -->
                                     <button
                                         type="button"
-                                        @click="emit('edit-product', product)"
+                                        @click="
+                                            editProduct(product)
+                                        "
                                         class="text-sm font-medium text-blue-600 hover:text-blue-800"
                                     >
                                         Edit
                                     </button>
 
-                                    <!-- Delete -->
                                     <button
                                         type="button"
-                                        @click="deleteProduct(product)"
+                                        @click="
+                                            deleteProduct(product)
+                                        "
                                         class="text-sm font-medium text-red-600 hover:text-red-800"
                                     >
                                         Delete
                                     </button>
+
                                 </div>
                             </td>
+
                         </tr>
 
                         <!-- Empty State -->
-                        <tr v-if="products.length === 0">
-                            <td colspan="6" class="px-6 py-16 text-center">
+                        <tr v-if="productCount === 0">
+
+                            <td
+                                colspan="6"
+                                class="px-6 py-16 text-center"
+                            >
+
                                 <div class="mx-auto max-w-sm">
+
                                     <div
                                         class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100"
                                     >
@@ -389,10 +546,9 @@ function bulkDelete() {
                                             viewBox="0 0 24 24"
                                         >
                                             <path
-                                                stroke="currentColor"
-                                                stroke-width="1.8"
                                                 stroke-linecap="round"
                                                 stroke-linejoin="round"
+                                                stroke-width="1.8"
                                                 d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
                                             />
                                         </svg>
@@ -404,39 +560,34 @@ function bulkDelete() {
                                         No products found
                                     </h3>
 
-                                    <p class="mt-1 text-sm text-gray-500">
-                                        Get started by adding your first
-                                        product.
+                                    <p
+                                        class="mt-1 text-sm text-gray-500"
+                                    >
+                                        Get started by adding your
+                                        first product.
                                     </p>
 
                                     <button
                                         type="button"
-                                        @click="emit('add-product')"
+                                        @click="
+                                            emit('add-product')
+                                        "
                                         class="mt-5 inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
                                     >
-                                        <svg
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                d="M12 4v16m8-8H4"
-                                            />
-                                        </svg>
-
                                         Add Product
                                     </button>
+
                                 </div>
+
                             </td>
+
                         </tr>
+
                     </tbody>
                 </table>
+
             </div>
         </div>
+
     </div>
 </template>
