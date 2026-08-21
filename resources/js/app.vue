@@ -16,7 +16,6 @@ import BulkEdit from "./components/products/BulkEdit.vue";
 
 const authenticated = ref(false);
 const checkingAuth = ref(true);
-const authPage = ref("login");
 
 // ============================================================
 // Products
@@ -31,7 +30,10 @@ const error = ref("");
 // Navigation
 // ============================================================
 
-const currentPage = ref("list");
+// IMPORTANT:
+// The application must start on login when the user is not
+// authenticated.
+const currentPage = ref("login");
 
 const selectedProduct = ref(null);
 
@@ -94,7 +96,9 @@ async function getCsrfToken() {
         throw new Error("CSRF token was not found.");
     }
 
-    return decodeURIComponent(cookie.substring("XSRF-TOKEN=".length));
+    return decodeURIComponent(
+        cookie.substring("XSRF-TOKEN=".length),
+    );
 }
 
 // ============================================================
@@ -131,26 +135,37 @@ async function checkAuthentication() {
 
         const data = await getResponseData(response);
 
+        // User is authenticated
         if (response.ok) {
             authenticated.value = true;
 
-            products.value = Array.isArray(data) ? data : data.products || [];
+            currentPage.value = "list";
+
+            products.value = Array.isArray(data)
+                ? data
+                : data.products || [];
 
             return;
         }
 
+        // User is not authenticated
         if (response.status === 401) {
             authenticated.value = false;
             products.value = [];
+            currentPage.value = "login";
+
             return;
         }
 
         authenticated.value = false;
+        products.value = [];
+        currentPage.value = "login";
     } catch (err) {
         console.error("Authentication check failed:", err);
 
         authenticated.value = false;
         products.value = [];
+        currentPage.value = "login";
     } finally {
         checkingAuth.value = false;
         loading.value = false;
@@ -167,7 +182,21 @@ async function handleLoginSuccess() {
     currentPage.value = "list";
 
     selectedProduct.value = null;
+    selectedProductsForBulkEdit.value = [];
 
+    await loadProducts();
+}
+
+// ============================================================
+// Register Success
+// ============================================================
+
+async function handleRegisterSuccess() {
+    authenticated.value = true;
+
+    currentPage.value = "list";
+
+    selectedProduct.value = null;
     selectedProductsForBulkEdit.value = [];
 
     await loadProducts();
@@ -194,28 +223,36 @@ async function logout() {
 
         if (!response.ok) {
             throw new Error(
-                data.message || `Logout failed. Status: ${response.status}`,
+                data.message ||
+                    `Logout failed. Status: ${response.status}`,
             );
         }
 
-        // Clear authentication state
+        // Clear authentication
         authenticated.value = false;
 
         // Clear products
         products.value = [];
 
-        // Reset navigation
-        currentPage.value = "list";
+        // Clear selected products
         selectedProduct.value = null;
         selectedProductsForBulkEdit.value = [];
+
+        // IMPORTANT:
+        // After logout, go to login.
+        currentPage.value = "login";
 
         showNotification("You have been logged out successfully.");
     } catch (err) {
         console.error("Logout failed:", err);
 
-        showNotification(err.message || "Unable to logout.", "error");
+        showNotification(
+            err.message || "Unable to logout.",
+            "error",
+        );
     }
 }
+
 // ============================================================
 // Load Products
 // ============================================================
@@ -235,9 +272,12 @@ async function loadProducts() {
 
         const data = await getResponseData(response);
 
+        // Session expired / user not authenticated
         if (response.status === 401) {
             authenticated.value = false;
             products.value = [];
+            currentPage.value = "login";
+
             return;
         }
 
@@ -250,34 +290,50 @@ async function loadProducts() {
 
         authenticated.value = true;
 
-        products.value = Array.isArray(data) ? data : data.products || [];
+        products.value = Array.isArray(data)
+            ? data
+            : data.products || [];
     } catch (err) {
         console.error("Failed to load products:", err);
 
-        error.value = "Unable to load products. Please try again.";
+        error.value =
+            "Unable to load products. Please try again.";
 
-        showNotification(err.message || "Unable to load products.", "error");
+        showNotification(
+            err.message || "Unable to load products.",
+            "error",
+        );
     } finally {
         loading.value = false;
     }
 }
 
 // ============================================================
-// Navigation Functions
+// Authentication Navigation
 // ============================================================
+
 function showRegister() {
+    authenticated.value = false;
     currentPage.value = "register";
+
+    error.value = "";
 }
 
 function showLogin() {
+    authenticated.value = false;
     currentPage.value = "login";
+
+    error.value = "";
 }
+
+// ============================================================
+// Product Navigation
+// ============================================================
 
 function showCreate() {
     currentPage.value = "create";
 
     selectedProduct.value = null;
-
     selectedProductsForBulkEdit.value = [];
 }
 
@@ -285,7 +341,6 @@ function showList() {
     currentPage.value = "list";
 
     selectedProduct.value = null;
-
     selectedProductsForBulkEdit.value = [];
 }
 
@@ -306,9 +361,11 @@ function showView(product) {
 }
 
 function showBulkEdit(productsToEdit) {
-    selectedProductsForBulkEdit.value = productsToEdit.map((product) => ({
-        ...product,
-    }));
+    selectedProductsForBulkEdit.value = productsToEdit.map(
+        (product) => ({
+            ...product,
+        }),
+    );
 
     currentPage.value = "bulk-edit";
 }
@@ -341,6 +398,9 @@ async function addProduct(product) {
 
         if (response.status === 401) {
             authenticated.value = false;
+            products.value = [];
+            currentPage.value = "login";
+
             return;
         }
 
@@ -363,7 +423,10 @@ async function addProduct(product) {
     } catch (err) {
         console.error("Failed to create product:", err);
 
-        showNotification(err.message || "Unable to create product.", "error");
+        showNotification(
+            err.message || "Unable to create product.",
+            "error",
+        );
     }
 }
 
@@ -375,26 +438,32 @@ async function updateProduct(updatedProduct) {
     try {
         const xsrfToken = await getCsrfToken();
 
-        const response = await fetch(`/api/products/${updatedProduct.id}`, {
-            method: "PUT",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                "X-XSRF-TOKEN": xsrfToken,
+        const response = await fetch(
+            `/api/products/${updatedProduct.id}`,
+            {
+                method: "PUT",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-XSRF-TOKEN": xsrfToken,
+                },
+                body: JSON.stringify({
+                    name: updatedProduct.name,
+                    description: updatedProduct.description,
+                    price: Number(updatedProduct.price),
+                    quantity: Number(updatedProduct.quantity),
+                }),
             },
-            body: JSON.stringify({
-                name: updatedProduct.name,
-                description: updatedProduct.description,
-                price: Number(updatedProduct.price),
-                quantity: Number(updatedProduct.quantity),
-            }),
-        });
+        );
 
         const data = await getResponseData(response);
 
         if (response.status === 401) {
             authenticated.value = false;
+            products.value = [];
+            currentPage.value = "login";
+
             return;
         }
 
@@ -419,11 +488,16 @@ async function updateProduct(updatedProduct) {
 
         showList();
 
-        showNotification(`Product "${updated.name}" updated successfully.`);
+        showNotification(
+            `Product "${updated.name}" updated successfully.`,
+        );
     } catch (err) {
         console.error("Failed to update product:", err);
 
-        showNotification(err.message || "Unable to update product.", "error");
+        showNotification(
+            err.message || "Unable to update product.",
+            "error",
+        );
     }
 }
 
@@ -443,19 +517,25 @@ async function deleteProduct(product) {
     try {
         const xsrfToken = await getCsrfToken();
 
-        const response = await fetch(`/api/products/${product.id}`, {
-            method: "DELETE",
-            credentials: "include",
-            headers: {
-                Accept: "application/json",
-                "X-XSRF-TOKEN": xsrfToken,
+        const response = await fetch(
+            `/api/products/${product.id}`,
+            {
+                method: "DELETE",
+                credentials: "include",
+                headers: {
+                    Accept: "application/json",
+                    "X-XSRF-TOKEN": xsrfToken,
+                },
             },
-        });
+        );
 
         const data = await getResponseData(response);
 
         if (response.status === 401) {
             authenticated.value = false;
+            products.value = [];
+            currentPage.value = "login";
+
             return;
         }
 
@@ -470,11 +550,16 @@ async function deleteProduct(product) {
             (item) => item.id !== product.id,
         );
 
-        showNotification(`Product "${product.name}" deleted successfully.`);
+        showNotification(
+            `Product "${product.name}" deleted successfully.`,
+        );
     } catch (err) {
         console.error("Failed to delete product:", err);
 
-        showNotification(err.message || "Unable to delete product.", "error");
+        showNotification(
+            err.message || "Unable to delete product.",
+            "error",
+        );
     }
 }
 
@@ -483,7 +568,10 @@ async function deleteProduct(product) {
 // ============================================================
 
 async function bulkDelete(productsToDelete) {
-    if (!productsToDelete || productsToDelete.length === 0) {
+    if (
+        !productsToDelete ||
+        productsToDelete.length === 0
+    ) {
         return;
     }
 
@@ -498,25 +586,33 @@ async function bulkDelete(productsToDelete) {
     try {
         const xsrfToken = await getCsrfToken();
 
-        const ids = productsToDelete.map((product) => product.id);
+        const ids = productsToDelete.map(
+            (product) => product.id,
+        );
 
-        const response = await fetch("/api/products/bulk-delete", {
-            method: "DELETE",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                "X-XSRF-TOKEN": xsrfToken,
+        const response = await fetch(
+            "/api/products/bulk-delete",
+            {
+                method: "DELETE",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-XSRF-TOKEN": xsrfToken,
+                },
+                body: JSON.stringify({
+                    selected_products: ids,
+                }),
             },
-            body: JSON.stringify({
-                selected_products: ids,
-            }),
-        });
+        );
 
         const data = await getResponseData(response);
 
         if (response.status === 401) {
             authenticated.value = false;
+            products.value = [];
+            currentPage.value = "login";
+
             return;
         }
 
@@ -535,10 +631,14 @@ async function bulkDelete(productsToDelete) {
             `${productsToDelete.length} product(s) deleted successfully.`,
         );
     } catch (err) {
-        console.error("Failed to bulk delete products:", err);
+        console.error(
+            "Failed to bulk delete products:",
+            err,
+        );
 
         showNotification(
-            err.message || "Unable to delete selected products.",
+            err.message ||
+                "Unable to delete selected products.",
             "error",
         );
     }
@@ -549,7 +649,10 @@ async function bulkDelete(productsToDelete) {
 // ============================================================
 
 async function updateBulkProducts(updatedProducts) {
-    if (!updatedProducts || updatedProducts.length === 0) {
+    if (
+        !updatedProducts ||
+        updatedProducts.length === 0
+    ) {
         return;
     }
 
@@ -568,21 +671,27 @@ async function updateBulkProducts(updatedProducts) {
 
         console.log("Bulk update payload:", payload);
 
-        const response = await fetch("/api/products/bulk-update", {
-            method: "PUT",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                "X-XSRF-TOKEN": xsrfToken,
+        const response = await fetch(
+            "/api/products/bulk-update",
+            {
+                method: "PUT",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-XSRF-TOKEN": xsrfToken,
+                },
+                body: JSON.stringify(payload),
             },
-            body: JSON.stringify(payload),
-        });
+        );
 
         const data = await getResponseData(response);
 
         if (response.status === 401) {
             authenticated.value = false;
+            products.value = [];
+            currentPage.value = "login";
+
             return;
         }
 
@@ -601,10 +710,14 @@ async function updateBulkProducts(updatedProducts) {
             `${updatedProducts.length} product(s) updated successfully.`,
         );
     } catch (err) {
-        console.error("Failed to bulk update products:", err);
+        console.error(
+            "Failed to bulk update products:",
+            err,
+        );
 
         showNotification(
-            err.message || "Unable to update selected products.",
+            err.message ||
+                "Unable to update selected products.",
             "error",
         );
     }
@@ -633,20 +746,35 @@ onMounted(() => {
                 class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
             ></div>
 
-            <p class="mt-4 text-sm text-gray-500">Loading...</p>
+            <p class="mt-4 text-sm text-gray-500">
+                Loading...
+            </p>
         </div>
     </div>
 
-    <!-- login and register -->
+    <!-- ====================================================== -->
+    <!-- Login -->
+    <!-- ====================================================== -->
 
     <Login
-        v-else-if="!authenticated && currentPage === 'login'"
+        v-else-if="
+            !authenticated &&
+            currentPage === 'login'
+        "
         @login-success="handleLoginSuccess"
         @show-register="showRegister"
     />
 
+    <!-- ====================================================== -->
+    <!-- Register -->
+    <!-- ====================================================== -->
+
     <Register
-        v-else-if="!authenticated && currentPage === 'register'"
+        v-else-if="
+            !authenticated &&
+            currentPage === 'register'
+        "
+        @registered="handleRegisterSuccess"
         @show-login="showLogin"
     />
 
@@ -654,22 +782,30 @@ onMounted(() => {
     <!-- Authenticated Application -->
     <!-- ====================================================== -->
 
-    <div v-else class="min-h-screen bg-gray-50">
+    <div
+        v-else-if="authenticated"
+        class="min-h-screen bg-gray-50"
+    >
         <!-- ================================================== -->
         <!-- Application Header -->
         <!-- ================================================== -->
 
-        <header class="border-b border-gray-200 bg-white">
+        <header
+            class="border-b border-gray-200 bg-white"
+        >
             <div
                 class="mx-auto flex max-w-7xl items-center justify-between px-6 py-4"
             >
                 <div>
-                    <h1 class="text-lg font-bold text-gray-900">
+                    <h1
+                        class="text-lg font-bold text-gray-900"
+                    >
                         Product Management
                     </h1>
                 </div>
 
                 <!-- Logout -->
+
                 <button
                     type="button"
                     @click="logout"
@@ -684,7 +820,9 @@ onMounted(() => {
         <!-- Main Application -->
         <!-- ================================================== -->
 
-        <main class="mx-auto max-w-7xl px-6 py-8">
+        <main
+            class="mx-auto max-w-7xl px-6 py-8"
+        >
             <!-- ================================================== -->
             <!-- Notification -->
             <!-- ================================================== -->
@@ -713,7 +851,9 @@ onMounted(() => {
                             "
                         >
                             <svg
-                                v-if="notification.type !== 'error'"
+                                v-if="
+                                    notification.type !== 'error'
+                                "
                                 class="h-5 w-5 text-green-600"
                                 fill="none"
                                 stroke="currentColor"
@@ -743,17 +883,26 @@ onMounted(() => {
                             </svg>
                         </div>
 
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold text-gray-900">
+                        <div
+                            class="min-w-0 flex-1"
+                        >
+                            <p
+                                class="text-sm font-semibold text-gray-900"
+                            >
                                 {{
-                                    notification.type === "error"
+                                    notification.type ===
+                                    "error"
                                         ? "Error"
                                         : "Success"
                                 }}
                             </p>
 
-                            <p class="mt-0.5 text-sm text-gray-500">
-                                {{ notification.message }}
+                            <p
+                                class="mt-0.5 text-sm text-gray-500"
+                            >
+                                {{
+                                    notification.message
+                                }}
                             </p>
                         </div>
 
@@ -785,14 +934,21 @@ onMounted(() => {
             <!-- Loading Products -->
             <!-- ================================================== -->
 
-            <div v-if="loading" class="mx-auto max-w-7xl">
-                <div class="flex min-h-[300px] items-center justify-center">
+            <div
+                v-if="loading"
+                class="mx-auto max-w-7xl"
+            >
+                <div
+                    class="flex min-h-[300px] items-center justify-center"
+                >
                     <div class="text-center">
                         <div
                             class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900"
                         ></div>
 
-                        <p class="mt-4 text-sm text-gray-500">
+                        <p
+                            class="mt-4 text-sm text-gray-500"
+                        >
                             Loading products...
                         </p>
                     </div>
@@ -803,13 +959,22 @@ onMounted(() => {
             <!-- Product Error -->
             <!-- ================================================== -->
 
-            <div v-else-if="error" class="mx-auto max-w-7xl">
-                <div class="rounded-xl border border-red-200 bg-red-50 p-6">
-                    <h2 class="text-sm font-semibold text-red-800">
+            <div
+                v-else-if="error"
+                class="mx-auto max-w-7xl"
+            >
+                <div
+                    class="rounded-xl border border-red-200 bg-red-50 p-6"
+                >
+                    <h2
+                        class="text-sm font-semibold text-red-800"
+                    >
                         Unable to load products
                     </h2>
 
-                    <p class="mt-1 text-sm text-red-600">
+                    <p
+                        class="mt-1 text-sm text-red-600"
+                    >
                         {{ error }}
                     </p>
 
@@ -836,7 +1001,6 @@ onMounted(() => {
                 @delete-product="deleteProduct"
                 @bulk-delete="bulkDelete"
                 @bulk-edit="showBulkEdit"
-                @logout="logout"
             />
 
             <!-- ================================================== -->
@@ -854,7 +1018,10 @@ onMounted(() => {
             <!-- ================================================== -->
 
             <ProductEdit
-                v-else-if="currentPage === 'edit' && selectedProduct"
+                v-else-if="
+                    currentPage === 'edit' &&
+                    selectedProduct
+                "
                 :product="selectedProduct"
                 @cancel="showList"
                 @product-updated="updateProduct"
@@ -879,7 +1046,10 @@ onMounted(() => {
             <!-- ================================================== -->
 
             <ProductView
-                v-else-if="currentPage === 'view' && selectedProduct"
+                v-else-if="
+                    currentPage === 'view' &&
+                    selectedProduct
+                "
                 :product="selectedProduct"
                 @back="showList"
                 @edit-product="showEdit"

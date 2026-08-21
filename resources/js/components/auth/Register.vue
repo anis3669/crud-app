@@ -16,8 +16,142 @@ const emailError = ref("");
 const passwordError = ref("");
 const passwordConfirmationError = ref("");
 
+async function getCsrfToken() {
+    const response = await fetch("/sanctum/csrf-cookie", {
+        method: "GET",
+        credentials: "include",
+        headers: {
+            Accept: "application/json",
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error(
+            `Unable to initialize CSRF protection. Status: ${response.status}`,
+        );
+    }
+
+    const cookie = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("XSRF-TOKEN="));
+
+    if (!cookie) {
+        throw new Error("CSRF token was not found.");
+    }
+
+    return decodeURIComponent(
+        cookie.substring("XSRF-TOKEN=".length),
+    );
+}
+
+function clearErrors() {
+    error.value = "";
+
+    nameError.value = "";
+    emailError.value = "";
+    passwordError.value = "";
+    passwordConfirmationError.value = "";
+}
+
 async function register() {
-    // We will add the registration API logic in the next step.
+    clearErrors();
+
+    // Client-side validation
+    if (!name.value.trim()) {
+        nameError.value = "Please enter your name.";
+        return;
+    }
+
+    if (!email.value.trim()) {
+        emailError.value = "Please enter your email address.";
+        return;
+    }
+
+    if (!password.value) {
+        passwordError.value = "Please enter a password.";
+        return;
+    }
+
+    if (password.value.length < 8) {
+        passwordError.value = "Password must be at least 8 characters.";
+        return;
+    }
+
+    if (!passwordConfirmation.value) {
+        passwordConfirmationError.value =
+            "Please confirm your password.";
+        return;
+    }
+
+    if (password.value !== passwordConfirmation.value) {
+        passwordConfirmationError.value =
+            "Password confirmation does not match.";
+        return;
+    }
+
+    loading.value = true;
+
+    try {
+        // Get Sanctum CSRF token
+        const xsrfToken = await getCsrfToken();
+
+        // Register user
+        const response = await fetch("/api/register", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                "X-XSRF-TOKEN": xsrfToken,
+            },
+            body: JSON.stringify({
+                name: name.value.trim(),
+                email: email.value.trim(),
+                password: password.value,
+                password_confirmation:
+                    passwordConfirmation.value,
+            }),
+        });
+
+        const contentType =
+            response.headers.get("content-type") || "";
+
+        const data = contentType.includes("application/json")
+            ? await response.json()
+            : {};
+
+        // Laravel validation error
+        if (response.status === 422) {
+            const errors = data.errors || {};
+
+            nameError.value = errors.name?.[0] || "";
+            emailError.value = errors.email?.[0] || "";
+            passwordError.value = errors.password?.[0] || "";
+            passwordConfirmationError.value =
+                errors.password_confirmation?.[0] || "";
+
+            error.value = data.message || "";
+
+            return;
+        }
+
+        if (!response.ok) {
+            throw new Error(
+                data.message ||
+                    `Registration failed. Status: ${response.status}`,
+            );
+        }
+
+        // Registration succeeded
+        emit("registered", data);
+    } catch (err) {
+        console.error("Registration failed:", err);
+
+        error.value =
+            err.message || "Unable to create your account.";
+    } finally {
+        loading.value = false;
+    }
 }
 </script>
 
@@ -197,6 +331,7 @@ async function register() {
                         :disabled="loading"
                         class="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                     >
+                        <!-- Spinner -->
                         <svg
                             v-if="loading"
                             class="h-4 w-4 animate-spin"
@@ -220,13 +355,19 @@ async function register() {
                         </svg>
 
                         <span>
-                            {{ loading ? "Creating Account..." : "Create Account" }}
+                            {{
+                                loading
+                                    ? "Creating Account..."
+                                    : "Create Account"
+                            }}
                         </span>
                     </button>
                 </form>
 
                 <!-- Login Link -->
-                <div class="mt-6 border-t border-gray-100 pt-5 text-center">
+                <div
+                    class="mt-6 border-t border-gray-100 pt-5 text-center"
+                >
                     <p class="text-sm text-gray-500">
                         Already have an account?
 

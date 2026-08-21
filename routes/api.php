@@ -5,7 +5,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\ProductApiController;
 
 // Authentication
-Route::post('/login', [AuthController::class, 'apiLogin']);
+Route::post('/login', [AuthController::class, 'apiLogin'])
+ ->middleware('web');
 
 Route::post('/register', [AuthController::class, 'register'])
     ->middleware('web');

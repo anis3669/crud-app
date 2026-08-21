@@ -9,95 +9,81 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    // ============================================================
-    // Register
-    // ============================================================
+    /*
+    |--------------------------------------------------------------------------
+    | Login
+    |--------------------------------------------------------------------------
+    */
 
-   public function register(Request $request)
-{
-    $validated = $request->validate(
-        [
-            'name' => 'required|string|max:255',
+    public function apiLogin(Request $request)
+    {
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required'],
+        ]);
+
+        if (!Auth::attempt($credentials)) {
+            return response()->json([
+                'message' => 'The provided credentials are incorrect.',
+            ], 422);
+        }
+
+        $request->session()->regenerate();
+
+        return response()->json([
+            'message' => 'Login successful.',
+            'user' => Auth::user(),
+        ]);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Register
+    |--------------------------------------------------------------------------
+    */
+
+    public function register(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
 
             'email' => [
                 'required',
-                'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/',
+                'email',
                 'unique:users,email',
             ],
 
-            'password' => 'required|min:8|confirmed',
-        ],
-        [
-            'name.required' => 'Please enter your name.',
-
-            'email.required' => 'Please enter your email address.',
-            'email.regex' => 'Please enter a valid email address (e.g. name@example.com).',
-            'email.unique' => 'This email address is already registered.',
-
-            'password.required' => 'Please enter a password.',
-            'password.min' => 'Password must be at least 8 characters.',
-            'password.confirmed' => 'Password confirmation does not match.',
-        ]
-    );
-
-    $user = User::create([
-        'name' => $validated['name'],
-        'email' => $validated['email'],
-        'password' => Hash::make($validated['password']),
-    ]);
-
-    Auth::login($user);
-
-    return response()->json([
-        'message' => 'Registration successful.',
-        'user' => $user,
-    ], 201);
-}
-    // ============================================================
-    // Login
-    // ============================================================
-
-    public function showLogin()
-    {
-        return view('auth.login');
-    }
-
-    public function login(Request $request)
-    {
-        $credentials = $request->validate(
-            [
-                'email' => [
-                    'required',
-                    'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/',
-                ],
-
-                'password' => 'required|min:8',
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
             ],
-            [
-                'email.required' => 'Please enter your email address.',
-                'email.regex' => 'Please enter a valid email address (e.g. name@example.com).',
+        ]);
 
-                'password.required' => 'Please enter your password.',
-                'password.min' => 'Password must be at least 8 characters.',
-            ]
-        );
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        Auth::login($user);
 
-            return redirect()->route('products.index');
-        }
+        $request->session()->regenerate();
 
-        return back()
-            ->withErrors([
-                'email' => 'The email or password you entered is incorrect.',
-            ])
-            ->onlyInput('email');
+        return response()->json([
+            'message' => 'Registration successful.',
+            'user' => $user,
+        ], 201);
     }
 
-    // ============================================================
-    // Logout
-    // ============================================================
+
+    /*
+    |--------------------------------------------------------------------------
+    | Logout
+    |--------------------------------------------------------------------------
+    */
 
     public function logout(Request $request)
     {
@@ -109,35 +95,6 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Logout successful.',
-        ]);
-    }
-
-    // ============================================================
-    // API Login
-    // ============================================================
-
-    public function apiLogin(Request $request)
-    {
-        $credentials = $request->validate([
-            'email' => [
-                'required',
-                'regex:/^[^@\s]+@[^@\s]+\.[^@\s]+$/',
-            ],
-
-            'password' => 'required|min:8',
-        ]);
-
-        if (!Auth::attempt($credentials)) {
-            return response()->json([
-                'message' => 'The email or password you entered is incorrect.',
-            ], 401);
-        }
-
-        $request->session()->regenerate();
-
-        return response()->json([
-            'message' => 'Login successful.',
-            'user' => Auth::user(),
         ]);
     }
 }
