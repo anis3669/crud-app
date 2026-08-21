@@ -1,137 +1,79 @@
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../../stores/auth";
 
-const emit = defineEmits(["login-success", "show-register"]);
+const router = useRouter();
+const auth = useAuthStore();
 
 const email = ref("");
 const password = ref("");
 
-const loading = ref(false);
 const error = ref("");
-
 const emailError = ref("");
 const passwordError = ref("");
 
-//  Get Sanctum CSRF Token
-
-async function getCsrfToken() {
-    const response = await fetch("/sanctum/csrf-cookie", {
-        method: "GET",
-        credentials: "include",
-        headers: {
-            Accept: "application/json",
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error(
-            `Unable to initialize CSRF protection. Status: ${response.status}`,
-        );
-    }
-
-    const cookie = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("XSRF-TOKEN="));
-
-    if (!cookie) {
-        throw new Error("CSRF token was not found.");
-    }
-
-    const token = cookie.substring("XSRF-TOKEN=".length);
-
-    return decodeURIComponent(token);
-}
-
-//  Login
-
-async function login() {
+function clearErrors() {
     error.value = "";
     emailError.value = "";
     passwordError.value = "";
+}
 
-    // Validation
-    
+async function login() {
+    clearErrors();
+
+    // Client-side validation
     if (!email.value.trim()) {
         emailError.value = "Please enter your email address.";
+        return;
     }
 
     if (!password.value) {
         passwordError.value = "Please enter your password.";
-    }
-
-    if (emailError.value || passwordError.value) {
         return;
     }
 
-    loading.value = true;
-
     try {
-        // 1. Get Sanctum CSRF Cookie
-       
-        const xsrfToken = await getCsrfToken();
+        await auth.login(
+            email.value.trim(),
+            password.value,
+        );
 
-        // 2. Login
-       
-        const response = await fetch("/api/login", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                "X-XSRF-TOKEN": xsrfToken,
-            },
-            body: JSON.stringify({
-                email: email.value.trim(),
-                password: password.value,
-            }),
-        });
-
-    //    read response
-        const contentType =
-            response.headers.get("content-type") || "";
-
-        const data = contentType.includes("application/json")
-            ? await response.json()
-            : {};
-
-    //    login failed
-        if (!response.ok) {
-            throw new Error(
-                data.message ||
-                    "The email or password you entered is incorrect.",
-            );
-        }
-
-        /*
-        | Login Successful
-        |
-        | App.vue receives this event and changes:
-        |
-        | isAuthenticated = true
-        |
-        | Then App.vue loads /api/products.
-        */
-        emit("login-success", data.user || null);
-
+        await router.push("/products");
     } catch (err) {
         console.error("Login failed:", err);
 
+        if (err.status === 422) {
+            const errors = err.data?.errors || {};
+
+            emailError.value =
+                errors.email?.[0] || "";
+
+            passwordError.value =
+                errors.password?.[0] || "";
+
+            error.value =
+                err.data?.message || "";
+
+            return;
+        }
+
         error.value =
-            err.message ||
-            "Unable to login. Please check your email and password.";
-    } finally {
-        loading.value = false;
+            auth.error || "Unable to sign in.";
     }
 }
+
+function showRegister() {
+    router.push("/register");
+}
 </script>
+
 <template>
     <div class="min-h-screen bg-gray-50 px-4 py-12">
-
         <div class="mx-auto max-w-md">
 
             <!-- Header -->
             <div class="mb-8 text-center">
-
                 <h1
                     class="text-2xl font-bold tracking-tight text-gray-900"
                 >
@@ -141,7 +83,6 @@ async function login() {
                 <p class="mt-2 text-sm text-gray-500">
                     Sign in to your account to continue.
                 </p>
-
             </div>
 
             <!-- Login Card -->
@@ -167,7 +108,6 @@ async function login() {
 
                     <!-- Email -->
                     <div>
-
                         <label
                             for="email"
                             class="mb-2 block text-sm font-medium text-gray-700"
@@ -182,7 +122,7 @@ async function login() {
                             name="email"
                             autocomplete="email"
                             placeholder="name@example.com"
-                            :disabled="loading"
+                            :disabled="auth.loading"
                             class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
                             :class="
                                 emailError
@@ -197,12 +137,10 @@ async function login() {
                         >
                             {{ emailError }}
                         </p>
-
                     </div>
 
                     <!-- Password -->
                     <div>
-
                         <label
                             for="password"
                             class="mb-2 block text-sm font-medium text-gray-700"
@@ -217,7 +155,7 @@ async function login() {
                             name="password"
                             autocomplete="current-password"
                             placeholder="Enter your password"
-                            :disabled="loading"
+                            :disabled="auth.loading"
                             class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
                             :class="
                                 passwordError
@@ -232,19 +170,18 @@ async function login() {
                         >
                             {{ passwordError }}
                         </p>
-
                     </div>
 
                     <!-- Login Button -->
                     <button
                         type="submit"
-                        :disabled="loading"
+                        :disabled="auth.loading"
                         class="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                     >
 
                         <!-- Spinner -->
                         <svg
-                            v-if="loading"
+                            v-if="auth.loading"
                             class="h-4 w-4 animate-spin"
                             fill="none"
                             viewBox="0 0 24 24"
@@ -266,33 +203,36 @@ async function login() {
                         </svg>
 
                         <span>
-                            {{ loading ? "Signing In..." : "Sign In" }}
+                            {{
+                                auth.loading
+                                    ? "Signing In..."
+                                    : "Sign In"
+                            }}
                         </span>
-
                     </button>
 
                 </form>
 
                 <!-- Register Link -->
-                <div class="mt-6 border-t border-gray-100 pt-5 text-center">
-
+                <div
+                    class="mt-6 border-t border-gray-100 pt-5 text-center"
+                >
                     <p class="text-sm text-gray-500">
+
                         Don't have an account?
 
                         <button
                             type="button"
-                            @click="emit('show-register')"
+                            @click="showRegister"
                             class="font-medium text-gray-900 underline-offset-4 hover:underline"
                         >
-                            Register
+                            Create an account
                         </button>
-                    </p>
 
+                    </p>
                 </div>
 
             </div>
-
         </div>
-
     </div>
 </template>

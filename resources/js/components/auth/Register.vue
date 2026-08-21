@@ -1,14 +1,16 @@
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../../stores/auth";
 
-const emit = defineEmits(["registered", "show-login"]);
+const router = useRouter();
+const auth = useAuthStore();
 
 const name = ref("");
 const email = ref("");
 const password = ref("");
 const passwordConfirmation = ref("");
 
-const loading = ref(false);
 const error = ref("");
 
 const nameError = ref("");
@@ -16,37 +18,8 @@ const emailError = ref("");
 const passwordError = ref("");
 const passwordConfirmationError = ref("");
 
-async function getCsrfToken() {
-    const response = await fetch("/sanctum/csrf-cookie", {
-        method: "GET",
-        credentials: "include",
-        headers: {
-            Accept: "application/json",
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error(
-            `Unable to initialize CSRF protection. Status: ${response.status}`,
-        );
-    }
-
-    const cookie = document.cookie
-        .split("; ")
-        .find((row) => row.startsWith("XSRF-TOKEN="));
-
-    if (!cookie) {
-        throw new Error("CSRF token was not found.");
-    }
-
-    return decodeURIComponent(
-        cookie.substring("XSRF-TOKEN=".length),
-    );
-}
-
 function clearErrors() {
     error.value = "";
-
     nameError.value = "";
     emailError.value = "";
     passwordError.value = "";
@@ -73,7 +46,8 @@ async function register() {
     }
 
     if (password.value.length < 8) {
-        passwordError.value = "Password must be at least 8 characters.";
+        passwordError.value =
+            "Password must be at least 8 characters.";
         return;
     }
 
@@ -89,69 +63,47 @@ async function register() {
         return;
     }
 
-    loading.value = true;
-
     try {
-        // Get Sanctum CSRF token
-        const xsrfToken = await getCsrfToken();
-
-        // Register user
-        const response = await fetch("/api/register", {
-            method: "POST",
-            credentials: "include",
-            headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                "X-XSRF-TOKEN": xsrfToken,
-            },
-            body: JSON.stringify({
-                name: name.value.trim(),
-                email: email.value.trim(),
-                password: password.value,
-                password_confirmation:
-                    passwordConfirmation.value,
-            }),
+        await auth.register({
+            name: name.value.trim(),
+            email: email.value.trim(),
+            password: password.value,
+            password_confirmation: passwordConfirmation.value,
         });
 
-        const contentType =
-            response.headers.get("content-type") || "";
+        // Laravel already logs the user in.
+        await router.push("/products");
+    } catch (err) {
+        console.error("Registration failed:", err);
 
-        const data = contentType.includes("application/json")
-            ? await response.json()
-            : {};
+        if (err.status === 422) {
+            const errors = err.data?.errors || {};
 
-        // Laravel validation error
-        if (response.status === 422) {
-            const errors = data.errors || {};
+            nameError.value =
+                errors.name?.[0] || "";
 
-            nameError.value = errors.name?.[0] || "";
-            emailError.value = errors.email?.[0] || "";
-            passwordError.value = errors.password?.[0] || "";
+            emailError.value =
+                errors.email?.[0] || "";
+
+            passwordError.value =
+                errors.password?.[0] || "";
+
             passwordConfirmationError.value =
                 errors.password_confirmation?.[0] || "";
 
-            error.value = data.message || "";
+            error.value =
+                err.data?.message || "";
 
             return;
         }
 
-        if (!response.ok) {
-            throw new Error(
-                data.message ||
-                    `Registration failed. Status: ${response.status}`,
-            );
-        }
-
-        // Registration succeeded
-        emit("registered", data);
-    } catch (err) {
-        console.error("Registration failed:", err);
-
         error.value =
-            err.message || "Unable to create your account.";
-    } finally {
-        loading.value = false;
+            auth.error || "Unable to create your account.";
     }
+}
+
+function showLogin() {
+    router.push("/login");
 }
 </script>
 
@@ -159,7 +111,6 @@ async function register() {
     <div class="min-h-screen bg-gray-50 px-4 py-12">
         <div class="mx-auto max-w-md">
 
-            <!-- Header -->
             <div class="mb-8 text-center">
                 <h1
                     class="text-2xl font-bold tracking-tight text-gray-900"
@@ -172,7 +123,6 @@ async function register() {
                 </p>
             </div>
 
-            <!-- Register Card -->
             <div
                 class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
             >
@@ -187,7 +137,6 @@ async function register() {
                     </p>
                 </div>
 
-                <!-- Register Form -->
                 <form
                     @submit.prevent="register"
                     class="space-y-5"
@@ -206,11 +155,10 @@ async function register() {
                             id="name"
                             v-model="name"
                             type="text"
-                            name="name"
                             autocomplete="name"
                             placeholder="Enter your name"
-                            :disabled="loading"
-                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
+                            :disabled="auth.loading"
+                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-1"
                             :class="
                                 nameError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -239,11 +187,10 @@ async function register() {
                             id="email"
                             v-model="email"
                             type="email"
-                            name="email"
                             autocomplete="email"
                             placeholder="name@example.com"
-                            :disabled="loading"
-                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
+                            :disabled="auth.loading"
+                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-1"
                             :class="
                                 emailError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -272,11 +219,10 @@ async function register() {
                             id="password"
                             v-model="password"
                             type="password"
-                            name="password"
                             autocomplete="new-password"
                             placeholder="Minimum 8 characters"
-                            :disabled="loading"
-                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
+                            :disabled="auth.loading"
+                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-1"
                             :class="
                                 passwordError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -305,11 +251,10 @@ async function register() {
                             id="password_confirmation"
                             v-model="passwordConfirmation"
                             type="password"
-                            name="password_confirmation"
                             autocomplete="new-password"
                             placeholder="Re-enter your password"
-                            :disabled="loading"
-                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
+                            :disabled="auth.loading"
+                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-1"
                             :class="
                                 passwordConfirmationError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -325,15 +270,14 @@ async function register() {
                         </p>
                     </div>
 
-                    <!-- Register Button -->
+                    <!-- Register -->
                     <button
                         type="submit"
-                        :disabled="loading"
-                        class="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                        :disabled="auth.loading"
+                        class="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                        <!-- Spinner -->
                         <svg
-                            v-if="loading"
+                            v-if="auth.loading"
                             class="h-4 w-4 animate-spin"
                             fill="none"
                             viewBox="0 0 24 24"
@@ -356,15 +300,16 @@ async function register() {
 
                         <span>
                             {{
-                                loading
+                                auth.loading
                                     ? "Creating Account..."
                                     : "Create Account"
                             }}
                         </span>
                     </button>
+
                 </form>
 
-                <!-- Login Link -->
+                <!-- Login -->
                 <div
                     class="mt-6 border-t border-gray-100 pt-5 text-center"
                 >
@@ -373,7 +318,7 @@ async function register() {
 
                         <button
                             type="button"
-                            @click="emit('show-login')"
+                            @click="showLogin"
                             class="font-medium text-gray-900 underline-offset-4 hover:underline"
                         >
                             Sign in
