@@ -9,40 +9,17 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    /*
-    |--------------------------------------------------------------------------
-    | Login
-    |--------------------------------------------------------------------------
-    */
-
+    //  Login 
     public function apiLogin(Request $request)
     {
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
-
+        $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required'],]);
         if (!Auth::attempt($credentials)) {
-            return response()->json([
-                'message' => 'The provided credentials are incorrect.',
-            ], 422);
+            return response()->json(['message' => 'The provided credentials are incorrect.',], 422);
         }
-
         $request->session()->regenerate();
-
-        return response()->json([
-            'message' => 'Login successful.',
-            'user' => Auth::user(),
-        ]);
+        return response()->json(['message' => 'Login successful.', 'user' => Auth::user(),]);
     }
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Register
-    |--------------------------------------------------------------------------
-    */
-
+    //  Register
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -78,12 +55,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-
-    /*
-    |--------------------------------------------------------------------------
-    | Logout
-    |--------------------------------------------------------------------------
-    */
+    // Logout
 
     public function logout(Request $request)
     {

@@ -42,22 +42,15 @@ async function getCsrfToken() {
     return decodeURIComponent(token);
 }
 
-/*
-|--------------------------------------------------------------------------
-| Login
-|--------------------------------------------------------------------------
-*/
+//  Login
+
 async function login() {
     error.value = "";
     emailError.value = "";
     passwordError.value = "";
 
-    /*
-    |--------------------------------------------------------------------------
-    | Validation
-    |--------------------------------------------------------------------------
-    */
-
+    // Validation
+    
     if (!email.value.trim()) {
         emailError.value = "Please enter your email address.";
     }
@@ -73,18 +66,12 @@ async function login() {
     loading.value = true;
 
     try {
-        /*
-        |--------------------------------------------------------------------------
-        | 1. Get Sanctum CSRF Cookie
-        |--------------------------------------------------------------------------
-        */
+        // 1. Get Sanctum CSRF Cookie
+       
         const xsrfToken = await getCsrfToken();
 
-        /*
-        |--------------------------------------------------------------------------
-        | 2. Login
-        |--------------------------------------------------------------------------
-        */
+        // 2. Login
+       
         const response = await fetch("/api/login", {
             method: "POST",
             credentials: "include",
@@ -99,11 +86,7 @@ async function login() {
             }),
         });
 
-        /*
-        |--------------------------------------------------------------------------
-        | Read Response
-        |--------------------------------------------------------------------------
-        */
+    //    read response
         const contentType =
             response.headers.get("content-type") || "";
 
@@ -111,11 +94,7 @@ async function login() {
             ? await response.json()
             : {};
 
-        /*
-        |--------------------------------------------------------------------------
-        | Login Failed
-        |--------------------------------------------------------------------------
-        */
+    //    login failed
         if (!response.ok) {
             throw new Error(
                 data.message ||
@@ -124,7 +103,6 @@ async function login() {
         }
 
         /*
-        |--------------------------------------------------------------------------
         | Login Successful
         |
         | App.vue receives this event and changes:
@@ -132,7 +110,6 @@ async function login() {
         | isAuthenticated = true
         |
         | Then App.vue loads /api/products.
-        |--------------------------------------------------------------------------
         */
         emit("login-success", data.user || null);
 
