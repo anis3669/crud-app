@@ -10,6 +10,10 @@ export const useAuthStore = defineStore("auth", {
     }),
 
     actions: {
+        // =========================
+        // CSRF
+        // =========================
+
         async getCsrfToken() {
             const response = await fetch("/sanctum/csrf-cookie", {
                 credentials: "include",
@@ -47,6 +51,10 @@ export const useAuthStore = defineStore("auth", {
 
             return {};
         },
+
+        // =========================
+        // LOGIN
+        // =========================
 
         async login(email, password) {
             this.loading = true;
@@ -99,6 +107,10 @@ export const useAuthStore = defineStore("auth", {
             }
         },
 
+        // =========================
+        // REGISTER
+        // =========================
+
         async register(formData) {
             this.loading = true;
             this.error = "";
@@ -147,6 +159,10 @@ export const useAuthStore = defineStore("auth", {
             }
         },
 
+        // =========================
+        // CHECK AUTH
+        // =========================
+
         async checkAuth() {
             try {
                 const response = await fetch("/api/user", {
@@ -180,6 +196,206 @@ export const useAuthStore = defineStore("auth", {
                 this.initialized = true;
             }
         },
+
+        // =========================
+        // GET PROFILE
+        // =========================
+
+        async loadProfile() {
+            try {
+                const response = await fetch("/api/profile", {
+                    method: "GET",
+                    credentials: "include",
+                    headers: {
+                        Accept: "application/json",
+                    },
+                });
+
+                const data = await this.getResponseData(response);
+
+                if (!response.ok) {
+                    throw new Error(
+                        data.message ||
+                            `Unable to load profile. Status: ${response.status}`,
+                    );
+                }
+
+                this.user = data.user;
+                this.authenticated = true;
+
+                return data;
+            } catch (error) {
+                console.error("Profile loading failed:", error);
+                throw error;
+            }
+        },
+
+        // =========================
+        // UPDATE PROFILE
+        // =========================
+
+        async updateProfile(profileData) {
+            this.loading = true;
+            this.error = "";
+
+            try {
+                const xsrfToken = await this.getCsrfToken();
+
+                const response = await fetch("/api/profile", {
+                    method: "PUT",
+                    credentials: "include",
+                    headers: {
+                        "Content-Type": "application/json",
+                        Accept: "application/json",
+                        "X-XSRF-TOKEN": xsrfToken,
+                    },
+                    body: JSON.stringify({
+                        name: profileData.name,
+                        email: profileData.email,
+                    }),
+                });
+
+                const data = await this.getResponseData(response);
+
+                if (!response.ok) {
+                    const error = new Error(
+                        data.message ||
+                            `Profile update failed. Status: ${response.status}`,
+                    );
+
+                    error.status = response.status;
+                    error.data = data;
+
+                    throw error;
+                }
+
+                this.user = data.user;
+
+                return data;
+            } catch (error) {
+                this.error =
+                    error.data?.message ||
+                    error.message ||
+                    "Unable to update profile.";
+
+                throw error;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // =========================
+        // UPLOAD PROFILE PICTURE
+        // =========================
+
+        async uploadProfilePicture(file) {
+            this.loading = true;
+            this.error = "";
+
+            try {
+                const xsrfToken = await this.getCsrfToken();
+
+                const formData = new FormData();
+
+                formData.append("profile_picture", file);
+
+                const response = await fetch(
+                    "/api/profile/picture",
+                    {
+                        method: "POST",
+                        credentials: "include",
+                        headers: {
+                            Accept: "application/json",
+                            "X-XSRF-TOKEN": xsrfToken,
+                        },
+                        body: formData,
+                    },
+                );
+
+                const data = await this.getResponseData(response);
+
+                if (!response.ok) {
+                    const error = new Error(
+                        data.message ||
+                            `Profile picture upload failed. Status: ${response.status}`,
+                    );
+
+                    error.status = response.status;
+                    error.data = data;
+
+                    throw error;
+                }
+
+                this.user = data.user;
+
+                return data;
+            } catch (error) {
+                this.error =
+                    error.data?.message ||
+                    error.message ||
+                    "Unable to upload profile picture.";
+
+                throw error;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // =========================
+        // DELETE PROFILE PICTURE
+        // =========================
+
+        async deleteProfilePicture() {
+            this.loading = true;
+            this.error = "";
+
+            try {
+                const xsrfToken = await this.getCsrfToken();
+
+                const response = await fetch(
+                    "/api/profile/picture",
+                    {
+                        method: "DELETE",
+                        credentials: "include",
+                        headers: {
+                            Accept: "application/json",
+                            "X-XSRF-TOKEN": xsrfToken,
+                        },
+                    },
+                );
+
+                const data = await this.getResponseData(response);
+
+                if (!response.ok) {
+                    const error = new Error(
+                        data.message ||
+                            `Unable to remove profile picture. Status: ${response.status}`,
+                    );
+
+                    error.status = response.status;
+                    error.data = data;
+
+                    throw error;
+                }
+
+                this.user = data.user;
+
+                return data;
+            } catch (error) {
+                this.error =
+                    error.data?.message ||
+                    error.message ||
+                    "Unable to remove profile picture.";
+
+                throw error;
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        // =========================
+        // LOGOUT
+        // =========================
 
         async logout() {
             try {

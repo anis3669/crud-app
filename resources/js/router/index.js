@@ -1,19 +1,20 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { createRouter, createWebHistory } from "vue-router";
+import { useAuthStore } from "../stores/auth";
 
 // Auth
-import Login from '../components/auth/Login.vue'
-import Register from '../components/auth/Register.vue'
+import Login from "../components/auth/Login.vue";
+import Register from "../components/auth/Register.vue";
 
 // Layout
-import Applayout from '../components/layout/Applayout.vue'
+import Applayout from "../components/layout/Applayout.vue";
 
 // Products
-import ProductIndex from '../components/products/ProductIndex.vue'
-import ProductCreate from '../components/products/ProductCreate.vue'
-import ProductView from '../components/products/ProductView.vue'
-import ProductEdit from '../components/products/ProductEdit.vue'
-import BulkEdit from '../components/products/BulkEdit.vue'
+import ProductIndex from "../components/products/ProductIndex.vue";
+import ProductCreate from "../components/products/ProductCreate.vue";
+import ProductView from "../components/products/ProductView.vue";
+import ProductEdit from "../components/products/ProductEdit.vue";
+import BulkEdit from "../components/products/BulkEdit.vue";
+import Profile from "../components/profile/Profile.vue";
 
 const routes = [
     // ==============================
@@ -21,8 +22,8 @@ const routes = [
     // ==============================
 
     {
-        path: '/login',
-        name: 'login',
+        path: "/login",
+        name: "login",
         component: Login,
         meta: {
             guest: true,
@@ -30,8 +31,8 @@ const routes = [
     },
 
     {
-        path: '/register',
-        name: 'register',
+        path: "/register",
+        name: "register",
         component: Register,
         meta: {
             guest: true,
@@ -43,7 +44,7 @@ const routes = [
     // ==============================
 
     {
-        path: '/',
+        path: "/",
         component: Applayout,
         meta: {
             requiresAuth: true,
@@ -52,45 +53,51 @@ const routes = [
         children: [
             // / → /products
             {
-                path: '',
+                path: "",
                 redirect: {
-                    name: 'products.index',
+                    name: "products.index",
                 },
             },
 
             // /products
             {
-                path: 'products',
-                name: 'products.index',
+                path: "products",
+                name: "products.index",
                 component: ProductIndex,
             },
 
             // /products/create
             {
-                path: 'products/create',
-                name: 'products.create',
+                path: "products/create",
+                name: "products.create",
                 component: ProductCreate,
             },
 
             // /products/bulk-edit
             {
-                path: 'products/bulk-edit',
-                name: 'products.bulk-edit',
+                path: "products/bulk-edit",
+                name: "products.bulk-edit",
                 component: BulkEdit,
             },
 
             // /products/:id/edit
             {
-                path: 'products/:id/edit',
-                name: 'products.edit',
+                path: "products/:id/edit",
+                name: "products.edit",
                 component: ProductEdit,
             },
 
             // /products/:id
             {
-                path: 'products/:id',
-                name: 'products.view',
+                path: "products/:id",
+                name: "products.view",
                 component: ProductView,
+            },
+            // /profile
+            {
+                path: "profile",
+                name: "profile",
+                component: Profile,
             },
         ],
     },
@@ -100,12 +107,12 @@ const routes = [
     // ==============================
 
     {
-        path: '/:pathMatch(.*)*',
+        path: "/:pathMatch(.*)*",
         redirect: {
-            name: 'products.index',
+            name: "products.index",
         },
     },
-]
+];
 
 const router = createRouter({
     history: createWebHistory(),
@@ -114,43 +121,37 @@ const router = createRouter({
     scrollBehavior() {
         return {
             top: 0,
-        }
+        };
     },
-})
+});
 
 // ==============================
 // Authentication Guard
 // ==============================
 
 router.beforeEach(async (to) => {
-    const authStore = useAuthStore()
+    const authStore = useAuthStore();
 
     // Check authentication once
     if (!authStore.initialized) {
-        await authStore.checkAuth()
+        await authStore.checkAuth();
     }
 
     // Protected route
-    if (
-        to.meta.requiresAuth &&
-        !authStore.authenticated
-    ) {
+    if (to.meta.requiresAuth && !authStore.authenticated) {
         return {
-            name: 'login',
-        }
+            name: "login",
+        };
     }
 
     // Guest route while already logged in
-    if (
-        to.meta.guest &&
-        authStore.authenticated
-    ) {
+    if (to.meta.guest && authStore.authenticated) {
         return {
-            name: 'products.index',
-        }
+            name: "products.index",
+        };
     }
 
-    return true
-})
+    return true;
+});
 
-export default router
+export default router;

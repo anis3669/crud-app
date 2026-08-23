@@ -9,11 +9,7 @@ const authStore = useAuthStore()
 const showProfileMenu = ref(false)
 const profileMenuRef = ref(null)
 
-/*
-|--------------------------------------------------------------------------
-| Navigation
-|--------------------------------------------------------------------------
-*/
+// navigation
 
 function goToProducts() {
     showProfileMenu.value = false
