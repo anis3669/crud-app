@@ -4,6 +4,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\ProductApiController;
+use App\Http\Controllers\ProfileController;
 
 // Authentication
 Route::post('/login', [AuthController::class, 'apiLogin']);
@@ -18,6 +19,11 @@ Route::get('/user', function (Request $request) {
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
+    // Profile
+Route::get('/profile', [ProfileController::class, 'show']);
+Route::put('/profile', [ProfileController::class, 'update']);
+Route::post('/profile/picture', [ProfileController::class, 'uploadPicture']);
+Route::delete('/profile/picture', [ProfileController::class, 'deletePicture']);
 
     // Bulk actions
     Route::delete(
