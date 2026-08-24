@@ -1,47 +1,102 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+
 import { useProductStore } from '../../stores/product'
+
+import BaseButton from '../common/BaseButton.vue'
+import BaseCard from '../common/BaseCard.vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
+
+/*
+|--------------------------------------------------------------------------
+| State
+|--------------------------------------------------------------------------
+*/
 
 const products = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 
-// Load selected products
+/*
+|--------------------------------------------------------------------------
+| Load Selected Products
+|--------------------------------------------------------------------------
+*/
+
 async function fetchProducts() {
     loading.value = true
     error.value = ''
 
     try {
+        /*
+        |--------------------------------------------------------------------------
+        | Get selected product IDs
+        |--------------------------------------------------------------------------
+        |
+        | ProductIndex.vue sends:
+        |
+        | ?selected_products=1,2,3
+        |
+        */
+
         let ids = route.query.selected_products
+
+        /*
+        |--------------------------------------------------------------------------
+        | Check selection
+        |--------------------------------------------------------------------------
+        */
 
         if (!ids) {
             error.value = 'No products were selected.'
             return
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Convert query parameter to array
+        |--------------------------------------------------------------------------
+        */
+
         if (!Array.isArray(ids)) {
             ids = String(ids).split(',')
         }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Convert IDs to numbers
+        |--------------------------------------------------------------------------
+        */
 
         ids = ids
             .map(id => Number(id))
             .filter(id => !Number.isNaN(id))
 
         if (ids.length === 0) {
-            error.value = 'No valid products were selected.'
+            error.value =
+                'No valid products were selected.'
             return
         }
 
-        // Load products through Pinia store
+        /*
+        |--------------------------------------------------------------------------
+        | Fetch all products through Pinia
+        |--------------------------------------------------------------------------
+        */
+
         await productStore.fetchProducts()
 
-        // Get only the selected products
+        /*
+        |--------------------------------------------------------------------------
+        | Select only requested products
+        |--------------------------------------------------------------------------
+        */
+
         products.value = productStore.products
             .filter(product =>
                 ids.includes(Number(product.id))
@@ -54,11 +109,28 @@ async function fetchProducts() {
                 quantity: product.quantity ?? '',
             }))
 
+        /*
+        |--------------------------------------------------------------------------
+        | Check result
+        |--------------------------------------------------------------------------
+        */
+
         if (products.value.length === 0) {
-            error.value = 'Selected products could not be found.'
+            error.value =
+                'Selected products could not be found.'
         }
+
     } catch (err) {
-        console.error('Failed to load products:', err)
+        console.error(
+            'Failed to load products:',
+            err
+        )
+
+        /*
+        |--------------------------------------------------------------------------
+        | Unauthorized
+        |--------------------------------------------------------------------------
+        */
 
         if (err.response?.status === 401) {
             router.push({
@@ -68,30 +140,69 @@ async function fetchProducts() {
             return
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Other Error
+        |--------------------------------------------------------------------------
+        */
+
         error.value =
             err.response?.data?.message ||
             err.message ||
+            productStore.error ||
             'Failed to load selected products.'
+
     } finally {
         loading.value = false
     }
 }
 
-// Save bulk changes
+/*
+|--------------------------------------------------------------------------
+| Save Changes
+|--------------------------------------------------------------------------
+*/
+
 async function saveChanges() {
     error.value = ''
 
+    /*
+    |--------------------------------------------------------------------------
+    | Check Products
+    |--------------------------------------------------------------------------
+    */
+
     if (products.value.length === 0) {
-        error.value = 'There are no products to update.'
+        error.value =
+            'There are no products to update.'
         return
     }
 
-    // Basic validation
+    /*
+    |--------------------------------------------------------------------------
+    | Validation
+    |--------------------------------------------------------------------------
+    */
+
     for (const product of products.value) {
+
+        /*
+        |----------------------------------------------------------------------
+        | Name
+        |----------------------------------------------------------------------
+        */
+
         if (!product.name.trim()) {
-            error.value = 'Product name cannot be empty.'
+            error.value =
+                'Product name cannot be empty.'
             return
         }
+
+        /*
+        |----------------------------------------------------------------------
+        | Price
+        |----------------------------------------------------------------------
+        */
 
         if (
             product.price === '' ||
@@ -99,8 +210,15 @@ async function saveChanges() {
         ) {
             error.value =
                 `Please enter a valid price for "${product.name}".`
+
             return
         }
+
+        /*
+        |----------------------------------------------------------------------
+        | Quantity
+        |----------------------------------------------------------------------
+        */
 
         if (
             product.quantity === '' ||
@@ -108,6 +226,7 @@ async function saveChanges() {
         ) {
             error.value =
                 `Please enter a valid quantity for "${product.name}".`
+
             return
         }
     }
@@ -115,24 +234,53 @@ async function saveChanges() {
     saving.value = true
 
     try {
-        // Prepare data for bulk update
-        const updatedProducts = products.value.map(product => ({
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            price: Number(product.price),
-            quantity: Number(product.quantity),
-        }))
+        /*
+        |--------------------------------------------------------------------------
+        | Prepare Data
+        |--------------------------------------------------------------------------
+        */
 
-        // Use Pinia bulkUpdate action
-        await productStore.bulkUpdate(updatedProducts)
+        const updatedProducts =
+            products.value.map(product => ({
+                id: product.id,
+                name: product.name.trim(),
+                description:
+                    product.description?.trim() || '',
+                price: Number(product.price),
+                quantity: Number(product.quantity),
+            }))
 
-        // Go back to products after successful update
+        /*
+        |--------------------------------------------------------------------------
+        | Update Through Pinia
+        |--------------------------------------------------------------------------
+        */
+
+        await productStore.bulkUpdate(
+            updatedProducts
+        )
+
+        /*
+        |--------------------------------------------------------------------------
+        | Success
+        |--------------------------------------------------------------------------
+        */
+
         await router.push({
             name: 'products.index',
         })
+
     } catch (err) {
-        console.error('Bulk update failed:', err)
+        console.error(
+            'Bulk update failed:',
+            err
+        )
+
+        /*
+        |--------------------------------------------------------------------------
+        | Unauthorized
+        |--------------------------------------------------------------------------
+        */
 
         if (err.response?.status === 401) {
             router.push({
@@ -142,16 +290,23 @@ async function saveChanges() {
             return
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Validation Error
+        |--------------------------------------------------------------------------
+        */
+
         if (err.response?.status === 422) {
             const validationErrors =
                 err.response.data?.errors
 
             if (validationErrors) {
-                error.value = Object.values(
-                    validationErrors
-                )
-                    .flat()
-                    .join(' ')
+                error.value =
+                    Object.values(
+                        validationErrors
+                    )
+                        .flat()
+                        .join(' ')
             } else {
                 error.value =
                     err.response.data?.message ||
@@ -161,23 +316,41 @@ async function saveChanges() {
             return
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Other Error
+        |--------------------------------------------------------------------------
+        */
+
         error.value =
             err.response?.data?.message ||
             err.message ||
+            productStore.error ||
             'Failed to update selected products.'
+
     } finally {
         saving.value = false
     }
 }
 
-// Cancel
+/*
+|--------------------------------------------------------------------------
+| Cancel
+|--------------------------------------------------------------------------
+*/
+
 function cancel() {
     router.push({
         name: 'products.index',
     })
 }
 
-// Lifecycle
+/*
+|--------------------------------------------------------------------------
+| Initial Load
+|--------------------------------------------------------------------------
+*/
+
 onMounted(() => {
     fetchProducts()
 })
@@ -188,7 +361,7 @@ onMounted(() => {
 
         <!-- Header -->
         <div
-            class="mb-8 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"
+            class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
         >
             <div>
                 <h1
@@ -202,64 +375,79 @@ onMounted(() => {
                 </p>
             </div>
 
-            <button
+            <!-- Back -->
+            <BaseButton
                 type="button"
+                variant="secondary"
+                :disabled="saving"
                 @click="cancel"
-                class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
             >
                 Back to Products
-            </button>
+            </BaseButton>
         </div>
 
         <!-- Loading -->
-        <div
+        <BaseCard
             v-if="loading"
-            class="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm"
+            class="py-16"
         >
             <div
-                class="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900"
-            ></div>
+                class="flex flex-col items-center justify-center"
+            >
+                <div
+                    class="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900"
+                ></div>
 
-            <p class="text-sm text-gray-500">
-                Loading selected products...
-            </p>
-        </div>
+                <p
+                    class="mt-4 text-sm text-gray-500"
+                >
+                    Loading selected products...
+                </p>
+            </div>
+        </BaseCard>
 
         <!-- Error -->
-        <div
+        <BaseCard
             v-else-if="error"
-            class="rounded-xl border border-red-200 bg-red-50 px-6 py-8 text-center"
+            class="border-red-200 bg-red-50"
         >
-            <div
-                class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-red-100"
-            >
-                <svg
-                    class="h-5 w-5 text-red-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+            <div class="text-center">
+
+                <!-- Error Icon -->
+                <div
+                    class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-red-100"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 9v4m0 4h.01M10.29 3.86l-8.09 14a2 2 0 001.73 3h16.14a2 2 0 001.73-3l-8.09-14a2 2 0 00-3.42 0z"
-                    />
-                </svg>
+                    <svg
+                        class="h-5 w-5 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v4m0 4h.01M10.29 3.86l-8.09 14a2 2 0 001.73 3h16.14a2 2 0 001.73 3l-8.09-14a2 2 0 00-3.42 0z"
+                        />
+                    </svg>
+                </div>
+
+                <p
+                    class="mt-3 text-sm font-medium text-red-700"
+                >
+                    {{ error }}
+                </p>
+
+                <BaseButton
+                    type="button"
+                    class="mt-4"
+                    @click="fetchProducts"
+                >
+                    Try Again
+                </BaseButton>
+
             </div>
-
-            <p class="mt-3 text-sm font-medium text-red-700">
-                {{ error }}
-            </p>
-
-            <button
-                type="button"
-                @click="fetchProducts"
-                class="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
-            >
-                Try Again
-            </button>
-        </div>
+        </BaseCard>
 
         <!-- Edit Form -->
         <form
@@ -269,10 +457,10 @@ onMounted(() => {
         >
 
             <!-- Products -->
-            <div
+            <BaseCard
                 v-for="(product, index) in products"
                 :key="product.id"
-                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+                class="p-6"
             >
 
                 <!-- Product Header -->
@@ -307,30 +495,36 @@ onMounted(() => {
                 <!-- Name -->
                 <div class="mb-5">
                     <label
+                        :for="`name-${product.id}`"
                         class="mb-2 block text-sm font-semibold text-gray-700"
                     >
                         Product Name
                     </label>
 
                     <input
+                        :id="`name-${product.id}`"
                         v-model="product.name"
                         type="text"
-                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                        :disabled="saving"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                     />
                 </div>
 
                 <!-- Description -->
                 <div class="mb-5">
                     <label
+                        :for="`description-${product.id}`"
                         class="mb-2 block text-sm font-semibold text-gray-700"
                     >
                         Description
                     </label>
 
                     <textarea
+                        :id="`description-${product.id}`"
                         v-model="product.description"
                         rows="3"
-                        class="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                        :disabled="saving"
+                        class="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                     ></textarea>
                 </div>
 
@@ -342,75 +536,79 @@ onMounted(() => {
                     <!-- Price -->
                     <div>
                         <label
+                            :for="`price-${product.id}`"
                             class="mb-2 block text-sm font-semibold text-gray-700"
                         >
                             Price
                         </label>
 
                         <input
+                            :id="`price-${product.id}`"
                             v-model="product.price"
                             type="number"
                             min="0"
                             step="0.01"
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                            :disabled="saving"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                         />
                     </div>
 
                     <!-- Quantity -->
                     <div>
                         <label
+                            :for="`quantity-${product.id}`"
                             class="mb-2 block text-sm font-semibold text-gray-700"
                         >
                             Quantity
                         </label>
 
                         <input
+                            :id="`quantity-${product.id}`"
                             v-model="product.quantity"
                             type="number"
                             min="0"
                             step="1"
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                            :disabled="saving"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                         />
                     </div>
 
                 </div>
-            </div>
+
+            </BaseCard>
 
             <!-- Bottom Actions -->
-            <div
-                class="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-6 py-4 shadow-sm"
+            <BaseCard
+                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >
+
                 <p class="text-sm text-gray-500">
                     {{ products.length }}
                     product{{ products.length !== 1 ? 's' : '' }}
                     selected
                 </p>
 
-                <div class="flex gap-3">
+                <div class="flex justify-end gap-3">
 
-                    <button
+                    <BaseButton
                         type="button"
-                        @click="cancel"
+                        variant="secondary"
                         :disabled="saving"
-                        class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        @click="cancel"
                     >
                         Cancel
-                    </button>
+                    </BaseButton>
 
-                    <button
+                    <BaseButton
                         type="submit"
-                        :disabled="saving"
-                        class="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        :loading="saving"
                     >
-                        {{
-                            saving
-                                ? 'Saving Changes...'
-                                : 'Save Changes'
-                        }}
-                    </button>
+                        Save Changes
+                    </BaseButton>
 
                 </div>
-            </div>
+
+            </BaseCard>
 
         </form>
 

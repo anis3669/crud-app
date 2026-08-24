@@ -3,14 +3,26 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '../../stores/product'
 
+import BaseButton from '../common/BaseButton.vue'
+import BaseCard from '../common/BaseCard.vue'
+import BaseModal from '../common/BaseModal.vue'
+
 const route = useRoute()
 const router = useRouter()
-
 const productStore = useProductStore()
+
+/*
+|--------------------------------------------------------------------------
+| State
+|--------------------------------------------------------------------------
+*/
 
 const product = ref(null)
 const loading = ref(true)
 const error = ref(null)
+
+const showDeleteModal = ref(false)
+const deleting = ref(false)
 
 /*
 |--------------------------------------------------------------------------
@@ -23,7 +35,7 @@ const stockStatus = computed(() => {
         return null
     }
 
-    const quantity = Number(product.value.quantity)
+    const quantity = Number(product.value.quantity) || 0
 
     if (quantity === 0) {
         return {
@@ -63,7 +75,10 @@ async function fetchProduct() {
             route.params.id
         )
     } catch (err) {
-        console.error('Failed to load product:', err)
+        console.error(
+            'Failed to load product:',
+            err
+        )
 
         if (err.response?.status === 404) {
             error.value = 'Product not found.'
@@ -74,7 +89,9 @@ async function fetchProduct() {
 
             return
         } else {
-            error.value = 'Failed to load product.'
+            error.value =
+                err.response?.data?.message ||
+                'Failed to load product.'
         }
     } finally {
         loading.value = false
@@ -114,7 +131,89 @@ function editProduct() {
 
 /*
 |--------------------------------------------------------------------------
-| Load
+| Delete Product
+|--------------------------------------------------------------------------
+*/
+
+function openDeleteModal() {
+    if (!product.value) {
+        return
+    }
+
+    showDeleteModal.value = true
+}
+
+function closeDeleteModal() {
+    if (deleting.value) {
+        return
+    }
+
+    showDeleteModal.value = false
+}
+
+async function confirmDelete() {
+    if (!product.value) {
+        return
+    }
+
+    deleting.value = true
+
+    try {
+        await productStore.deleteProduct(
+            product.value.id
+        )
+
+        showDeleteModal.value = false
+
+        router.push({
+            name: 'products.index',
+        })
+    } catch (err) {
+        console.error(
+            'Delete product error:',
+            err
+        )
+
+        if (err.response?.status === 401) {
+            router.push({
+                name: 'login',
+            })
+
+            return
+        }
+
+        error.value =
+            err.response?.data?.message ||
+            'Failed to delete product.'
+
+        showDeleteModal.value = false
+    } finally {
+        deleting.value = false
+    }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Price Formatting
+|--------------------------------------------------------------------------
+*/
+
+function formatPrice(price) {
+    const amount = Number(price)
+
+    if (Number.isNaN(amount)) {
+        return '0.00'
+    }
+
+    return amount.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })
+}
+
+/*
+|--------------------------------------------------------------------------
+| Initial Load
 |--------------------------------------------------------------------------
 */
 
@@ -127,104 +226,214 @@ onMounted(() => {
     <div class="mx-auto max-w-4xl">
 
         <!-- Loading -->
-        <div
+        <BaseCard
             v-if="loading"
-            class="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm"
+            class="py-16"
         >
-            <p class="text-sm text-gray-500">
-                Loading product...
-            </p>
-        </div>
+            <div
+                class="flex flex-col items-center justify-center"
+            >
+                <svg
+                    class="h-8 w-8 animate-spin text-gray-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                    />
+
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                </svg>
+
+                <p
+                    class="mt-4 text-sm text-gray-500"
+                >
+                    Loading product...
+                </p>
+            </div>
+        </BaseCard>
 
         <!-- Error -->
-        <div
+        <BaseCard
             v-else-if="error"
-            class="rounded-xl border border-red-200 bg-red-50 px-6 py-8 text-center"
+            class="border-red-200 bg-red-50"
         >
-            <p class="text-sm font-medium text-red-700">
-                {{ error }}
-            </p>
+            <div class="py-4 text-center">
 
-            <button
-                type="button"
-                @click="back"
-                class="mt-4 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
-            >
-                Back to Products
-            </button>
-        </div>
+                <div
+                    class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100"
+                >
+                    <svg
+                        class="h-6 w-6 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
+                        />
+                    </svg>
+                </div>
+
+                <h2
+                    class="mt-4 text-lg font-semibold text-red-800"
+                >
+                    Unable to load product
+                </h2>
+
+                <p
+                    class="mt-1 text-sm text-red-700"
+                >
+                    {{ error }}
+                </p>
+
+                <div
+                    class="mt-5 flex justify-center gap-3"
+                >
+                    <BaseButton
+                        type="button"
+                        variant="secondary"
+                        @click="back"
+                    >
+                        Back to Products
+                    </BaseButton>
+
+                    <BaseButton
+                        type="button"
+                        @click="fetchProduct"
+                    >
+                        Try Again
+                    </BaseButton>
+                </div>
+
+            </div>
+        </BaseCard>
 
         <!-- Product -->
         <template v-else-if="product">
 
             <!-- Back -->
-            <button
-                type="button"
-                @click="back"
-                class="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900"
-            >
-                <svg
-                    class="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 19l-7-7 7-7"
-                    />
-                </svg>
+            <div class="mb-6">
 
-                Back to Products
-            </button>
+                <BaseButton
+                    type="button"
+                    variant="secondary"
+                    @click="back"
+                >
+                    <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 19l-7-7 7-7"
+                        />
+                    </svg>
+
+                    Back to Products
+                </BaseButton>
+
+            </div>
 
             <!-- Header -->
             <div
                 class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
             >
+
                 <div class="flex items-center gap-3">
 
+                    <!-- Product Initial -->
                     <div
                         class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-lg font-bold text-gray-700"
                     >
-                        {{ product.name?.charAt(0)?.toUpperCase() }}
+                        {{
+                            product.name
+                                ?.charAt(0)
+                                ?.toUpperCase()
+                        }}
                     </div>
 
+                    <!-- Product Title -->
                     <div>
+
                         <h1
                             class="text-2xl font-bold tracking-tight text-gray-900"
                         >
                             {{ product.name }}
                         </h1>
 
-                        <p class="mt-1 text-sm text-gray-500">
+                        <p
+                            class="mt-1 text-sm text-gray-500"
+                        >
                             Product #{{ product.id }}
                         </p>
+
                     </div>
 
                 </div>
 
-                <!-- Edit -->
-                <button
-                    type="button"
-                    @click="editProduct"
-                    class="inline-flex items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
-                >
-                    Edit Product
-                </button>
+                <!-- Actions -->
+                <div class="flex items-center gap-3">
+
+                    <!-- Edit -->
+                    <BaseButton
+                        type="button"
+                        @click="editProduct"
+                    >
+                        <svg
+                            class="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.5-8.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 8.5-8.5z"
+                            />
+                        </svg>
+
+                        Edit Product
+                    </BaseButton>
+
+                    <!-- Delete -->
+                    <BaseButton
+                        type="button"
+                        variant="danger"
+                        @click="openDeleteModal"
+                    >
+                        Delete Product
+                    </BaseButton>
+
+                </div>
+
             </div>
 
-            <!-- Product Card -->
-            <div
-                class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
-            >
+            <!-- Product Information -->
+            <BaseCard class="overflow-hidden p-0">
 
                 <!-- Description -->
                 <div
                     class="border-b border-gray-100 px-6 py-6"
                 >
+
                     <h2
                         class="text-sm font-semibold text-gray-900"
                     >
@@ -239,6 +448,7 @@ onMounted(() => {
                             'No description available.'
                         }}
                     </p>
+
                 </div>
 
                 <!-- Product Information -->
@@ -248,6 +458,7 @@ onMounted(() => {
 
                     <!-- Price -->
                     <div class="bg-white px-6 py-6">
+
                         <p
                             class="text-xs font-semibold uppercase tracking-wide text-gray-500"
                         >
@@ -258,20 +469,14 @@ onMounted(() => {
                             class="mt-2 text-2xl font-bold text-gray-900"
                         >
                             Rs.
-                            {{
-                                Number(product.price).toLocaleString(
-                                    'en-US',
-                                    {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                    }
-                                )
-                            }}
+                            {{ formatPrice(product.price) }}
                         </p>
+
                     </div>
 
                     <!-- Quantity -->
                     <div class="bg-white px-6 py-6">
+
                         <p
                             class="text-xs font-semibold uppercase tracking-wide text-gray-500"
                         >
@@ -283,12 +488,14 @@ onMounted(() => {
                         >
                             {{ product.quantity }}
                         </p>
+
                     </div>
 
                     <!-- Stock Status -->
                     <div
                         class="bg-white px-6 py-6 sm:col-span-2"
                     >
+
                         <p
                             class="text-xs font-semibold uppercase tracking-wide text-gray-500"
                         >
@@ -307,12 +514,101 @@ onMounted(() => {
 
                             {{ stockStatus.label }}
                         </span>
+
                     </div>
 
                 </div>
-            </div>
+
+            </BaseCard>
 
         </template>
+
+        <!-- Delete Confirmation Modal -->
+        <BaseModal
+            :show="showDeleteModal"
+            title="Delete Product"
+            size="sm"
+            @close="closeDeleteModal"
+        >
+            <!-- Modal Body -->
+            <div class="text-center">
+
+                <!-- Warning Icon -->
+                <div
+                    class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100"
+                >
+                    <svg
+                        class="h-6 w-6 text-red-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
+                        />
+                    </svg>
+                </div>
+
+                <h3
+                    class="mt-4 text-lg font-semibold text-gray-900"
+                >
+                    Delete Product?
+                </h3>
+
+                <p
+                    class="mt-2 text-sm leading-6 text-gray-500"
+                >
+                    Are you sure you want to delete
+
+                    <span
+                        class="font-semibold text-gray-700"
+                    >
+                        {{ product?.name }}
+                    </span>
+
+                   ?
+
+                    This action cannot be undone.
+                </p>
+
+            </div>
+
+            <!-- Modal Footer -->
+            <template #footer>
+
+                <div
+                    class="flex justify-end gap-3"
+                >
+
+                    <BaseButton
+                        type="button"
+                        variant="secondary"
+                        :disabled="deleting"
+                        @click="closeDeleteModal"
+                    >
+                        Cancel
+                    </BaseButton>
+
+                    <BaseButton
+                        type="button"
+                        variant="danger"
+                        :disabled="deleting"
+                        @click="confirmDelete"
+                    >
+                        {{
+                            deleting
+                                ? 'Deleting...'
+                                : 'Delete Product'
+                        }}
+                    </BaseButton>
+
+                </div>
+
+            </template>
+        </BaseModal>
 
     </div>
 </template>
