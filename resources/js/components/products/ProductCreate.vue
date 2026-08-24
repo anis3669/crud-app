@@ -3,6 +3,9 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProductStore } from '../../stores/product'
 
+import BaseButton from '../common/BaseButton.vue'
+import BaseCard from '../common/BaseCard.vue'
+
 const router = useRouter()
 const productStore = useProductStore()
 
@@ -19,11 +22,13 @@ const error = ref('')
 async function submitForm() {
     error.value = ''
 
+    // Validate product name
     if (!form.value.name.trim()) {
         error.value = 'Please enter a product name.'
         return
     }
 
+    // Validate price
     if (
         form.value.price === '' ||
         Number(form.value.price) < 0
@@ -32,6 +37,7 @@ async function submitForm() {
         return
     }
 
+    // Validate quantity
     if (
         form.value.quantity === '' ||
         Number(form.value.quantity) < 0
@@ -44,8 +50,8 @@ async function submitForm() {
 
     try {
         await productStore.createProduct({
-            name: form.value.name,
-            description: form.value.description,
+            name: form.value.name.trim(),
+            description: form.value.description.trim(),
             price: Number(form.value.price),
             quantity: Number(form.value.quantity),
         })
@@ -57,6 +63,7 @@ async function submitForm() {
     } catch (err) {
         console.error('Create product error:', err)
 
+        // Validation error
         if (err.response?.status === 422) {
             const errors = err.response.data?.errors
 
@@ -69,18 +76,24 @@ async function submitForm() {
                     err.response.data?.message ||
                     'Validation failed.'
             }
-        } else if (err.response?.status === 401) {
+
+            return
+        }
+
+        // Unauthorized
+        if (err.response?.status === 401) {
             router.push({
                 name: 'login',
             })
 
             return
-        } else {
-            error.value =
-                err.response?.data?.message ||
-                productStore.error ||
-                'Failed to create product.'
         }
+
+        // Other errors
+        error.value =
+            err.response?.data?.message ||
+            productStore.error ||
+            'Failed to create product.'
     } finally {
         loading.value = false
     }
@@ -98,7 +111,9 @@ function cancel() {
 
         <!-- Header -->
         <div class="mb-8">
-            <h1 class="text-2xl font-bold tracking-tight text-gray-900">
+            <h1
+                class="text-2xl font-bold tracking-tight text-gray-900"
+            >
                 Add Product
             </h1>
 
@@ -115,110 +130,114 @@ function cancel() {
             {{ error }}
         </div>
 
-        <!-- Form -->
-        <form
-            @submit.prevent="submitForm"
-            class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
-        >
+        <!-- Card -->
+        <BaseCard>
 
-            <!-- Name -->
-            <div class="mb-5">
-                <label
-                    for="name"
-                    class="mb-2 block text-sm font-semibold text-gray-700"
-                >
-                    Product Name
-                </label>
+            <!-- Form -->
+            <form
+                @submit.prevent="submitForm"
+            >
 
-                <input
-                    id="name"
-                    v-model="form.name"
-                    type="text"
-                    placeholder="Enter product name"
-                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                />
-            </div>
+                <!-- Name -->
+                <div class="mb-5">
+                    <label
+                        for="name"
+                        class="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                        Product Name
+                    </label>
 
-            <!-- Description -->
-            <div class="mb-5">
-                <label
-                    for="description"
-                    class="mb-2 block text-sm font-semibold text-gray-700"
-                >
-                    Description
-                </label>
+                    <input
+                        id="name"
+                        v-model="form.name"
+                        type="text"
+                        placeholder="Enter product name"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                    />
+                </div>
 
-                <textarea
-                    id="description"
-                    v-model="form.description"
-                    rows="4"
-                    placeholder="Enter product description"
-                    class="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                ></textarea>
-            </div>
+                <!-- Description -->
+                <div class="mb-5">
+                    <label
+                        for="description"
+                        class="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                        Description
+                    </label>
 
-            <!-- Price -->
-            <div class="mb-5">
-                <label
-                    for="price"
-                    class="mb-2 block text-sm font-semibold text-gray-700"
-                >
-                    Price
-                </label>
+                    <textarea
+                        id="description"
+                        v-model="form.description"
+                        rows="4"
+                        placeholder="Enter product description"
+                        class="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                    ></textarea>
+                </div>
 
-                <input
-                    id="price"
-                    v-model="form.price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                />
-            </div>
+                <!-- Price -->
+                <div class="mb-5">
+                    <label
+                        for="price"
+                        class="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                        Price
+                    </label>
 
-            <!-- Quantity -->
-            <div class="mb-8">
-                <label
-                    for="quantity"
-                    class="mb-2 block text-sm font-semibold text-gray-700"
-                >
-                    Quantity
-                </label>
+                    <input
+                        id="price"
+                        v-model="form.price"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                    />
+                </div>
 
-                <input
-                    id="quantity"
-                    v-model="form.quantity"
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="0"
-                    class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                />
-            </div>
+                <!-- Quantity -->
+                <div class="mb-8">
+                    <label
+                        for="quantity"
+                        class="mb-2 block text-sm font-semibold text-gray-700"
+                    >
+                        Quantity
+                    </label>
 
-            <!-- Actions -->
-            <div class="flex justify-end gap-3">
+                    <input
+                        id="quantity"
+                        v-model="form.quantity"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="0"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                    />
+                </div>
 
-                <button
-                    type="button"
-                    @click="cancel"
-                    :disabled="loading"
-                    class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    Cancel
-                </button>
+                <!-- Actions -->
+                <div class="flex justify-end gap-3">
 
-                <button
-                    type="submit"
-                    :disabled="loading"
-                    class="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {{ loading ? 'Creating...' : 'Create Product' }}
-                </button>
+                    <BaseButton
+                        type="button"
+                        variant="secondary"
+                        :disabled="loading"
+                        @click="cancel"
+                    >
+                        Cancel
+                    </BaseButton>
 
-            </div>
-        </form>
+                    <BaseButton
+                        type="submit"
+                        :loading="loading"
+                    >
+                        Create Product
+                    </BaseButton>
+
+                </div>
+
+            </form>
+
+        </BaseCard>
 
     </div>
 </template>

@@ -3,6 +3,9 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '../../stores/product'
 
+import BaseButton from '../common/BaseButton.vue'
+import BaseCard from '../common/BaseCard.vue'
+
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
@@ -50,6 +53,11 @@ async function fetchProduct() {
                 name: 'login',
             })
 
+            return
+        }
+
+        if (err.response?.status === 404) {
+            error.value = 'Product not found.'
             return
         }
 
@@ -107,7 +115,6 @@ async function submitForm() {
             }
         )
 
-        // Update successful
         router.push({
             name: 'products.view',
             params: {
@@ -143,9 +150,9 @@ async function submitForm() {
             return
         }
 
-        // Other errors
         error.value =
             err.response?.data?.message ||
+            productStore.error ||
             'Failed to update product.'
     } finally {
         saving.value = false
@@ -180,41 +187,86 @@ onMounted(fetchProduct)
     <div class="mx-auto max-w-3xl">
 
         <!-- Loading -->
-        <div
+        <BaseCard
             v-if="loading"
-            class="rounded-xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm"
+            class="py-16"
         >
-            <p class="text-sm text-gray-500">
-                Loading product...
-            </p>
-        </div>
+            <div class="flex flex-col items-center justify-center">
+
+                <svg
+                    class="h-8 w-8 animate-spin text-gray-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                >
+                    <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                    />
+
+                    <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                    />
+                </svg>
+
+                <p class="mt-4 text-sm text-gray-500">
+                    Loading product...
+                </p>
+
+            </div>
+        </BaseCard>
 
         <!-- Content -->
         <template v-else>
 
             <!-- Header -->
             <div class="mb-8">
-                <h1 class="text-2xl font-bold tracking-tight text-gray-900">
+
+                <h1
+                    class="text-2xl font-bold tracking-tight text-gray-900"
+                >
                     Edit Product
                 </h1>
 
                 <p class="mt-1 text-sm text-gray-500">
                     Update the product information below.
                 </p>
+
             </div>
 
             <!-- Error -->
-            <div
+            <BaseCard
                 v-if="error"
-                class="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                class="mb-6 border-red-200 bg-red-50"
             >
-                {{ error }}
-            </div>
+                <div
+                    class="flex items-center justify-between gap-4"
+                >
 
-            <!-- Form Card -->
-            <div
-                class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
-            >
+                    <p
+                        class="text-sm font-medium text-red-700"
+                    >
+                        {{ error }}
+                    </p>
+
+                    <BaseButton
+                        type="button"
+                        variant="secondary"
+                        @click="fetchProduct"
+                    >
+                        Try Again
+                    </BaseButton>
+
+                </div>
+            </BaseCard>
+
+            <!-- Form -->
+            <BaseCard v-else>
 
                 <form
                     @submit.prevent="submitForm"
@@ -223,6 +275,7 @@ onMounted(fetchProduct)
 
                     <!-- Product Name -->
                     <div>
+
                         <label
                             for="name"
                             class="block text-sm font-semibold text-gray-700"
@@ -238,10 +291,12 @@ onMounted(fetchProduct)
                             :disabled="saving"
                             class="mt-2 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                         />
+
                     </div>
 
                     <!-- Description -->
                     <div>
+
                         <label
                             for="description"
                             class="block text-sm font-semibold text-gray-700"
@@ -257,10 +312,12 @@ onMounted(fetchProduct)
                             :disabled="saving"
                             class="mt-2 block w-full resize-none rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                         ></textarea>
+
                     </div>
 
                     <!-- Price -->
                     <div>
+
                         <label
                             for="price"
                             class="block text-sm font-semibold text-gray-700"
@@ -278,10 +335,12 @@ onMounted(fetchProduct)
                             :disabled="saving"
                             class="mt-2 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                         />
+
                     </div>
 
                     <!-- Quantity -->
                     <div>
+
                         <label
                             for="quantity"
                             class="block text-sm font-semibold text-gray-700"
@@ -299,6 +358,7 @@ onMounted(fetchProduct)
                             :disabled="saving"
                             class="mt-2 block w-full rounded-lg border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                         />
+
                     </div>
 
                     <!-- Actions -->
@@ -307,29 +367,30 @@ onMounted(fetchProduct)
                     >
 
                         <!-- Cancel -->
-                        <button
+                        <BaseButton
                             type="button"
-                            @click="cancel"
+                            variant="secondary"
                             :disabled="saving"
-                            class="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            @click="cancel"
                         >
                             Cancel
-                        </button>
+                        </BaseButton>
 
                         <!-- Update -->
-                        <button
+                        <BaseButton
                             type="submit"
-                            :disabled="saving"
-                            class="rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                            :loading="saving"
                         >
-                            {{ saving ? 'Updating...' : 'Update Product' }}
-                        </button>
+                            Update Product
+                        </BaseButton>
 
                     </div>
 
                 </form>
-            </div>
+
+            </BaseCard>
 
         </template>
+
     </div>
 </template>
