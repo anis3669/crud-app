@@ -1,56 +1,32 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, computed } from 'vue'
 import axios from 'axios'
 import { useRouter } from 'vue-router'
 
+import { useProductStore } from '../../stores/product'
 import ProductList from './ProductList.vue'
 
 const router = useRouter()
+const productStore = useProductStore()
 
-const products = ref([])
-const loading = ref(true)
-const error = ref(null)
+const products = computed(() => productStore.products)
+const loading = computed(() => productStore.loading)
+const error = computed(() => productStore.error)
 
-/*
-|--------------------------------------------------------------------------
-| Fetch Products
-|--------------------------------------------------------------------------
-*/
-
+// fetch products
 async function fetchProducts() {
-    loading.value = true
-    error.value = null
-
     try {
-        const response = await axios.get('/api/products')
-
-        products.value = Array.isArray(response.data?.data)
-            ? response.data.data
-            : Array.isArray(response.data)
-                ? response.data
-                : []
+        await productStore.fetchProducts()
     } catch (err) {
-        console.error('Failed to fetch products:', err)
-
         if (err.response?.status === 401) {
             router.push({
                 name: 'login',
             })
-
-            return
         }
-
-        error.value = 'Failed to load products.'
-    } finally {
-        loading.value = false
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Navigation
-|--------------------------------------------------------------------------
-*/
+// navigation
 
 function addProduct() {
     router.push({
@@ -84,27 +60,19 @@ function editProduct(product) {
     })
 }
 
-/*
-|--------------------------------------------------------------------------
-| Delete Product
-|--------------------------------------------------------------------------
-*/
-
+// delete a single product
 async function deleteProduct(product) {
     if (!product?.id) {
         return
     }
 
     try {
-        await axios.delete(
-            `/api/products/${product.id}`
-        )
-
-        products.value = products.value.filter(
-            item => item.id !== product.id
-        )
+        await productStore.deleteProduct(product.id)
     } catch (err) {
-        console.error('Failed to delete product:', err)
+        console.error(
+            'Failed to delete product:',
+            err
+        )
 
         if (err.response?.status === 401) {
             router.push({
@@ -118,12 +86,7 @@ async function deleteProduct(product) {
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Bulk Delete
-|--------------------------------------------------------------------------
-*/
-
+//  Bulk Delete
 async function bulkDelete(productsToDelete) {
     if (!Array.isArray(productsToDelete)) {
         return
@@ -134,21 +97,8 @@ async function bulkDelete(productsToDelete) {
     }
 
     try {
-        await Promise.all(
-            productsToDelete.map(product =>
-                axios.delete(
-                    `/api/products/${product.id}`
-                )
-            )
-        )
+        await productStore.bulkDelete(productsToDelete)
 
-        const deletedIds = productsToDelete.map(
-            product => product.id
-        )
-
-        products.value = products.value.filter(
-            product => !deletedIds.includes(product.id)
-        )
     } catch (err) {
         console.error(
             'Failed to bulk delete products:',
@@ -165,16 +115,12 @@ async function bulkDelete(productsToDelete) {
 
         alert('Failed to delete selected products.')
 
-        // Refresh in case some requests succeeded
+        // Refresh products if something went wrong
         await fetchProducts()
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Bulk Edit
-|--------------------------------------------------------------------------
-*/
+// bulk edit
 
 function bulkEdit(productsToEdit) {
     if (!Array.isArray(productsToEdit)) {
@@ -201,11 +147,7 @@ function bulkEdit(productsToEdit) {
     })
 }
 
-/*
-|--------------------------------------------------------------------------
-| Lifecycle
-|--------------------------------------------------------------------------
-*/
+// lifecycle
 
 onMounted(() => {
     fetchProducts()
@@ -214,9 +156,6 @@ onMounted(() => {
 
 <template>
     <div class="min-h-screen bg-gray-50">
-
-        <!-- Navbar -->
-        <Navbar />
 
         <!-- Main Content -->
         <main
@@ -255,7 +194,7 @@ onMounted(() => {
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
-                            d="M12 9v4m0 4h.01M10.29 3.86l-8.09 14a2 2 0 001.73 3h16.14a2 2 0 001.73-3l-8.09-14a2 2 0 00-3.42 0z"
+                            d="M12 9v4m0 4h.01M10.29 3.86l-8.09 14a2 2 0 001.73 3h16.14a2 2 0 003.42 0z"
                         />
                     </svg>
                 </div>

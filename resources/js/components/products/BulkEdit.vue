@@ -1,38 +1,24 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
+import { useProductStore } from '../../stores/product'
 
 const route = useRoute()
 const router = useRouter()
+const productStore = useProductStore()
 
 const products = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 
-/*
-|--------------------------------------------------------------------------
-| Load Selected Products
-|--------------------------------------------------------------------------
-*/
-
+// Load selected products
 async function fetchProducts() {
     loading.value = true
     error.value = ''
 
     try {
         let ids = route.query.selected_products
-
-        /*
-         * Vue Router can give us:
-         *
-         * ?selected_products=1,2,3
-         *
-         * or
-         *
-         * ?selected_products=1&selected_products=2
-         */
 
         if (!ids) {
             error.value = 'No products were selected.'
@@ -52,23 +38,14 @@ async function fetchProducts() {
             return
         }
 
-        /*
-         * Get all products.
-         *
-         * We use the existing products endpoint because
-         * your Laravel API already provides it.
-         */
+        // Load products through Pinia store
+        await productStore.fetchProducts()
 
-        const response = await axios.get('/api/products')
-
-        const allProducts = Array.isArray(response.data?.data)
-            ? response.data.data
-            : Array.isArray(response.data)
-                ? response.data
-                : []
-
-        products.value = allProducts
-            .filter(product => ids.includes(Number(product.id)))
+        // Get only the selected products
+        products.value = productStore.products
+            .filter(product =>
+                ids.includes(Number(product.id))
+            )
             .map(product => ({
                 id: product.id,
                 name: product.name ?? '',
@@ -81,10 +58,7 @@ async function fetchProducts() {
             error.value = 'Selected products could not be found.'
         }
     } catch (err) {
-        console.error(
-            'Failed to load products:',
-            err
-        )
+        console.error('Failed to load products:', err)
 
         if (err.response?.status === 401) {
             router.push({
@@ -96,18 +70,14 @@ async function fetchProducts() {
 
         error.value =
             err.response?.data?.message ||
+            err.message ||
             'Failed to load selected products.'
     } finally {
         loading.value = false
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Save Bulk Changes
-|--------------------------------------------------------------------------
-*/
-
+// Save bulk changes
 async function saveChanges() {
     error.value = ''
 
@@ -116,10 +86,7 @@ async function saveChanges() {
         return
     }
 
-    /*
-     * Basic validation
-     */
-
+    // Basic validation
     for (const product of products.value) {
         if (!product.name.trim()) {
             error.value = 'Product name cannot be empty.'
@@ -148,44 +115,24 @@ async function saveChanges() {
     saving.value = true
 
     try {
-        /*
-         * Update each selected product.
-         *
-         * This uses your existing:
-         *
-         * PUT /api/products/{product}
-         */
+        // Prepare data for bulk update
+        const updatedProducts = products.value.map(product => ({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            price: Number(product.price),
+            quantity: Number(product.quantity),
+        }))
 
-        await Promise.all(
-            products.value.map(product =>
-                axios.put(
-                    `/api/products/${product.id}`,
-                    {
-                        name: product.name,
-                        description: product.description,
-                        price: Number(product.price),
-                        quantity: Number(product.quantity),
-                    }
-                )
-            )
-        )
+        // Use Pinia bulkUpdate action
+        await productStore.bulkUpdate(updatedProducts)
 
-        /*
-         * IMPORTANT:
-         *
-         * We don't inspect response.data here.
-         * A successful 2xx Axios request means
-         * Laravel accepted the update.
-         */
-
+        // Go back to products after successful update
         await router.push({
             name: 'products.index',
         })
     } catch (err) {
-        console.error(
-            'Bulk update failed:',
-            err
-        )
+        console.error('Bulk update failed:', err)
 
         if (err.response?.status === 401) {
             router.push({
@@ -216,30 +163,21 @@ async function saveChanges() {
 
         error.value =
             err.response?.data?.message ||
+            err.message ||
             'Failed to update selected products.'
     } finally {
         saving.value = false
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Cancel
-|--------------------------------------------------------------------------
-*/
-
+// Cancel
 function cancel() {
     router.push({
         name: 'products.index',
     })
 }
 
-/*
-|--------------------------------------------------------------------------
-| Lifecycle
-|--------------------------------------------------------------------------
-*/
-
+// Lifecycle
 onMounted(() => {
     fetchProducts()
 })

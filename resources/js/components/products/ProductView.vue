@@ -1,10 +1,12 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
+import { useProductStore } from '../../stores/product'
 
 const route = useRoute()
 const router = useRouter()
+
+const productStore = useProductStore()
 
 const product = ref(null)
 const loading = ref(true)
@@ -57,13 +59,9 @@ async function fetchProduct() {
     error.value = null
 
     try {
-        const response = await axios.get(
-            `/api/products/${route.params.id}`
+        product.value = await productStore.fetchProduct(
+            route.params.id
         )
-
-        product.value =
-            response.data.data ?? response.data
-
     } catch (err) {
         console.error('Failed to load product:', err)
 
@@ -78,7 +76,6 @@ async function fetchProduct() {
         } else {
             error.value = 'Failed to load product.'
         }
-
     } finally {
         loading.value = false
     }
