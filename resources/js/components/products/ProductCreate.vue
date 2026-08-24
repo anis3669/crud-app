@@ -1,9 +1,10 @@
 <script setup>
 import { ref } from 'vue'
-import axios from 'axios'
 import { useRouter } from 'vue-router'
+import { useProductStore } from '../../stores/product'
 
 const router = useRouter()
+const productStore = useProductStore()
 
 const form = ref({
     name: '',
@@ -42,15 +43,12 @@ async function submitForm() {
     loading.value = true
 
     try {
-        await axios.post(
-            '/api/products',
-            {
-                name: form.value.name,
-                description: form.value.description,
-                price: Number(form.value.price),
-                quantity: Number(form.value.quantity),
-            }
-        )
+        await productStore.createProduct({
+            name: form.value.name,
+            description: form.value.description,
+            price: Number(form.value.price),
+            quantity: Number(form.value.quantity),
+        })
 
         // Product successfully created
         router.push({
@@ -80,6 +78,7 @@ async function submitForm() {
         } else {
             error.value =
                 err.response?.data?.message ||
+                productStore.error ||
                 'Failed to create product.'
         }
     } finally {
