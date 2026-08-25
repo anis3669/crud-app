@@ -1,4 +1,5 @@
 <script setup>
+
 defineProps({
     type: {
         type: String,
@@ -20,9 +21,11 @@ defineProps({
         default: false,
     },
 })
+
 </script>
 
 <template>
+
     <button
         :type="type"
         :disabled="disabled || loading"
@@ -46,6 +49,7 @@ defineProps({
             },
         ]"
     >
+
         <svg
             v-if="loading"
             class="h-4 w-4 animate-spin"
@@ -72,6 +76,8 @@ defineProps({
             Loading...
         </span>
 
-        <slot v-else />
+        <slot v-else></slot>
+
     </button>
+
 </template>

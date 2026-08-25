@@ -6,72 +6,37 @@ import { useProductStore } from '../../stores/product'
 
 import BaseButton from '../common/BaseButton.vue'
 import BaseCard from '../common/BaseCard.vue'
+import ImageUpload from '../common/ImageUpload.vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
-
-/*
-|--------------------------------------------------------------------------
-| State
-|--------------------------------------------------------------------------
-*/
 
 const products = ref([])
 const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 
-/*
-|--------------------------------------------------------------------------
-| Load Selected Products
-|--------------------------------------------------------------------------
-*/
+// =========================================================
+// LOAD PRODUCTS
+// =========================================================
 
 async function fetchProducts() {
     loading.value = true
     error.value = ''
 
     try {
-        /*
-        |--------------------------------------------------------------------------
-        | Get selected product IDs
-        |--------------------------------------------------------------------------
-        |
-        | ProductIndex.vue sends:
-        |
-        | ?selected_products=1,2,3
-        |
-        */
-
         let ids = route.query.selected_products
 
-        /*
-        |--------------------------------------------------------------------------
-        | Check selection
-        |--------------------------------------------------------------------------
-        */
-
         if (!ids) {
-            error.value = 'No products were selected.'
+            error.value =
+                'No products were selected.'
             return
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Convert query parameter to array
-        |--------------------------------------------------------------------------
-        */
 
         if (!Array.isArray(ids)) {
             ids = String(ids).split(',')
         }
-
-        /*
-        |--------------------------------------------------------------------------
-        | Convert IDs to numbers
-        |--------------------------------------------------------------------------
-        */
 
         ids = ids
             .map(id => Number(id))
@@ -83,37 +48,41 @@ async function fetchProducts() {
             return
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Fetch all products through Pinia
-        |--------------------------------------------------------------------------
-        */
-
         await productStore.fetchProducts()
 
-        /*
-        |--------------------------------------------------------------------------
-        | Select only requested products
-        |--------------------------------------------------------------------------
-        */
+        products.value =
+            productStore.products
+                .filter(product =>
+                    ids.includes(
+                        Number(product.id)
+                    )
+                )
+                .map(product => ({
+                    id: product.id,
 
-        products.value = productStore.products
-            .filter(product =>
-                ids.includes(Number(product.id))
-            )
-            .map(product => ({
-                id: product.id,
-                name: product.name ?? '',
-                description: product.description ?? '',
-                price: product.price ?? '',
-                quantity: product.quantity ?? '',
-            }))
+                    name:
+                        product.name ?? '',
 
-        /*
-        |--------------------------------------------------------------------------
-        | Check result
-        |--------------------------------------------------------------------------
-        */
+                    description:
+                        product.description ?? '',
+
+                    price:
+                        product.price ?? '',
+
+                    quantity:
+                        product.quantity ?? '',
+
+                    existingImage:
+                        product.image
+                            ? `/storage/${product.image}`
+                            : null,
+
+                    // New File
+                    image: null,
+
+                    // IMPORTANT
+                    removeImage: false,
+                }))
 
         if (products.value.length === 0) {
             error.value =
@@ -126,13 +95,9 @@ async function fetchProducts() {
             err
         )
 
-        /*
-        |--------------------------------------------------------------------------
-        | Unauthorized
-        |--------------------------------------------------------------------------
-        */
-
-        if (err.response?.status === 401) {
+        if (
+            err.response?.status === 401
+        ) {
             router.push({
                 name: 'login',
             })
@@ -140,16 +105,9 @@ async function fetchProducts() {
             return
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Other Error
-        |--------------------------------------------------------------------------
-        */
-
         error.value =
             err.response?.data?.message ||
             err.message ||
-            productStore.error ||
             'Failed to load selected products.'
 
     } finally {
@@ -157,52 +115,33 @@ async function fetchProducts() {
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Save Changes
-|--------------------------------------------------------------------------
-*/
+
+// =========================================================
+// SAVE CHANGES
+// =========================================================
 
 async function saveChanges() {
     error.value = ''
 
-    /*
-    |--------------------------------------------------------------------------
-    | Check Products
-    |--------------------------------------------------------------------------
-    */
-
     if (products.value.length === 0) {
         error.value =
             'There are no products to update.'
+
         return
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Validation
-    |--------------------------------------------------------------------------
-    */
+    // -------------------------------------------------------
+    // Validate
+    // -------------------------------------------------------
 
     for (const product of products.value) {
-
-        /*
-        |----------------------------------------------------------------------
-        | Name
-        |----------------------------------------------------------------------
-        */
 
         if (!product.name.trim()) {
             error.value =
                 'Product name cannot be empty.'
+
             return
         }
-
-        /*
-        |----------------------------------------------------------------------
-        | Price
-        |----------------------------------------------------------------------
-        */
 
         if (
             product.price === '' ||
@@ -213,12 +152,6 @@ async function saveChanges() {
 
             return
         }
-
-        /*
-        |----------------------------------------------------------------------
-        | Quantity
-        |----------------------------------------------------------------------
-        */
 
         if (
             product.quantity === '' ||
@@ -234,37 +167,51 @@ async function saveChanges() {
     saving.value = true
 
     try {
-        /*
-        |--------------------------------------------------------------------------
-        | Prepare Data
-        |--------------------------------------------------------------------------
-        */
+
+        // ---------------------------------------------------
+        // Prepare data
+        // ---------------------------------------------------
 
         const updatedProducts =
             products.value.map(product => ({
                 id: product.id,
-                name: product.name.trim(),
+
+                name:
+                    product.name.trim(),
+
                 description:
                     product.description?.trim() || '',
-                price: Number(product.price),
-                quantity: Number(product.quantity),
+
+                price:
+                    Number(product.price),
+
+                quantity:
+                    Number(product.quantity),
+
+                // New image
+                image:
+                    product.image instanceof File
+                        ? product.image
+                        : null,
+
+                // Existing image removal
+                removeImage:
+                    product.removeImage === true,
             }))
 
-        /*
-        |--------------------------------------------------------------------------
-        | Update Through Pinia
-        |--------------------------------------------------------------------------
-        */
+
+        // ---------------------------------------------------
+        // Send to Pinia
+        // ---------------------------------------------------
 
         await productStore.bulkUpdate(
             updatedProducts
         )
 
-        /*
-        |--------------------------------------------------------------------------
-        | Success
-        |--------------------------------------------------------------------------
-        */
+
+        // ---------------------------------------------------
+        // Success
+        // ---------------------------------------------------
 
         await router.push({
             name: 'products.index',
@@ -276,13 +223,9 @@ async function saveChanges() {
             err
         )
 
-        /*
-        |--------------------------------------------------------------------------
-        | Unauthorized
-        |--------------------------------------------------------------------------
-        */
-
-        if (err.response?.status === 401) {
+        if (
+            err.response?.status === 401
+        ) {
             router.push({
                 name: 'login',
             })
@@ -290,42 +233,25 @@ async function saveChanges() {
             return
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Validation Error
-        |--------------------------------------------------------------------------
-        */
-
-        if (err.response?.status === 422) {
-            const validationErrors =
+        if (
+            err.response?.status === 422
+        ) {
+            const errors =
                 err.response.data?.errors
 
-            if (validationErrors) {
-                error.value =
-                    Object.values(
-                        validationErrors
-                    )
-                        .flat()
-                        .join(' ')
-            } else {
-                error.value =
-                    err.response.data?.message ||
-                    'Validation failed.'
-            }
+            error.value = errors
+                ? Object.values(errors)
+                    .flat()
+                    .join(' ')
+                : err.response.data?.message ||
+                  'Validation failed.'
 
             return
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Other Error
-        |--------------------------------------------------------------------------
-        */
-
         error.value =
             err.response?.data?.message ||
             err.message ||
-            productStore.error ||
             'Failed to update selected products.'
 
     } finally {
@@ -333,11 +259,10 @@ async function saveChanges() {
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Cancel
-|--------------------------------------------------------------------------
-*/
+
+// =========================================================
+// CANCEL
+// =========================================================
 
 function cancel() {
     router.push({
@@ -345,25 +270,31 @@ function cancel() {
     })
 }
 
-/*
-|--------------------------------------------------------------------------
-| Initial Load
-|--------------------------------------------------------------------------
-*/
+
+// =========================================================
+// INITIAL LOAD
+// =========================================================
 
 onMounted(() => {
     fetchProducts()
 })
 </script>
 
+
 <template>
+
     <div class="mx-auto max-w-5xl">
 
-        <!-- Header -->
+        <!-- =====================================================
+             HEADER
+        ====================================================== -->
+
         <div
             class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
         >
+
             <div>
+
                 <h1
                     class="text-2xl font-bold tracking-tight text-gray-900"
                 >
@@ -373,9 +304,9 @@ onMounted(() => {
                 <p class="mt-1 text-sm text-gray-500">
                     Update the selected products.
                 </p>
+
             </div>
 
-            <!-- Back -->
             <BaseButton
                 type="button"
                 variant="secondary"
@@ -384,16 +315,23 @@ onMounted(() => {
             >
                 Back to Products
             </BaseButton>
+
         </div>
 
-        <!-- Loading -->
+
+        <!-- =====================================================
+             LOADING
+        ====================================================== -->
+
         <BaseCard
             v-if="loading"
             class="py-16"
         >
+
             <div
                 class="flex flex-col items-center justify-center"
             >
+
                 <div
                     class="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900"
                 ></div>
@@ -403,37 +341,25 @@ onMounted(() => {
                 >
                     Loading selected products...
                 </p>
+
             </div>
+
         </BaseCard>
 
-        <!-- Error -->
+
+        <!-- =====================================================
+             ERROR
+        ====================================================== -->
+
         <BaseCard
             v-else-if="error"
             class="border-red-200 bg-red-50"
         >
+
             <div class="text-center">
 
-                <!-- Error Icon -->
-                <div
-                    class="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-red-100"
-                >
-                    <svg
-                        class="h-5 w-5 text-red-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 9v4m0 4h.01M10.29 3.86l-8.09 14a2 2 0 001.73 3h16.14a2 2 0 001.73 3l-8.09-14a2 2 0 00-3.42 0z"
-                        />
-                    </svg>
-                </div>
-
                 <p
-                    class="mt-3 text-sm font-medium text-red-700"
+                    class="text-sm font-medium text-red-700"
                 >
                     {{ error }}
                 </p>
@@ -447,53 +373,81 @@ onMounted(() => {
                 </BaseButton>
 
             </div>
+
         </BaseCard>
 
-        <!-- Edit Form -->
+
+        <!-- =====================================================
+             FORM
+        ====================================================== -->
+
         <form
             v-else
             @submit.prevent="saveChanges"
             class="space-y-4"
         >
 
-            <!-- Products -->
             <BaseCard
                 v-for="(product, index) in products"
                 :key="product.id"
                 class="p-6"
             >
 
-                <!-- Product Header -->
+                <!-- Product header -->
+
                 <div
-                    class="mb-6 flex items-center justify-between border-b border-gray-100 pb-4"
+                    class="mb-6 flex items-center gap-3 border-b border-gray-100 pb-4"
                 >
-                    <div class="flex items-center gap-3">
 
-                        <div
-                            class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-sm font-semibold text-white"
+                    <div
+                        class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-sm font-semibold text-white"
+                    >
+                        {{ index + 1 }}
+                    </div>
+
+                    <div>
+
+                        <h2
+                            class="text-sm font-semibold text-gray-900"
                         >
-                            {{ index + 1 }}
-                        </div>
+                            Product #{{ product.id }}
+                        </h2>
 
-                        <div>
-                            <h2
-                                class="text-sm font-semibold text-gray-900"
-                            >
-                                Product #{{ product.id }}
-                            </h2>
-
-                            <p
-                                class="text-xs text-gray-500"
-                            >
-                                Edit product information
-                            </p>
-                        </div>
+                        <p
+                            class="text-xs text-gray-500"
+                        >
+                            Edit product information
+                        </p>
 
                     </div>
+
                 </div>
 
-                <!-- Name -->
+
+                <!-- =================================================
+                     IMAGE
+                ================================================== -->
+
+                <div class="mb-6">
+
+                    <ImageUpload
+                        v-model="product.image"
+                        :existing-image="product.existingImage"
+                        label="Product Image"
+                        @remove-existing="
+                            product.removeImage = true
+                        "
+                    />
+
+                </div>
+
+
+                <!-- =================================================
+                     NAME
+                ================================================== -->
+
                 <div class="mb-5">
+
                     <label
                         :for="`name-${product.id}`"
                         class="mb-2 block text-sm font-semibold text-gray-700"
@@ -506,12 +460,18 @@ onMounted(() => {
                         v-model="product.name"
                         type="text"
                         :disabled="saving"
-                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
+                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100"
                     />
+
                 </div>
 
-                <!-- Description -->
+
+                <!-- =================================================
+                     DESCRIPTION
+                ================================================== -->
+
                 <div class="mb-5">
+
                     <label
                         :for="`description-${product.id}`"
                         class="mb-2 block text-sm font-semibold text-gray-700"
@@ -524,17 +484,22 @@ onMounted(() => {
                         v-model="product.description"
                         rows="3"
                         :disabled="saving"
-                        class="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
+                        class="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100"
                     ></textarea>
+
                 </div>
 
-                <!-- Price / Quantity -->
+
+                <!-- =================================================
+                     PRICE / QUANTITY
+                ================================================== -->
+
                 <div
                     class="grid gap-5 sm:grid-cols-2"
                 >
 
-                    <!-- Price -->
                     <div>
+
                         <label
                             :for="`price-${product.id}`"
                             class="mb-2 block text-sm font-semibold text-gray-700"
@@ -549,12 +514,14 @@ onMounted(() => {
                             min="0"
                             step="0.01"
                             :disabled="saving"
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100"
                         />
+
                     </div>
 
-                    <!-- Quantity -->
+
                     <div>
+
                         <label
                             :for="`quantity-${product.id}`"
                             class="mb-2 block text-sm font-semibold text-gray-700"
@@ -569,15 +536,20 @@ onMounted(() => {
                             min="0"
                             step="1"
                             :disabled="saving"
-                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
+                            class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:bg-gray-100"
                         />
+
                     </div>
 
                 </div>
 
             </BaseCard>
 
-            <!-- Bottom Actions -->
+
+            <!-- =====================================================
+                 ACTIONS
+            ====================================================== -->
+
             <BaseCard
                 class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >
@@ -613,4 +585,5 @@ onMounted(() => {
         </form>
 
     </div>
+
 </template>
