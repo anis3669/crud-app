@@ -15,8 +15,7 @@ class ProductApiController extends Controller
 
         return response()->json($products);
     }
-
-    // store newley created product
+    // store newly created product
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -24,7 +23,13 @@ class ProductApiController extends Controller
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'quantity' => 'required|integer|min:0',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ]);
+
+        // Store image if provided
+        if ($request->hasFile('image')) {
+            $validated['image'] = $request->file('image')->store('products', 'public');
+        }
 
         $product = Product::create($validated);
 
@@ -33,7 +38,6 @@ class ProductApiController extends Controller
             'product' => $product,
         ], 201);
     }
-
     // display a single product
     public function show(Product $product)
     {
@@ -84,7 +88,7 @@ class ProductApiController extends Controller
         ]);
     }
 
-// update multiple products individually
+    // update multiple products individually
     public function bulkUpdate(Request $request)
     {
         $validated = $request->validate([
