@@ -15,6 +15,10 @@ class Product extends Model
         'price',
         'quantity',
         'image',
-        'profile_picture',
+    ];
+
+    protected $casts = [
+        'price' => 'decimal:3',
+        'quantity' => 'integer',
     ];
 }

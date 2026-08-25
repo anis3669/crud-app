@@ -1,147 +1,145 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useProductStore } from '../../stores/product'
+import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useProductStore } from "../../stores/product";
 
-import BaseButton from '../common/BaseButton.vue'
-import BaseCard from '../common/Basecard.vue'
-import ImageUpload from '../common/ImageUpload.vue'
+import BaseButton from "../common/BaseButton.vue";
+import BaseCard from "../common/BaseCard.vue";
+import ImageUpload from "../common/ImageUpload.vue";
 
-const router = useRouter()
-const productStore = useProductStore()
+const router = useRouter();
+const productStore = useProductStore();
+
+// FORM
 
 const form = ref({
-    name: '',
-    description: '',
-    price: '',
-    quantity: '',
+    name: "",
+    description: "",
+    price: "",
+    quantity: "",
     image: null,
-})
+});
 
-const loading = ref(false)
-const error = ref('')
+// STATE
+
+const loading = ref(false);
+const error = ref("");
+
+// VALIDATION
+
+function validateForm() {
+    if (!form.value.name.trim()) {
+        error.value = "Please enter a product name.";
+        return false;
+    }
+
+    if (form.value.price === "" || Number(form.value.price) < 0) {
+        error.value = "Please enter a valid price.";
+        return false;
+    }
+
+    if (form.value.quantity === "" || Number(form.value.quantity) < 0) {
+        error.value = "Please enter a valid quantity.";
+        return false;
+    }
+
+    return true;
+}
+
+// CREATE PRODUCT
 
 async function submitForm() {
-    error.value = ''
+    error.value = "";
 
-    // Validate product name
-    if (!form.value.name.trim()) {
-        error.value = 'Please enter a product name.'
-        return
+    if (!validateForm()) {
+        return;
     }
 
-    // Validate price
-    if (
-        form.value.price === '' ||
-        Number(form.value.price) < 0
-    ) {
-        error.value = 'Please enter a valid price.'
-        return
-    }
-
-    // Validate quantity
-    if (
-        form.value.quantity === '' ||
-        Number(form.value.quantity) < 0
-    ) {
-        error.value = 'Please enter a valid quantity.'
-        return
-    }
-
-    loading.value = true
+    loading.value = true;
 
     try {
-        // Create FormData for text fields + image file
-        const productData = new FormData()
+        // CREATE FORMDATA
 
-        productData.append(
-            'name',
-            form.value.name.trim()
-        )
+        const productData = new FormData();
 
-        productData.append(
-            'description',
-            form.value.description.trim()
-        )
+        productData.append("name", form.value.name.trim());
 
-        productData.append(
-            'price',
-            Number(form.value.price)
-        )
+        productData.append("description", form.value.description?.trim() || "");
 
-        productData.append(
-            'quantity',
-            Number(form.value.quantity)
-        )
+        productData.append("price", String(Number(form.value.price)));
 
-        // Add image only if one was selected
-        if (form.value.image) {
-            productData.append(
-                'image',
-                form.value.image
-            )
+        productData.append("quantity", String(Number(form.value.quantity)));
+
+        // IMAGE
+
+        if (form.value.image instanceof File) {
+            productData.append("image", form.value.image);
         }
 
-        await productStore.createProduct(productData)
+        // SEND TO PINIA
 
-        // Product successfully created
-        router.push({
-            name: 'products.index',
-        })
+        await productStore.createProduct(productData);
+
+        // SUCCESS
+
+        await router.push({
+            name: "products.index",
+        });
     } catch (err) {
-        console.error('Create product error:', err)
+        console.error("Create product error:", err);
 
-        // Validation error
-        if (err.response?.status === 422) {
-            const errors = err.response.data?.errors
+        // UNAUTHORIZED
 
-            if (errors) {
-                error.value = Object.values(errors)
-                    .flat()
-                    .join(' ')
-            } else {
-                error.value =
-                    err.response.data?.message ||
-                    'Validation failed.'
-            }
-
-            return
-        }
-
-        // Unauthorized
         if (err.response?.status === 401) {
             router.push({
-                name: 'login',
-            })
+                name: "login",
+            });
 
-            return
+            return;
         }
 
-        // Other errors
+        // VALIDATION ERROR
+
+
+        if (err.response?.status === 422) {
+            const validationErrors = err.response.data?.errors;
+
+            if (validationErrors) {
+                error.value = Object.values(validationErrors).flat().join(" ");
+            } else {
+                error.value =
+                    err.response.data?.message || "Validation failed.";
+            }
+
+            return;
+        }
+// other errors
+
         error.value =
             err.response?.data?.message ||
+            err.message ||
             productStore.error ||
-            'Failed to create product.'
+            "Failed to create product.";
     } finally {
-        loading.value = false
+        loading.value = false;
     }
 }
 
+// cancel
+
 function cancel() {
     router.push({
-        name: 'products.index',
-    })
+        name: "products.index",
+    });
 }
 </script>
 
 <template>
     <div class="mx-auto max-w-3xl">
+       <!-- header -->
 
-        <!-- Header -->
         <div class="mb-8">
-            <h1
-                class="text-2xl font-bold tracking-tight text-gray-900"
-            >
+            <h1 class="text-2xl font-bold tracking-tight text-gray-900">
                 Add Product
             </h1>
 
@@ -150,25 +148,24 @@ function cancel() {
             </p>
         </div>
 
-        <!-- Error -->
-        <div
-            v-if="error"
-            class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
-        >
-            {{ error }}
-        </div>
+       <!-- error -->
 
-        <!-- Card -->
+        <BaseCard v-if="error" class="mb-6 border-red-200 bg-red-50">
+            <p class="text-sm font-medium text-red-700">
+                {{ error }}
+            </p>
+        </BaseCard>
+
+      <!-- form card -->
+
         <BaseCard>
+            <form class="space-y-6" @submit.prevent="submitForm">
+                <!-- product name -->
 
-            <!-- Form -->
-            <form @submit.prevent="submitForm">
-
-                <!-- Name -->
-                <div class="mb-5">
+                <div>
                     <label
                         for="name"
-                        class="mb-2 block text-sm font-semibold text-gray-700"
+                        class="block text-sm font-semibold text-gray-700"
                     >
                         Product Name
                     </label>
@@ -178,15 +175,17 @@ function cancel() {
                         v-model="form.name"
                         type="text"
                         placeholder="Enter product name"
-                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                        :disabled="loading"
+                        class="mt-2 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                     />
                 </div>
 
-                <!-- Description -->
-                <div class="mb-5">
+                <!-- description -->
+
+                <div>
                     <label
                         for="description"
-                        class="mb-2 block text-sm font-semibold text-gray-700"
+                        class="block text-sm font-semibold text-gray-700"
                     >
                         Description
                     </label>
@@ -196,15 +195,16 @@ function cancel() {
                         v-model="form.description"
                         rows="4"
                         placeholder="Enter product description"
-                        class="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                        :disabled="loading"
+                        class="mt-2 block w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                     ></textarea>
                 </div>
 
-                <!-- Price -->
-                <div class="mb-5">
+                <!-- price -->
+                <div>
                     <label
                         for="price"
-                        class="mb-2 block text-sm font-semibold text-gray-700"
+                        class="block text-sm font-semibold text-gray-700"
                     >
                         Price
                     </label>
@@ -216,15 +216,15 @@ function cancel() {
                         min="0"
                         step="0.01"
                         placeholder="0.00"
-                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                        :disabled="loading"
+                        class="mt-2 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                     />
                 </div>
-
-                <!-- Quantity -->
-                <div class="mb-5">
+                <!-- quantity -->
+                <div>
                     <label
                         for="quantity"
-                        class="mb-2 block text-sm font-semibold text-gray-700"
+                        class="block text-sm font-semibold text-gray-700"
                     >
                         Quantity
                     </label>
@@ -236,21 +236,22 @@ function cancel() {
                         min="0"
                         step="1"
                         placeholder="0"
-                        class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                        :disabled="loading"
+                        class="mt-2 block w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
                     />
                 </div>
 
-                <!-- Product Image -->
-                <div class="mb-8">
-                    <ImageUpload
-                        v-model="form.image"
-                        label="Product Image"
-                    />
+                <!-- product image -->
+
+                <div>
+                    <ImageUpload v-model="form.image" label="Product Image" />
                 </div>
 
-                <!-- Actions -->
-                <div class="flex justify-end gap-3">
+                <!-- actions -->
 
+                <div
+                    class="flex justify-end gap-3 border-t border-gray-100 pt-6"
+                >
                     <BaseButton
                         type="button"
                         variant="secondary"
@@ -260,19 +261,11 @@ function cancel() {
                         Cancel
                     </BaseButton>
 
-                    <BaseButton
-                        type="submit"
-                        :loading="loading"
-                    >
+                    <BaseButton type="submit" :loading="loading">
                         Create Product
                     </BaseButton>
-
                 </div>
-
             </form>
-
         </BaseCard>
-
     </div>
 </template>
-

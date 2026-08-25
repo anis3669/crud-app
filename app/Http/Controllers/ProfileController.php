@@ -17,9 +17,7 @@ class ProfileController extends Controller
 
         return response()->json([
             'user' => $user,
-            'profile_picture_url' => $user->profile_picture
-                ? asset('storage/' . $user->profile_picture)
-                : null,
+            'profile_picture_url' => $user->profile_picture_url,
         ]);
     }
 
@@ -31,32 +29,38 @@ class ProfileController extends Controller
         $user = $request->user();
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+            ],
+
             'email' => [
                 'required',
                 'email',
                 'max:255',
-                Rule::unique('users', 'email')->ignore($user->id),
+                Rule::unique('users', 'email')
+                    ->ignore($user->id),
             ],
         ]);
 
         $user->update($validated);
 
+        $user = $user->fresh();
+
         return response()->json([
             'message' => 'Profile updated successfully.',
-            'user' => $user->fresh(),
-            'profile_picture_url' => $user->profile_picture
-                ? asset('storage/' . $user->profile_picture)
-                : null,
+            'user' => $user,
+            'profile_picture_url' => $user->profile_picture_url,
         ]);
     }
 
     /**
-     * Upload profile picture.
+     * Upload or replace profile picture.
      */
     public function uploadPicture(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'profile_picture' => [
                 'required',
                 'image',
@@ -67,23 +71,34 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        // Delete old picture
+        /*
+         * Delete the old picture first.
+         */
         if ($user->profile_picture) {
-            Storage::disk('public')->delete($user->profile_picture);
+            Storage::disk('public')->delete(
+                $user->profile_picture
+            );
         }
 
-        // Store new picture
-        $path = $request->file('profile_picture')
+        /*
+         * Store the new picture.
+         */
+        $path = $validated['profile_picture']
             ->store('profile-pictures', 'public');
 
+        /*
+         * Save path in database.
+         */
         $user->update([
             'profile_picture' => $path,
         ]);
 
+        $user = $user->fresh();
+
         return response()->json([
             'message' => 'Profile picture updated successfully.',
-            'user' => $user->fresh(),
-            'profile_picture_url' => asset('storage/' . $path),
+            'user' => $user,
+            'profile_picture_url' => $user->profile_picture_url,
         ]);
     }
 
@@ -94,17 +109,27 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        /*
+         * Delete physical file.
+         */
         if ($user->profile_picture) {
-            Storage::disk('public')->delete($user->profile_picture);
-
-            $user->update([
-                'profile_picture' => null,
-            ]);
+            Storage::disk('public')->delete(
+                $user->profile_picture
+            );
         }
+
+        /*
+         * Remove database path.
+         */
+        $user->update([
+            'profile_picture' => null,
+        ]);
+
+        $user = $user->fresh();
 
         return response()->json([
             'message' => 'Profile picture removed successfully.',
-            'user' => $user->fresh(),
+            'user' => $user,
             'profile_picture_url' => null,
         ]);
     }
