@@ -5,46 +5,76 @@ import { useProductStore } from '../../stores/product'
 
 import BaseButton from '../common/BaseButton.vue'
 import BaseCard from '../common/BaseCard.vue'
+import ImageUpload from '../common/ImageUpload.vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
 
-const product = ref(null)
 const loading = ref(true)
 const saving = ref(false)
-const error = ref(null)
+const error = ref('')
 
 const form = ref({
     name: '',
     description: '',
     price: '',
     quantity: '',
+    image: null,
 })
 
-/*
-|--------------------------------------------------------------------------
-| Fetch Product
-|--------------------------------------------------------------------------
-*/
+const existingImage = ref(null)
+const removeImage = ref(false)
+
+// =========================================================
+// IMAGE URL
+// =========================================================
+
+function getImageUrl(image) {
+    if (!image) {
+        return null
+    }
+
+    if (
+        image.startsWith('http://') ||
+        image.startsWith('https://')
+    ) {
+        return image
+    }
+
+    return `/storage/${image}`
+}
+
+// =========================================================
+// LOAD PRODUCT
+// =========================================================
 
 async function fetchProduct() {
     loading.value = true
-    error.value = null
+    error.value = ''
 
     try {
-        const data = await productStore.fetchProduct(
+        const product = await productStore.fetchProduct(
             route.params.id
         )
 
-        product.value = data
+        if (!product) {
+            error.value = 'Product not found.'
+            return
+        }
 
         form.value = {
-            name: data.name ?? '',
-            description: data.description ?? '',
-            price: data.price ?? '',
-            quantity: data.quantity ?? '',
+            name: product.name ?? '',
+            description: product.description ?? '',
+            price: product.price ?? '',
+            quantity: product.quantity ?? '',
+            image: null,
         }
+
+        existingImage.value = getImageUrl(product.image)
+
+        removeImage.value = false
+
     } catch (err) {
         console.error('Failed to load product:', err)
 
@@ -52,7 +82,6 @@ async function fetchProduct() {
             router.push({
                 name: 'login',
             })
-
             return
         }
 
@@ -63,28 +92,38 @@ async function fetchProduct() {
 
         error.value =
             err.response?.data?.message ||
+            err.message ||
             'Failed to load product.'
+
     } finally {
         loading.value = false
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Submit / Update Product
-|--------------------------------------------------------------------------
-*/
+// =========================================================
+// REMOVE EXISTING IMAGE
+// =========================================================
+
+function handleRemoveExistingImage() {
+    removeImage.value = true
+}
+
+// =========================================================
+// SUBMIT
+// =========================================================
 
 async function submitForm() {
-    error.value = null
+    error.value = ''
 
-    // Validate name
+    // -------------------------------------------------------
+    // VALIDATION
+    // -------------------------------------------------------
+
     if (!form.value.name.trim()) {
         error.value = 'Please enter a product name.'
         return
     }
 
-    // Validate price
     if (
         form.value.price === '' ||
         Number(form.value.price) < 0
@@ -93,7 +132,6 @@ async function submitForm() {
         return
     }
 
-    // Validate quantity
     if (
         form.value.quantity === '' ||
         Number(form.value.quantity) < 0
@@ -105,42 +143,100 @@ async function submitForm() {
     saving.value = true
 
     try {
-        await productStore.updateProduct(
-            route.params.id,
-            {
-                name: form.value.name.trim(),
-                description: form.value.description.trim(),
-                price: Number(form.value.price),
-                quantity: Number(form.value.quantity),
-            }
+        // ---------------------------------------------------
+        // FORM DATA
+        // ---------------------------------------------------
+
+        const data = new FormData()
+
+        data.append(
+            'name',
+            form.value.name.trim()
         )
 
-        router.push({
+        data.append(
+            'description',
+            form.value.description?.trim() || ''
+        )
+
+        data.append(
+            'price',
+            String(Number(form.value.price))
+        )
+
+        data.append(
+            'quantity',
+            String(Number(form.value.quantity))
+        )
+
+        // ---------------------------------------------------
+        // REMOVE EXISTING IMAGE
+        // ---------------------------------------------------
+
+        data.append(
+            'remove_image',
+            removeImage.value ? '1' : '0'
+        )
+
+        // ---------------------------------------------------
+        // NEW IMAGE
+        // ---------------------------------------------------
+
+        if (form.value.image instanceof File) {
+            data.append(
+                'image',
+                form.value.image
+            )
+        }
+
+        // ---------------------------------------------------
+        // LARAVEL METHOD SPOOFING
+        // ---------------------------------------------------
+
+        data.append('_method', 'PUT')
+
+        // ---------------------------------------------------
+        // UPDATE
+        // ---------------------------------------------------
+
+        await productStore.updateProduct(
+            route.params.id,
+            data
+        )
+
+        // ---------------------------------------------------
+        // SUCCESS
+        // ---------------------------------------------------
+
+        await router.push({
             name: 'products.view',
             params: {
                 id: route.params.id,
             },
         })
-    } catch (err) {
-        console.error('Update product error:', err)
 
-        // Unauthorized
+    } catch (err) {
+        console.error(
+            'Failed to update product:',
+            err
+        )
+
         if (err.response?.status === 401) {
             router.push({
                 name: 'login',
             })
-
             return
         }
 
-        // Validation error
         if (err.response?.status === 422) {
-            const errors = err.response.data?.errors
+            const validationErrors =
+                err.response.data?.errors
 
-            if (errors) {
-                error.value = Object.values(errors)
-                    .flat()
-                    .join(' ')
+            if (validationErrors) {
+                error.value =
+                    Object.values(validationErrors)
+                        .flat()
+                        .join(' ')
             } else {
                 error.value =
                     err.response.data?.message ||
@@ -152,6 +248,7 @@ async function submitForm() {
 
         error.value =
             err.response?.data?.message ||
+            err.message ||
             productStore.error ||
             'Failed to update product.'
     } finally {
@@ -159,11 +256,9 @@ async function submitForm() {
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Cancel
-|--------------------------------------------------------------------------
-*/
+// =========================================================
+// CANCEL
+// =========================================================
 
 function cancel() {
     router.push({
@@ -174,57 +269,49 @@ function cancel() {
     })
 }
 
-/*
-|--------------------------------------------------------------------------
-| Initial Load
-|--------------------------------------------------------------------------
-*/
+// =========================================================
+// LOAD
+// =========================================================
 
 onMounted(fetchProduct)
 </script>
 
+
 <template>
     <div class="mx-auto max-w-3xl">
 
-        <!-- Loading -->
+        <!-- =====================================================
+             LOADING
+        ====================================================== -->
+
         <BaseCard
             v-if="loading"
             class="py-16"
         >
-            <div class="flex flex-col items-center justify-center">
+            <div
+                class="flex flex-col items-center justify-center"
+            >
+                <div
+                    class="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900"
+                ></div>
 
-                <svg
-                    class="h-8 w-8 animate-spin text-gray-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
+                <p
+                    class="mt-4 text-sm text-gray-500"
                 >
-                    <circle
-                        class="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        stroke-width="4"
-                    />
-
-                    <path
-                        class="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                    />
-                </svg>
-
-                <p class="mt-4 text-sm text-gray-500">
                     Loading product...
                 </p>
-
             </div>
         </BaseCard>
 
-        <!-- Content -->
+
+        <!-- =====================================================
+             MAIN CONTENT
+        ====================================================== -->
+
         <template v-else>
 
             <!-- Header -->
+
             <div class="mb-8">
 
                 <h1
@@ -233,13 +320,19 @@ onMounted(fetchProduct)
                     Edit Product
                 </h1>
 
-                <p class="mt-1 text-sm text-gray-500">
+                <p
+                    class="mt-1 text-sm text-gray-500"
+                >
                     Update the product information below.
                 </p>
 
             </div>
 
-            <!-- Error -->
+
+            <!-- =================================================
+                 ERROR
+            ================================================== -->
+
             <BaseCard
                 v-if="error"
                 class="mb-6 border-red-200 bg-red-50"
@@ -265,15 +358,20 @@ onMounted(fetchProduct)
                 </div>
             </BaseCard>
 
-            <!-- Form -->
+
+            <!-- =================================================
+                 FORM
+            ================================================== -->
+
             <BaseCard v-else>
 
                 <form
-                    @submit.prevent="submitForm"
                     class="space-y-6"
+                    @submit.prevent="submitForm"
                 >
 
                     <!-- Product Name -->
+
                     <div>
 
                         <label
@@ -294,7 +392,9 @@ onMounted(fetchProduct)
 
                     </div>
 
+
                     <!-- Description -->
+
                     <div>
 
                         <label
@@ -315,7 +415,9 @@ onMounted(fetchProduct)
 
                     </div>
 
+
                     <!-- Price -->
+
                     <div>
 
                         <label
@@ -338,7 +440,9 @@ onMounted(fetchProduct)
 
                     </div>
 
+
                     <!-- Quantity -->
+
                     <div>
 
                         <label
@@ -361,12 +465,31 @@ onMounted(fetchProduct)
 
                     </div>
 
-                    <!-- Actions -->
+
+                    <!-- =================================================
+                         IMAGE
+                    ================================================== -->
+
+                    <div>
+
+                        <ImageUpload
+                            v-model="form.image"
+                            :existing-image="existingImage"
+                            label="Product Image"
+                            @remove-existing="handleRemoveExistingImage"
+                        />
+
+                    </div>
+
+
+                    <!-- =================================================
+                         ACTIONS
+                    ================================================== -->
+
                     <div
                         class="flex justify-end gap-3 border-t border-gray-100 pt-6"
                     >
 
-                        <!-- Cancel -->
                         <BaseButton
                             type="button"
                             variant="secondary"
@@ -376,7 +499,6 @@ onMounted(fetchProduct)
                             Cancel
                         </BaseButton>
 
-                        <!-- Update -->
                         <BaseButton
                             type="submit"
                             :loading="saving"

@@ -1,4 +1,5 @@
 <script setup>
+
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '../../stores/product'
@@ -11,12 +12,6 @@ const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
 
-/*
-|--------------------------------------------------------------------------
-| State
-|--------------------------------------------------------------------------
-*/
-
 const product = ref(null)
 const loading = ref(true)
 const error = ref(null)
@@ -24,23 +19,39 @@ const error = ref(null)
 const showDeleteModal = ref(false)
 const deleting = ref(false)
 
-/*
-|--------------------------------------------------------------------------
-| Stock Status
-|--------------------------------------------------------------------------
-*/
+const imageUrl = computed(() => {
+
+    if (!product.value?.image) {
+        return null
+    }
+
+    const image = product.value.image
+
+    if (
+        image.startsWith('http://') ||
+        image.startsWith('https://') ||
+        image.startsWith('/storage/')
+    ) {
+        return image
+    }
+
+    return `/storage/${image}`
+})
 
 const stockStatus = computed(() => {
+
     if (!product.value) {
         return null
     }
 
-    const quantity = Number(product.value.quantity) || 0
+    const quantity =
+        Number(product.value.quantity) || 0
 
     if (quantity === 0) {
         return {
             label: 'Out of stock',
-            wrapper: 'bg-red-50 text-red-700',
+            wrapper:
+                'bg-red-50 text-red-700',
             dot: 'bg-red-500',
         }
     }
@@ -48,75 +59,76 @@ const stockStatus = computed(() => {
     if (quantity <= 5) {
         return {
             label: `${quantity} left`,
-            wrapper: 'bg-yellow-50 text-yellow-700',
+            wrapper:
+                'bg-yellow-50 text-yellow-700',
             dot: 'bg-yellow-500',
         }
     }
 
     return {
         label: `${quantity} in stock`,
-        wrapper: 'bg-green-50 text-green-700',
+        wrapper:
+            'bg-green-50 text-green-700',
         dot: 'bg-green-500',
     }
 })
 
-/*
-|--------------------------------------------------------------------------
-| Fetch Product
-|--------------------------------------------------------------------------
-*/
-
 async function fetchProduct() {
+
     loading.value = true
     error.value = null
 
     try {
-        product.value = await productStore.fetchProduct(
-            route.params.id
-        )
+
+        product.value =
+            await productStore.fetchProduct(
+                route.params.id
+            )
+
     } catch (err) {
+
         console.error(
             'Failed to load product:',
             err
         )
 
         if (err.response?.status === 404) {
-            error.value = 'Product not found.'
-        } else if (err.response?.status === 401) {
+
+            error.value =
+                'Product not found.'
+
+        } else if (
+            err.response?.status === 401
+        ) {
+
             router.push({
                 name: 'login',
             })
 
             return
+
         } else {
+
             error.value =
                 err.response?.data?.message ||
                 'Failed to load product.'
         }
+
     } finally {
+
         loading.value = false
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Back to Products
-|--------------------------------------------------------------------------
-*/
-
 function back() {
+
     router.push({
         name: 'products.index',
     })
 }
 
-/*
-|--------------------------------------------------------------------------
-| Edit Product
-|--------------------------------------------------------------------------
-*/
-
 function editProduct() {
+
     if (!product.value) {
         return
     }
@@ -129,13 +141,8 @@ function editProduct() {
     })
 }
 
-/*
-|--------------------------------------------------------------------------
-| Delete Product
-|--------------------------------------------------------------------------
-*/
-
 function openDeleteModal() {
+
     if (!product.value) {
         return
     }
@@ -144,6 +151,7 @@ function openDeleteModal() {
 }
 
 function closeDeleteModal() {
+
     if (deleting.value) {
         return
     }
@@ -152,6 +160,7 @@ function closeDeleteModal() {
 }
 
 async function confirmDelete() {
+
     if (!product.value) {
         return
     }
@@ -159,6 +168,7 @@ async function confirmDelete() {
     deleting.value = true
 
     try {
+
         await productStore.deleteProduct(
             product.value.id
         )
@@ -168,13 +178,18 @@ async function confirmDelete() {
         router.push({
             name: 'products.index',
         })
+
     } catch (err) {
+
         console.error(
             'Delete product error:',
             err
         )
 
-        if (err.response?.status === 401) {
+        if (
+            err.response?.status === 401
+        ) {
+
             router.push({
                 name: 'login',
             })
@@ -187,42 +202,38 @@ async function confirmDelete() {
             'Failed to delete product.'
 
         showDeleteModal.value = false
+
     } finally {
+
         deleting.value = false
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Price Formatting
-|--------------------------------------------------------------------------
-*/
-
 function formatPrice(price) {
+
     const amount = Number(price)
 
     if (Number.isNaN(amount)) {
         return '0.00'
     }
 
-    return amount.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    })
+    return amount.toLocaleString(
+        'en-US',
+        {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }
+    )
 }
-
-/*
-|--------------------------------------------------------------------------
-| Initial Load
-|--------------------------------------------------------------------------
-*/
 
 onMounted(() => {
     fetchProduct()
 })
+
 </script>
 
 <template>
+
     <div class="mx-auto max-w-4xl">
 
         <!-- Loading -->
@@ -230,14 +241,17 @@ onMounted(() => {
             v-if="loading"
             class="py-16"
         >
+
             <div
                 class="flex flex-col items-center justify-center"
             >
+
                 <svg
                     class="h-8 w-8 animate-spin text-gray-500"
                     fill="none"
                     viewBox="0 0 24 24"
                 >
+
                     <circle
                         class="opacity-25"
                         cx="12"
@@ -252,6 +266,7 @@ onMounted(() => {
                         fill="currentColor"
                         d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
                     />
+
                 </svg>
 
                 <p
@@ -259,7 +274,9 @@ onMounted(() => {
                 >
                     Loading product...
                 </p>
+
             </div>
+
         </BaseCard>
 
         <!-- Error -->
@@ -267,28 +284,11 @@ onMounted(() => {
             v-else-if="error"
             class="border-red-200 bg-red-50"
         >
+
             <div class="py-4 text-center">
 
-                <div
-                    class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100"
-                >
-                    <svg
-                        class="h-6 w-6 text-red-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
-                        />
-                    </svg>
-                </div>
-
                 <h2
-                    class="mt-4 text-lg font-semibold text-red-800"
+                    class="text-lg font-semibold text-red-800"
                 >
                     Unable to load product
                 </h2>
@@ -302,6 +302,7 @@ onMounted(() => {
                 <div
                     class="mt-5 flex justify-center gap-3"
                 >
+
                     <BaseButton
                         type="button"
                         variant="secondary"
@@ -316,9 +317,11 @@ onMounted(() => {
                     >
                         Try Again
                     </BaseButton>
+
                 </div>
 
             </div>
+
         </BaseCard>
 
         <!-- Product -->
@@ -332,21 +335,25 @@ onMounted(() => {
                     variant="secondary"
                     @click="back"
                 >
+
                     <svg
                         class="h-4 w-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                     >
+
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
                             d="M15 19l-7-7 7-7"
                         />
+
                     </svg>
 
                     Back to Products
+
                 </BaseButton>
 
             </div>
@@ -358,18 +365,31 @@ onMounted(() => {
 
                 <div class="flex items-center gap-3">
 
-                    <!-- Product Initial -->
+                    <!-- Small image -->
                     <div
-                        class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-lg font-bold text-gray-700"
+                        class="h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
                     >
-                        {{
-                            product.name
-                                ?.charAt(0)
-                                ?.toUpperCase()
-                        }}
+
+                        <img
+                            v-if="imageUrl"
+                            :src="imageUrl"
+                            :alt="product.name"
+                            class="h-full w-full object-cover"
+                        />
+
+                        <div
+                            v-else
+                            class="flex h-full w-full items-center justify-center text-lg font-bold text-gray-700"
+                        >
+                            {{
+                                product.name
+                                    ?.charAt(0)
+                                    ?.toUpperCase()
+                            }}
+                        </div>
+
                     </div>
 
-                    <!-- Product Title -->
                     <div>
 
                         <h1
@@ -391,29 +411,13 @@ onMounted(() => {
                 <!-- Actions -->
                 <div class="flex items-center gap-3">
 
-                    <!-- Edit -->
                     <BaseButton
                         type="button"
                         @click="editProduct"
                     >
-                        <svg
-                            class="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.5-8.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 8.5-8.5z"
-                            />
-                        </svg>
-
                         Edit Product
                     </BaseButton>
 
-                    <!-- Delete -->
                     <BaseButton
                         type="button"
                         variant="danger"
@@ -426,8 +430,33 @@ onMounted(() => {
 
             </div>
 
-            <!-- Product Information -->
+            <!-- IMAGE + INFORMATION -->
             <BaseCard class="overflow-hidden p-0">
+
+                <!-- Product Image -->
+                <div
+                    class="flex min-h-[350px] items-center justify-center border-b border-gray-100 bg-gray-50 p-6"
+                >
+
+                    <img
+                        v-if="imageUrl"
+                        :src="imageUrl"
+                        :alt="product.name"
+                        class="max-h-[400px] max-w-full rounded-xl object-contain"
+                    />
+
+                    <div
+                        v-else
+                        class="flex h-64 w-64 items-center justify-center rounded-xl bg-gray-200 text-7xl font-bold text-gray-500"
+                    >
+                        {{
+                            product.name
+                                ?.charAt(0)
+                                ?.toUpperCase()
+                        }}
+                    </div>
+
+                </div>
 
                 <!-- Description -->
                 <div
@@ -451,13 +480,15 @@ onMounted(() => {
 
                 </div>
 
-                <!-- Product Information -->
+                <!-- Information -->
                 <div
                     class="grid gap-px bg-gray-100 sm:grid-cols-2"
                 >
 
                     <!-- Price -->
-                    <div class="bg-white px-6 py-6">
+                    <div
+                        class="bg-white px-6 py-6"
+                    >
 
                         <p
                             class="text-xs font-semibold uppercase tracking-wide text-gray-500"
@@ -469,13 +500,19 @@ onMounted(() => {
                             class="mt-2 text-2xl font-bold text-gray-900"
                         >
                             Rs.
-                            {{ formatPrice(product.price) }}
+                            {{
+                                formatPrice(
+                                    product.price
+                                )
+                            }}
                         </p>
 
                     </div>
 
                     <!-- Quantity -->
-                    <div class="bg-white px-6 py-6">
+                    <div
+                        class="bg-white px-6 py-6"
+                    >
 
                         <p
                             class="text-xs font-semibold uppercase tracking-wide text-gray-500"
@@ -491,7 +528,7 @@ onMounted(() => {
 
                     </div>
 
-                    <!-- Stock Status -->
+                    <!-- Stock -->
                     <div
                         class="bg-white px-6 py-6 sm:col-span-2"
                     >
@@ -507,12 +544,14 @@ onMounted(() => {
                             :class="stockStatus.wrapper"
                             class="mt-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
                         >
+
                             <span
                                 :class="stockStatus.dot"
                                 class="h-1.5 w-1.5 rounded-full"
                             ></span>
 
                             {{ stockStatus.label }}
+
                         </span>
 
                     </div>
@@ -523,33 +562,36 @@ onMounted(() => {
 
         </template>
 
-        <!-- Delete Confirmation Modal -->
+        <!-- Delete Modal -->
         <BaseModal
             :show="showDeleteModal"
             title="Delete Product"
             size="sm"
             @close="closeDeleteModal"
         >
-            <!-- Modal Body -->
+
             <div class="text-center">
 
-                <!-- Warning Icon -->
                 <div
                     class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100"
                 >
+
                     <svg
                         class="h-6 w-6 text-red-600"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
                     >
+
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
                             stroke-width="2"
                             d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
                         />
+
                     </svg>
+
                 </div>
 
                 <h3
@@ -561,6 +603,7 @@ onMounted(() => {
                 <p
                     class="mt-2 text-sm leading-6 text-gray-500"
                 >
+
                     Are you sure you want to delete
 
                     <span
@@ -569,14 +612,14 @@ onMounted(() => {
                         {{ product?.name }}
                     </span>
 
-                   ?
+                    ?
 
                     This action cannot be undone.
+
                 </p>
 
             </div>
 
-            <!-- Modal Footer -->
             <template #footer>
 
                 <div
@@ -596,19 +639,18 @@ onMounted(() => {
                         type="button"
                         variant="danger"
                         :disabled="deleting"
+                        :loading="deleting"
                         @click="confirmDelete"
                     >
-                        {{
-                            deleting
-                                ? 'Deleting...'
-                                : 'Delete Product'
-                        }}
+                        Delete Product
                     </BaseButton>
 
                 </div>
 
             </template>
+
         </BaseModal>
 
     </div>
+
 </template>

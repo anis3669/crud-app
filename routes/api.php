@@ -31,10 +31,10 @@ Route::delete('/profile/picture', [ProfileController::class, 'deletePicture']);
         [ProductApiController::class, 'bulkDelete']
     );
 
-    Route::put(
-        '/products/bulk-update',
-        [ProductApiController::class, 'bulkUpdate']
-    );
+   Route::post(
+    '/products/bulk-update',
+    [ProductApiController::class, 'bulkUpdate']
+);
 
     // Products
     Route::get('/products', [ProductApiController::class, 'index']);
