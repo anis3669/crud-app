@@ -4,7 +4,8 @@ import { useRouter } from 'vue-router'
 import { useProductStore } from '../../stores/product'
 
 import BaseButton from '../common/BaseButton.vue'
-import BaseCard from '../common/BaseCard.vue'
+import BaseCard from '../common/Basecard.vue'
+import ImageUpload from '../common/ImageUpload.vue'
 
 const router = useRouter()
 const productStore = useProductStore()
@@ -14,6 +15,7 @@ const form = ref({
     description: '',
     price: '',
     quantity: '',
+    image: null,
 })
 
 const loading = ref(false)
@@ -49,12 +51,38 @@ async function submitForm() {
     loading.value = true
 
     try {
-        await productStore.createProduct({
-            name: form.value.name.trim(),
-            description: form.value.description.trim(),
-            price: Number(form.value.price),
-            quantity: Number(form.value.quantity),
-        })
+        // Create FormData for text fields + image file
+        const productData = new FormData()
+
+        productData.append(
+            'name',
+            form.value.name.trim()
+        )
+
+        productData.append(
+            'description',
+            form.value.description.trim()
+        )
+
+        productData.append(
+            'price',
+            Number(form.value.price)
+        )
+
+        productData.append(
+            'quantity',
+            Number(form.value.quantity)
+        )
+
+        // Add image only if one was selected
+        if (form.value.image) {
+            productData.append(
+                'image',
+                form.value.image
+            )
+        }
+
+        await productStore.createProduct(productData)
 
         // Product successfully created
         router.push({
@@ -134,9 +162,7 @@ function cancel() {
         <BaseCard>
 
             <!-- Form -->
-            <form
-                @submit.prevent="submitForm"
-            >
+            <form @submit.prevent="submitForm">
 
                 <!-- Name -->
                 <div class="mb-5">
@@ -195,7 +221,7 @@ function cancel() {
                 </div>
 
                 <!-- Quantity -->
-                <div class="mb-8">
+                <div class="mb-5">
                     <label
                         for="quantity"
                         class="mb-2 block text-sm font-semibold text-gray-700"
@@ -211,6 +237,14 @@ function cancel() {
                         step="1"
                         placeholder="0"
                         class="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                    />
+                </div>
+
+                <!-- Product Image -->
+                <div class="mb-8">
+                    <ImageUpload
+                        v-model="form.image"
+                        label="Product Image"
                     />
                 </div>
 
@@ -241,3 +275,4 @@ function cancel() {
 
     </div>
 </template>
+
