@@ -3,34 +3,96 @@ import axios from 'axios'
 
 export const useProductStore = defineStore('product', {
     state: () => ({
+        // =====================================================
+        // PRODUCTS
+        // =====================================================
+
         products: [],
         product: null,
+
+        // =====================================================
+        // PAGINATION
+        // =====================================================
+
+        currentPage: 1,
+        lastPage: 1,
+        perPage: 10,
+        total: 0,
+
+        // =====================================================
+        // SEARCH
+        // =====================================================
+
+        search: '',
+
+        // =====================================================
+        // STATE
+        // =====================================================
+
         loading: false,
         error: null,
     }),
 
     actions: {
+
         // =====================================================
-        // GET ALL PRODUCTS
+        // GET PRODUCTS
         // =====================================================
 
-        async fetchProducts() {
+        async fetchProducts(page = 1, search = this.search) {
             this.loading = true
             this.error = null
 
             try {
                 const response = await axios.get(
-                    '/api/products'
+                    '/api/products',
+                    {
+                        params: {
+                            page,
+                            search,
+                            per_page: this.perPage,
+                        },
+                    }
                 )
 
-                this.products = Array.isArray(response.data?.data)
-                    ? response.data.data
-                    : Array.isArray(response.data)
-                        ? response.data
+                const data = response.data
+
+                // -------------------------------------------------
+                // Laravel pagination response
+                // -------------------------------------------------
+
+                this.products = Array.isArray(data?.data)
+                    ? data.data
+                    : Array.isArray(data)
+                        ? data
                         : []
 
+                // -------------------------------------------------
+                // Pagination information
+                // -------------------------------------------------
+
+                this.currentPage =
+                    data?.current_page ?? 1
+
+                this.lastPage =
+                    data?.last_page ?? 1
+
+                this.perPage =
+                    data?.per_page ?? this.perPage
+
+                this.total =
+                    data?.total ?? this.products.length
+
+                // -------------------------------------------------
+                // Save current search
+                // -------------------------------------------------
+
+                this.search = search
+
                 return this.products
+
             } catch (error) {
+
                 console.error(
                     'Failed to fetch products:',
                     error
@@ -41,20 +103,95 @@ export const useProductStore = defineStore('product', {
                     'Failed to load products.'
 
                 throw error
+
             } finally {
                 this.loading = false
             }
         },
+
+
+        // =====================================================
+        // SEARCH PRODUCTS
+        // =====================================================
+
+        async searchProducts(search) {
+
+            this.search = search
+
+            return await this.fetchProducts(
+                1,
+                search
+            )
+        },
+
+
+        // =====================================================
+        // CHANGE PAGE
+        // =====================================================
+
+        async goToPage(page) {
+
+            if (
+                page < 1 ||
+                page > this.lastPage ||
+                page === this.currentPage
+            ) {
+                return
+            }
+
+            return await this.fetchProducts(
+                page,
+                this.search
+            )
+        },
+
+
+        // =====================================================
+        // NEXT PAGE
+        // =====================================================
+
+        async nextPage() {
+
+            if (
+                this.currentPage <
+                this.lastPage
+            ) {
+                return await this.fetchProducts(
+                    this.currentPage + 1,
+                    this.search
+                )
+            }
+        },
+
+
+        // =====================================================
+        // PREVIOUS PAGE
+        // =====================================================
+
+        async previousPage() {
+
+            if (
+                this.currentPage > 1
+            ) {
+                return await this.fetchProducts(
+                    this.currentPage - 1,
+                    this.search
+                )
+            }
+        },
+
 
         // =====================================================
         // GET SINGLE PRODUCT
         // =====================================================
 
         async fetchProduct(productId) {
+
             this.loading = true
             this.error = null
 
             try {
+
                 const response = await axios.get(
                     `/api/products/${productId}`
                 )
@@ -65,7 +202,9 @@ export const useProductStore = defineStore('product', {
                     response.data
 
                 return this.product
+
             } catch (error) {
+
                 console.error(
                     'Failed to fetch product:',
                     error
@@ -76,20 +215,24 @@ export const useProductStore = defineStore('product', {
                     'Failed to load product.'
 
                 throw error
+
             } finally {
                 this.loading = false
             }
         },
+
 
         // =====================================================
         // CREATE PRODUCT
         // =====================================================
 
         async createProduct(productData) {
+
             this.loading = true
             this.error = null
 
             try {
+
                 const response = await axios.post(
                     '/api/products',
                     productData
@@ -100,12 +243,22 @@ export const useProductStore = defineStore('product', {
                     response.data?.data ??
                     response.data
 
-                if (product) {
-                    this.products.push(product)
-                }
+                /*
+                 * Instead of manually pushing the product,
+                 * refresh the current pagination.
+                 *
+                 * This keeps pagination and total count correct.
+                 */
+
+                await this.fetchProducts(
+                    this.currentPage,
+                    this.search
+                )
 
                 return product
+
             } catch (error) {
+
                 console.error(
                     'Failed to create product:',
                     error
@@ -116,52 +269,58 @@ export const useProductStore = defineStore('product', {
                     'Failed to create product.'
 
                 throw error
+
             } finally {
                 this.loading = false
             }
         },
 
+
         // =====================================================
         // UPDATE SINGLE PRODUCT
         // =====================================================
 
-        async updateProduct(productId, productData) {
+        async updateProduct(
+            productId,
+            productData
+        ) {
+
             this.loading = true
             this.error = null
 
             try {
+
                 /*
-                 * productData is normally FormData because
-                 * a product may contain a new image.
+                 * productData is normally FormData
+                 * because products can contain images.
+                 *
+                 * Laravel PUT + multipart/form-data can be
+                 * problematic, so we use POST with _method=PUT
+                 * when FormData is being used.
                  */
+
+                let requestData = productData
+
+                if (
+                    productData instanceof FormData
+                ) {
+
+                    productData.append(
+                        '_method',
+                        'PUT'
+                    )
+
+                }
 
                 const response = await axios.post(
                     `/api/products/${productId}`,
-                    productData
+                    requestData
                 )
 
                 const updatedProduct =
                     response.data?.product ??
                     response.data?.data ??
                     response.data
-
-                // -------------------------------------------------
-                // Update product inside store
-                // -------------------------------------------------
-
-                const index = this.products.findIndex(
-                    product =>
-                        Number(product.id) ===
-                        Number(productId)
-                )
-
-                if (
-                    index !== -1 &&
-                    updatedProduct
-                ) {
-                    this.products[index] =
-                        updatedProduct
-                }
 
                 // -------------------------------------------------
                 // Update currently selected product
@@ -172,39 +331,56 @@ export const useProductStore = defineStore('product', {
                     Number(this.product.id) ===
                         Number(productId)
                 ) {
+
                     this.product =
                         updatedProduct
                 }
 
+                // -------------------------------------------------
+                // Refresh current page
+                // -------------------------------------------------
+
+                await this.fetchProducts(
+                    this.currentPage,
+                    this.search
+                )
+
                 return updatedProduct
 
             } catch (error) {
+
                 console.error(
                     'Failed to update product:',
                     error
                 )
 
                 // -------------------------------------------------
-                // Laravel validation error
+                // Laravel validation errors
                 // -------------------------------------------------
 
                 if (
                     error.response?.status === 422
                 ) {
+
                     const errors =
                         error.response.data?.errors
 
                     if (errors) {
+
                         this.error =
                             Object.values(errors)
                                 .flat()
                                 .join(' ')
+
                     } else {
+
                         this.error =
                             error.response.data?.message ||
                             'Validation failed.'
                     }
+
                 } else {
+
                     this.error =
                         error.response?.data?.message ||
                         error.message ||
@@ -218,35 +394,46 @@ export const useProductStore = defineStore('product', {
             }
         },
 
+
         // =====================================================
         // DELETE SINGLE PRODUCT
         // =====================================================
 
         async deleteProduct(productId) {
+
             this.loading = true
             this.error = null
 
             try {
+
                 await axios.delete(
                     `/api/products/${productId}`
                 )
-
-                this.products =
-                    this.products.filter(
-                        product =>
-                            Number(product.id) !==
-                            Number(productId)
-                    )
 
                 if (
                     this.product &&
                     Number(this.product.id) ===
                         Number(productId)
                 ) {
+
                     this.product = null
                 }
 
+                /*
+                 * Refresh products so:
+                 *
+                 * - total is correct
+                 * - pagination is correct
+                 * - empty pages are handled
+                 */
+
+                await this.fetchProducts(
+                    this.currentPage,
+                    this.search
+                )
+
             } catch (error) {
+
                 console.error(
                     'Failed to delete product:',
                     error
@@ -263,13 +450,19 @@ export const useProductStore = defineStore('product', {
             }
         },
 
+
         // =====================================================
         // BULK DELETE
         // =====================================================
 
-        async bulkDelete(productsToDelete) {
+        async bulkDelete(
+            productsToDelete
+        ) {
+
             if (
-                !Array.isArray(productsToDelete) ||
+                !Array.isArray(
+                    productsToDelete
+                ) ||
                 productsToDelete.length === 0
             ) {
                 return
@@ -279,30 +472,37 @@ export const useProductStore = defineStore('product', {
             this.error = null
 
             try {
-                await Promise.all(
+
+                /*
+                 * Use the existing backend bulk-delete endpoint.
+                 */
+
+                const ids =
                     productsToDelete.map(
                         product =>
-                            axios.delete(
-                                `/api/products/${product.id}`
-                            )
+                            product.id
                     )
+
+                await axios.delete(
+                    '/api/products/bulk-delete',
+                    {
+                        data: {
+                            ids,
+                        },
+                    }
                 )
 
-                const deletedIds =
-                    productsToDelete.map(
-                        product =>
-                            Number(product.id)
-                    )
+                /*
+                 * Refresh current page.
+                 */
 
-                this.products =
-                    this.products.filter(
-                        product =>
-                            !deletedIds.includes(
-                                Number(product.id)
-                            )
-                    )
+                await this.fetchProducts(
+                    this.currentPage,
+                    this.search
+                )
 
             } catch (error) {
+
                 console.error(
                     'Failed to bulk delete products:',
                     error
@@ -319,68 +519,79 @@ export const useProductStore = defineStore('product', {
             }
         },
 
+
         // =====================================================
         // BULK UPDATE
         // =====================================================
 
         async bulkUpdate(products) {
+
             this.loading = true
             this.error = null
 
             try {
-                // -------------------------------------------------
+
                 // Validate input
-                // -------------------------------------------------
 
                 if (
                     !Array.isArray(products) ||
                     products.length === 0
                 ) {
+
                     throw new Error(
                         'No products were provided.'
                     )
                 }
 
-                // -------------------------------------------------
                 // Create FormData
-                // -------------------------------------------------
 
-                const formData = new FormData()
+                const formData =
+                    new FormData()
 
                 products.forEach(
                     (product, index) => {
 
                         // ID
+
                         formData.append(
                             `products[${index}][id]`,
                             String(product.id)
                         )
 
                         // Name
+
                         formData.append(
                             `products[${index}][name]`,
                             product.name ?? ''
                         )
 
                         // Description
+
                         formData.append(
                             `products[${index}][description]`,
                             product.description ?? ''
                         )
 
                         // Price
+
                         formData.append(
                             `products[${index}][price]`,
-                            String(product.price ?? '')
+                            String(
+                                product.price ?? ''
+                            )
                         )
 
                         // Quantity
+
                         formData.append(
                             `products[${index}][quantity]`,
-                            String(product.quantity ?? '')
+                            String(
+                                product.quantity ?? ''
+                            )
                         )
 
                         // Remove existing image
+
                         formData.append(
                             `products[${index}][remove_image]`,
                             product.removeImage === true
@@ -389,9 +600,11 @@ export const useProductStore = defineStore('product', {
                         )
 
                         // New image
+
                         if (
                             product.image instanceof File
                         ) {
+
                             formData.append(
                                 `products[${index}][image]`,
                                 product.image
@@ -400,9 +613,7 @@ export const useProductStore = defineStore('product', {
                     }
                 )
 
-                // -------------------------------------------------
                 // Send request
-                // -------------------------------------------------
 
                 const response =
                     await axios.post(
@@ -410,41 +621,47 @@ export const useProductStore = defineStore('product', {
                         formData
                     )
 
-                // -------------------------------------------------
                 // Refresh products
-                // -------------------------------------------------
 
-                await this.fetchProducts()
+                await this.fetchProducts(
+                    this.currentPage,
+                    this.search
+                )
 
                 return response.data
 
             } catch (error) {
+
                 console.error(
                     'Failed to bulk update products:',
                     error
                 )
 
-                // -------------------------------------------------
                 // Validation errors
-                // -------------------------------------------------
 
                 if (
                     error.response?.status === 422
                 ) {
+
                     const errors =
                         error.response.data?.errors
 
                     if (errors) {
+
                         this.error =
                             Object.values(errors)
                                 .flat()
                                 .join(' ')
+
                     } else {
+
                         this.error =
                             error.response.data?.message ||
                             'Validation failed.'
                     }
+
                 } else {
+
                     this.error =
                         error.response?.data?.message ||
                         error.message ||
@@ -458,17 +675,31 @@ export const useProductStore = defineStore('product', {
             }
         },
 
-        // =====================================================
+
+
         // CLEAR CURRENT PRODUCT
-        // =====================================================
+
 
         clearProduct() {
             this.product = null
         },
 
-        // =====================================================
+
+        // CLEAR SEARCH
+
+        async clearSearch() {
+
+            this.search = ''
+
+            return await this.fetchProducts(
+                1,
+                ''
+            )
+        },
+
+
         // CLEAR ERROR
-        // =====================================================
+
 
         clearError() {
             this.error = null

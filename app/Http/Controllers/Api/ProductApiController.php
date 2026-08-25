@@ -11,13 +11,44 @@ class ProductApiController extends Controller
 {
     // =========================================================
     // GET ALL PRODUCTS
+    // SEARCH + PAGINATION
     // =========================================================
 
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(
-            Product::all()
+        $perPage = (int) $request->input('per_page', 10);
+
+        // Keep pagination between 1 and 100 products per page
+        $perPage = max(1, min($perPage, 100));
+
+        $search = trim(
+            $request->input('search', '')
         );
+
+        $query = Product::query();
+
+        // Search product name and description
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where(
+                    'name',
+                    'like',
+                    "%{$search}%"
+                )
+                ->orWhere(
+                    'description',
+                    'like',
+                    "%{$search}%"
+                );
+            });
+        }
+
+        // Paginate products
+        $products = $query
+            ->latest()
+            ->paginate($perPage);
+
+        return response()->json($products);
     }
 
 
@@ -60,13 +91,20 @@ class ProductApiController extends Controller
         ]);
 
 
-        // Store image if uploaded
+        // =====================================================
+        // STORE IMAGE
+        // =====================================================
+
         if ($request->hasFile('image')) {
             $validated['image'] = $request
                 ->file('image')
                 ->store('products', 'public');
         }
 
+
+        // =====================================================
+        // CREATE PRODUCT
+        // =====================================================
 
         $product = Product::create($validated);
 
@@ -186,7 +224,7 @@ class ProductApiController extends Controller
 
         if ($request->hasFile('image')) {
 
-            // Delete old image if it still exists
+            // Delete old image
             if (!empty($product->image)) {
                 Storage::disk('public')->delete(
                     $product->image
@@ -224,7 +262,7 @@ class ProductApiController extends Controller
 
     public function destroy(Product $product)
     {
-        // Delete image
+        // Delete image from storage
         if (!empty($product->image)) {
             Storage::disk('public')->delete(
                 $product->image
@@ -269,7 +307,10 @@ class ProductApiController extends Controller
         )->get();
 
 
-        // Delete images
+        // =====================================================
+        // DELETE PRODUCT IMAGES
+        // =====================================================
+
         foreach ($products as $product) {
 
             if (!empty($product->image)) {
@@ -280,7 +321,10 @@ class ProductApiController extends Controller
         }
 
 
-        // Delete products
+        // =====================================================
+        // DELETE PRODUCTS
+        // =====================================================
+
         $deletedCount = Product::whereIn(
             'id',
             $validated['ids']
@@ -429,7 +473,7 @@ class ProductApiController extends Controller
 
             if ($request->hasFile($imageKey)) {
 
-                // Delete current image if it exists
+                // Delete current image
                 if (!empty($product->image)) {
 
                     Storage::disk('public')->delete(
@@ -457,7 +501,7 @@ class ProductApiController extends Controller
 
 
             // =================================================
-            // ADD FRESH PRODUCT TO RESPONSE
+            // ADD FRESH PRODUCT
             // =================================================
 
             $updatedProducts[] =

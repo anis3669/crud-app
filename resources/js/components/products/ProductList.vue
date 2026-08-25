@@ -264,31 +264,6 @@ function imageUrl(image) {
 
     <div>
 
-        <!-- Header -->
-        <div class="mb-8">
-
-            <div class="flex items-center gap-3">
-
-                <h1
-                    class="text-2xl font-bold tracking-tight text-gray-900"
-                >
-                    Products
-                </h1>
-
-                <span
-                    class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-600"
-                >
-                    {{ productCount }}
-                </span>
-
-            </div>
-
-            <p class="mt-1 text-sm text-gray-500">
-                Manage your product inventory.
-            </p>
-
-        </div>
-
         <!-- Bulk Actions -->
         <div
             v-if="hasSelectedProducts"
