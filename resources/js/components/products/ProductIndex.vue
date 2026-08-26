@@ -73,6 +73,18 @@ const search = computed(() => {
     return productStore.search
 })
 
+// Filter
+
+const filter = computed(() => {
+    return productStore.filter
+})
+
+// Inventory Stats
+
+const stats = computed(() => {
+    return productStore.stats
+})
+
 // Pagination information
 
 const firstProductNumber = computed(() => {
@@ -100,7 +112,8 @@ async function loadProducts() {
     try {
         await productStore.fetchProducts(
             productStore.currentPage,
-            productStore.search
+            productStore.search,
+            productStore.filter
         )
     } catch (err) {
         console.error(
@@ -135,6 +148,21 @@ async function clearSearch() {
     } catch (err) {
         console.error(
             'Clear search error:',
+            err
+        )
+    }
+}
+
+// Filter Products
+
+async function changeFilter() {
+    try {
+        await productStore.filterProducts(
+            filter.value
+        )
+    } catch (err) {
+        console.error(
+            'Filter products error:',
             err
         )
     }
@@ -324,6 +352,7 @@ async function refreshProducts() {
 
 onMounted(() => {
     searchInput.value = productStore.search
+
     loadProducts()
 })
 </script>
@@ -333,329 +362,375 @@ onMounted(() => {
 
         <!-- Page Header -->
 
-<div class="mb-6">
-    <div
-        class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white px-5 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
-    >
+        <div class="mb-6">
+            <div
+                class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white px-5 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+            >
 
-        <!-- Title -->
-
-        <div class="min-w-0">
-            <div class="flex items-center gap-3">
-                <div
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-900"
-                >
-                    <svg
-                        class="h-5 w-5 text-white"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="1.8"
-                            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                        />
-                    </svg>
-                </div>
+                <!-- Title -->
 
                 <div class="min-w-0">
-                    <h1
-                        class="truncate text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl"
-                    >
-                        Product Management
-                    </h1>
+                    <div class="flex items-center gap-3">
+
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-900"
+                        >
+                            <svg
+                                class="h-5 w-5 text-white"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                />
+                            </svg>
+                        </div>
+
+                        <div class="min-w-0">
+                            <h1
+                                class="truncate text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl"
+                            >
+                                Product Management
+                            </h1>
+
+                            <p class="mt-1 text-sm text-gray-500">
+                                Manage your inventory
+                            </p>
+                        </div>
+
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- Actions -->
+                <!-- Actions -->
 
-        <div
-            class="flex w-full items-center gap-2 sm:w-auto"
-        >
-
-            <!-- Refresh -->
-
-            <BaseButton
-                type="button"
-                variant="secondary"
-                :disabled="loading"
-                class="flex-1 sm:flex-none"
-                @click="refreshProducts"
-            >
-                <svg
-                    class="h-4 w-4"
-                    :class="{
-                        'animate-spin': loading,
-                    }"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <div
+                    class="flex w-full items-center gap-2 sm:w-auto"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M4 4v5h5M20 20v-5h-5M5.07 9A7 7 0 0117.9 6.1L20 9M19 15a7 7 0 01-12.83 2.9L4 15"
-                    />
-                </svg>
 
-                <span class="hidden sm:inline">
-                    {{ loading ? 'Loading...' : 'Refresh' }}
-                </span>
-            </BaseButton>
+                    <!-- Refresh -->
 
-            <!-- Add Product -->
-
-            <BaseButton
-                type="button"
-                class="flex-1 sm:flex-none"
-                @click="addProduct"
-            >
-                <svg
-                    class="h-4 w-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4v16m8-8H4"
-                    />
-                </svg>
-
-                <span>Add Product</span>
-            </BaseButton>
-
-        </div>
-
-    </div>
-</div>
-
-        <!-- Search -->
-
-<BaseCard class="mb-6 overflow-hidden">
-
-    <!-- Search Header -->
-
-    <div
-        class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
-    >
-
-        <div>
-            <div class="flex items-center gap-2">
-
-            </div>
-        </div>
-
-        <!-- Result Count -->
-
-        <div
-            v-if="!search"
-            class="hidden text-xs text-gray-400 sm:block"
-        >
-            {{ total }} product{{ total === 1 ? '' : 's' }}
-        </div>
-
-    </div>
-
-    <!-- Search Form -->
-
-    <form
-        class="flex flex-col gap-2 sm:flex-row"
-        @submit.prevent="performSearch"
-    >
-
-        <!-- Search Input -->
-
-        <div class="relative min-w-0 flex-1">
-
-            <!-- Search Icon -->
-
-            <div
-                class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4"
-            >
-                <svg
-                    class="h-5 w-5 text-gray-400 transition"
-                    :class="{
-                        'text-gray-700': searchInput,
-                    }"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="1.8"
-                        d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
-                    />
-                </svg>
-            </div>
-
-            <input
-                v-model="searchInput"
-                type="text"
-                placeholder="Search products..."
-                class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3.5 pl-12 pr-24 text-sm text-gray-900 outline-none transition duration-200 placeholder:text-gray-400 hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
-            />
-
-            <!-- Right Side -->
-
-            <div
-                class="absolute inset-y-0 right-3 flex items-center gap-2"
-            >
-
-                <!-- Clear -->
-
-                <button
-                    v-if="searchInput"
-                    type="button"
-                    class="flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-200 hover:text-gray-700"
-                    @click="clearSearch"
-                >
-                    <svg
-                        class="h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    <BaseButton
+                        type="button"
+                        variant="secondary"
+                        :disabled="loading"
+                        class="flex-1 sm:flex-none"
+                        @click="refreshProducts"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
-                    </svg>
-                </button>
+                        <svg
+                            class="h-4 w-4"
+                            :class="{
+                                'animate-spin': loading,
+                            }"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M4 4v5h5M20 20v-5h-5M5.07 9A7 7 0 0117.9 6.1L20 9M19 15a7 7 0 01-12.83 2.9L4 15"
+                            />
+                        </svg>
 
+                        <span class="hidden sm:inline">
+                            {{ loading ? 'Loading...' : 'Refresh' }}
+                        </span>
+                    </BaseButton>
+
+                    <!-- Add Product -->
+
+                    <BaseButton
+                        type="button"
+                        class="flex-1 sm:flex-none"
+                        @click="addProduct"
+                    >
+                        <svg
+                            class="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 4v16m8-8H4"
+                            />
+                        </svg>
+
+                        <span>Add Product</span>
+                    </BaseButton>
+
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Inventory Summary -->
+
+        <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+
+            <!-- Total Products -->
+
+            <div
+                class="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+            >
+                <p class="text-xs font-medium text-gray-500">
+                    Total Products
+                </p>
+
+                <p class="mt-1 text-2xl font-bold text-gray-900">
+                    {{ stats.total_products }}
+                </p>
+            </div>
+
+            <!-- In Stock -->
+
+            <div
+                class="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+            >
+                <p class="text-xs font-medium text-gray-500">
+                    In Stock
+                </p>
+
+                <p class="mt-1 text-2xl font-bold text-gray-900">
+                    {{ stats.in_stock }}
+                </p>
+            </div>
+
+            <!-- Out of Stock -->
+
+            <div
+                class="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+            >
+                <p class="text-xs font-medium text-gray-500">
+                    Out of Stock
+                </p>
+
+                <p class="mt-1 text-2xl font-bold text-gray-900">
+                    {{ stats.out_of_stock }}
+                </p>
+            </div>
+
+            <!-- Total Quantity -->
+
+            <div
+                class="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+            >
+                <p class="text-xs font-medium text-gray-500">
+                    Total Quantity
+                </p>
+
+                <p class="mt-1 text-2xl font-bold text-gray-900">
+                    {{ stats.total_quantity }}
+                </p>
             </div>
 
         </div>
 
-        <!-- Search Button -->
+        <!-- Search + Filter -->
 
-        <BaseButton
-            type="submit"
-            :disabled="loading"
-            class="justify-center px-6 sm:min-w-[110px]"
-        >
+        <BaseCard class="mb-6 overflow-hidden">
 
-            <svg
-                v-if="!loading"
-                class="h-4 w-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div
+                class="flex flex-col gap-3 lg:flex-row lg:items-center"
             >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="1.8"
-                    d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
-                />
-            </svg>
 
-            <svg
-                v-else
-                class="h-4 w-4 animate-spin"
-                fill="none"
-                viewBox="0 0 24 24"
-            >
-                <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                />
+                <!-- Search Form -->
 
-                <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                />
-            </svg>
-
-            {{ loading ? 'Searching...' : 'Search' }}
-
-        </BaseButton>
-
-        <!-- Clear Button -->
-
-        <BaseButton
-            v-if="search"
-            type="button"
-            variant="secondary"
-            :disabled="loading"
-            class="justify-center"
-            @click="clearSearch"
-        >
-            Clear
-        </BaseButton>
-
-    </form>
-
-    <!-- Active Search -->
-
-    <div
-        v-if="search"
-        class="mt-4 flex flex-wrap items-center gap-2"
-    >
-
-        <span
-            class="text-xs font-medium text-gray-500"
-        >
-            Showing results for
-        </span>
-
-        <span
-            class="inline-flex max-w-full items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-semibold text-gray-700"
-        >
-
-            <span
-                class="h-1.5 w-1.5 shrink-0 rounded-full bg-gray-900"
-            ></span>
-
-            <span class="max-w-[220px] truncate">
-                "{{ search }}"
-            </span>
-
-            <button
-                type="button"
-                class="ml-0.5 flex h-4 w-4 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-200 hover:text-gray-700"
-                @click="clearSearch"
-            >
-                <svg
-                    class="h-3 w-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <form
+                    class="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row"
+                    @submit.prevent="performSearch"
                 >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M6 6l12 12M18 6L6 18"
-                    />
-                </svg>
-            </button>
 
-        </span>
+                    <!-- Search Input -->
 
-        <span class="text-xs text-gray-400">
-            {{ total }}
-            result{{ total === 1 ? '' : 's' }}
-        </span>
+                    <div class="relative min-w-0 flex-1">
 
-    </div>
+                        <!-- Search Icon -->
 
-</BaseCard>
+                        <div
+                            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4"
+                        >
+                            <svg
+                                class="h-5 w-5 text-gray-400 transition"
+                                :class="{
+                                    'text-gray-700': searchInput,
+                                }"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
+                                />
+                            </svg>
+                        </div>
+
+                        <input
+                            v-model="searchInput"
+                            type="text"
+                            placeholder="Search products..."
+                            class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3.5 pl-12 pr-12 text-sm text-gray-900 outline-none transition duration-200 placeholder:text-gray-400 hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
+                        />
+
+                        <!-- Clear -->
+
+                        <button
+                            v-if="searchInput"
+                            type="button"
+                            class="absolute inset-y-0 right-3 flex h-full w-7 items-center justify-center text-gray-400 transition hover:text-gray-700"
+                            @click="clearSearch"
+                        >
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+                            </svg>
+                        </button>
+
+                    </div>
+
+                    <!-- Search Button -->
+
+                    <BaseButton
+                        type="submit"
+                        :disabled="loading"
+                        class="justify-center px-6 sm:min-w-[110px]"
+                    >
+
+                        <svg
+                            v-if="!loading"
+                            class="h-4 w-4"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1-14.5 0Z"
+                            />
+                        </svg>
+
+                        <svg
+                            v-else
+                            class="h-4 w-4 animate-spin"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle
+                                class="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                stroke-width="4"
+                            />
+
+                            <path
+                                class="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            />
+                        </svg>
+
+                        {{ loading ? 'Searching...' : 'Search' }}
+
+                    </BaseButton>
+
+                </form>
+
+                <!-- Filter -->
+
+                <div class="w-full lg:w-56">
+
+                    <label
+                        for="product-filter"
+                        class="sr-only"
+                    >
+                        Filter products
+                    </label>
+
+                    <div class="relative">
+
+                        <select
+                            id="product-filter"
+                            :value="filter"
+                            :disabled="loading"
+                            class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 pr-10 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                            @change="
+                                productStore.filterProducts(
+                                    $event.target.value
+                                )
+                            "
+                        >
+
+                            <option value="all">
+                                All Products
+                            </option>
+
+                            <option value="latest">
+                                Latest Added
+                            </option>
+
+                            <option value="oldest">
+                                Oldest Added
+                            </option>
+
+                            <option value="in_stock">
+                                In Stock
+                            </option>
+
+                            <option value="out_of_stock">
+                                Out of Stock
+                            </option>
+
+                        </select>
+
+                        <div
+                            class="pointer-events-none absolute inset-y-0 right-3 flex items-center"
+                        >
+                            <svg
+                                class="h-4 w-4 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="m6 9 6 6 6-6"
+                                />
+                            </svg>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </BaseCard>
 
         <!-- Error -->
 
@@ -793,20 +868,20 @@ onMounted(() => {
 
                 <!-- Information -->
 
-                <div
-                    class="flex flex-col gap-1"
-                >
+                <div class="flex flex-col gap-1">
 
                     <p
                         class="text-sm font-semibold text-gray-800"
                     >
-                        Products {{ firstProductNumber }}–{{ lastProductNumber }}
+                        Products
+                        {{ firstProductNumber }}–{{ lastProductNumber }}
                     </p>
 
                     <p
                         class="text-xs text-gray-500"
                     >
-                        Showing {{ products.length }} of {{ total }} products
+                        Showing {{ products.length }} of
+                        {{ total }} products
                     </p>
 
                 </div>
