@@ -9,51 +9,139 @@ use Illuminate\Support\Facades\Storage;
 
 class ProductApiController extends Controller
 {
+    // =========================================================
     // GET ALL PRODUCTS
-    // SEARCH + PAGINATION
+    // SEARCH + PRODUCT FILTER + PRICE FILTER + PAGINATION
+    // =========================================================
 
     public function index(Request $request)
     {
-        // Pagination
-        $perPage = (int) $request->input('per_page', 10);
+        // =====================================================
+        // VALIDATE QUERY PARAMETERS
+        // =====================================================
 
-        // Keep pagination between 1 and 100
-        $perPage = max(1, min($perPage, 100));
+        $validated = $request->validate([
+            'search' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
 
-        // Search
-        $search = trim(
-            $request->input('search', '')
-        );
+            'filter' => [
+                'nullable',
+                'string',
+                'in:all,latest,oldest,in_stock,out_of_stock',
+            ],
 
-        // Filter
-        $filter = $request->input('filter', 'all');
+            'min_price' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
 
-        // Start query
+            'max_price' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'per_page' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:100',
+            ],
+        ]);
+
+        // =====================================================
+        // VALUES
+        // =====================================================
+
+        $search =
+            trim($validated['search'] ?? '');
+
+        $filter =
+            $validated['filter'] ?? 'all';
+
+        $minPrice =
+            $validated['min_price'] ?? null;
+
+        $maxPrice =
+            $validated['max_price'] ?? null;
+
+        $perPage =
+            $validated['per_page'] ?? 10;
+
+
+        // =====================================================
+        // PRODUCT QUERY
+        // =====================================================
+
         $query = Product::query();
 
 
-// search
+        // =====================================================
+        // SEARCH
+        // =====================================================
 
         if ($search !== '') {
+
             $query->where(function ($q) use ($search) {
+
                 $q->where(
                     'name',
                     'like',
-                    "%{$search}%"
-                )
-                    ->orWhere(
-                        'description',
-                        'like',
-                        "%{$search}%"
-                    );
+                    '%' . $search . '%'
+                );
+
+                $q->orWhere(
+                    'description',
+                    'like',
+                    '%' . $search . '%'
+                );
+
             });
         }
 
-// filter
+
+        // =====================================================
+        // PRODUCT FILTER
+        // =====================================================
 
         switch ($filter) {
 
-            // Products with quantity greater than 0
+            // -------------------------------------------------
+            // LATEST
+            // -------------------------------------------------
+
+            case 'latest':
+
+                $query->orderBy(
+                    'created_at',
+                    'desc'
+                );
+
+                break;
+
+
+            // -------------------------------------------------
+            // OLDEST
+            // -------------------------------------------------
+
+            case 'oldest':
+
+                $query->orderBy(
+                    'created_at',
+                    'asc'
+                );
+
+                break;
+
+
+            // -------------------------------------------------
+            // IN STOCK
+            // -------------------------------------------------
+
             case 'in_stock':
 
                 $query->where(
@@ -62,10 +150,18 @@ class ProductApiController extends Controller
                     0
                 );
 
+                $query->orderBy(
+                    'created_at',
+                    'desc'
+                );
+
                 break;
 
 
-            // Products with quantity equal to 0
+            // -------------------------------------------------
+            // OUT OF STOCK
+            // -------------------------------------------------
+
             case 'out_of_stock':
 
                 $query->where(
@@ -74,61 +170,121 @@ class ProductApiController extends Controller
                     0
                 );
 
-                break;
-
-
-            // Newest products first
-            case 'latest':
-
-                $query->latest();
+                $query->orderBy(
+                    'created_at',
+                    'desc'
+                );
 
                 break;
 
 
-            // Oldest products first
-            case 'oldest':
+            // -------------------------------------------------
+            // ALL
+            // -------------------------------------------------
 
-                $query->oldest();
-
-                break;
-
-
-            // All products
             case 'all':
+
             default:
 
-                $query->latest();
+                $query->orderBy(
+                    'created_at',
+                    'desc'
+                );
 
                 break;
         }
 
 
+        // =====================================================
+        // MINIMUM PRICE
+        // =====================================================
 
-// Pagination
-$products = $query->paginate($perPage);
+        if ($minPrice !== null) {
 
-$totalProducts = Product::count();
+            $query->where(
+                'price',
+                '>=',
+                $minPrice
+            );
 
-$inStock = Product::where('quantity', '>', 0)->count();
+        }
 
-$outOfStock = Product::where('quantity', '=', 0)->count();
 
-$totalQuantity = Product::sum('quantity');
+        // =====================================================
+        // MAXIMUM PRICE
+        // =====================================================
 
-// Response
-return response()->json([
-    'products' => $products,
-    'stats' => [
-        'total_products' => $totalProducts,
-        'in_stock' => $inStock,
-        'out_of_stock' => $outOfStock,
-        'total_quantity' => $totalQuantity,
-    ],
-]);
+        if ($maxPrice !== null) {
+
+            $query->where(
+                'price',
+                '<=',
+                $maxPrice
+            );
+
+        }
+
+
+        // =====================================================
+        // PAGINATION
+        // =====================================================
+
+        $products = $query->paginate(
+            $perPage
+        );
+
+
+        // =====================================================
+        // INVENTORY STATISTICS
+        // =====================================================
+        //
+        // IMPORTANT:
+        // These are COMPLETE inventory statistics.
+        // They are NOT affected by filters/search/pagination.
+        //
+
+        $stats = [
+
+            'total_products' =>
+                Product::count(),
+
+            'in_stock' =>
+                Product::where(
+                    'quantity',
+                    '>',
+                    0
+                )->count(),
+
+            'out_of_stock' =>
+                Product::where(
+                    'quantity',
+                    '=',
+                    0
+                )->count(),
+
+            'total_quantity' =>
+                Product::sum('quantity'),
+
+        ];
+
+
+        // =====================================================
+        // RESPONSE
+        // =====================================================
+
+        return response()->json([
+
+            'products' => $products,
+
+            'stats' => $stats,
+
+        ]);
     }
 
-    // CREATE PRODUCT
 
+    // =========================================================
+    // CREATE PRODUCT
+    // =========================================================
 
     public function store(Request $request)
     {
@@ -164,30 +320,33 @@ return response()->json([
             ],
         ]);
 
-
-        // STORE IMAGE
-
-
         if ($request->hasFile('image')) {
-            $validated['image'] = $request
-                ->file('image')
-                ->store('products', 'public');
+
+            $validated['image'] =
+                $request
+                    ->file('image')
+                    ->store(
+                        'products',
+                        'public'
+                    );
         }
 
-
-        // CREATE PRODUCT
-
-        $product = Product::create($validated);
-
+        $product =
+            Product::create($validated);
 
         return response()->json([
-            'message' => 'Product created successfully.',
-            'product' => $product->fresh(),
+            'message' =>
+                'Product created successfully.',
+
+            'product' =>
+                $product->fresh(),
         ], 201);
     }
 
 
+    // =========================================================
     // GET SINGLE PRODUCT
+    // =========================================================
 
     public function show(Product $product)
     {
@@ -195,7 +354,9 @@ return response()->json([
     }
 
 
+    // =========================================================
     // UPDATE SINGLE PRODUCT
+    // =========================================================
 
     public function update(
         Request $request,
@@ -237,9 +398,6 @@ return response()->json([
             ],
         ]);
 
-
-        // BASIC FIELDS
-
         $product->name =
             $validated['name'];
 
@@ -253,7 +411,9 @@ return response()->json([
             $validated['quantity'];
 
 
-        // CHECK REMOVE IMAGE
+        // =====================================================
+        // REMOVE IMAGE
+        // =====================================================
 
         $removeImage =
             $request->input('remove_image');
@@ -265,12 +425,11 @@ return response()->json([
             $removeImage === 'true';
 
 
-        // REMOVE EXISTING IMAGE
-
         if (
             $removeImage &&
             !empty($product->image)
         ) {
+
             Storage::disk('public')->delete(
                 $product->image
             );
@@ -279,83 +438,96 @@ return response()->json([
         }
 
 
+        // =====================================================
         // NEW IMAGE
+        // =====================================================
 
         if ($request->hasFile('image')) {
 
-            // Delete old image
             if (!empty($product->image)) {
+
                 Storage::disk('public')->delete(
                     $product->image
                 );
             }
 
-            // Store new image
             $product->image =
                 $request
-                ->file('image')
-                ->store(
-                    'products',
-                    'public'
-                );
+                    ->file('image')
+                    ->store(
+                        'products',
+                        'public'
+                    );
         }
 
-
-        // SAVE
 
         $product->save();
 
-
         return response()->json([
-            'message' => 'Product updated successfully.',
-            'product' => $product->fresh(),
+            'message' =>
+                'Product updated successfully.',
+
+            'product' =>
+                $product->fresh(),
         ]);
     }
 
 
+    // =========================================================
     // DELETE SINGLE PRODUCT
+    // =========================================================
+
     public function destroy(Product $product)
     {
-        // Remember the image path before deleting the product
-        $image = $product->image;
+        $image =
+            $product->image;
 
-        // Delete product from database
         $product->delete();
 
-        // Delete product image from Laravel storage
         if ($image) {
-            Storage::disk('public')->delete($image);
+
+            Storage::disk('public')->delete(
+                $image
+            );
         }
 
         return response()->json([
-            'message' => 'Product deleted successfully.',
+            'message' =>
+                'Product deleted successfully.',
         ]);
     }
 
+
+    // =========================================================
     // BULK DELETE
+    // =========================================================
 
     public function bulkDelete(Request $request)
     {
         $validated = $request->validate([
-            'ids' => 'required|array|min:1',
-            'ids.*' => 'required|integer|exists:products,id',
+            'ids' =>
+                'required|array|min:1',
+
+            'ids.*' =>
+                'required|integer|exists:products,id',
         ]);
 
-        // Get products before deleting them
-        $products = Product::whereIn(
-            'id',
-            $validated['ids']
-        )->get();
+        $products =
+            Product::whereIn(
+                'id',
+                $validated['ids']
+            )->get();
 
-        // Delete database records
-        $deletedCount = Product::whereIn(
-            'id',
-            $validated['ids']
-        )->delete();
+        $deletedCount =
+            Product::whereIn(
+                'id',
+                $validated['ids']
+            )->delete();
 
-        // Delete their images from storage
         foreach ($products as $product) {
+
             if ($product->image) {
+
                 Storage::disk('public')->delete(
                     $product->image
                 );
@@ -363,12 +535,18 @@ return response()->json([
         }
 
         return response()->json([
-            'message' => 'Selected products deleted successfully.',
-            'deleted_count' => $deletedCount,
+            'message' =>
+                'Selected products deleted successfully.',
+
+            'deleted_count' =>
+                $deletedCount,
         ]);
     }
 
+
+    // =========================================================
     // BULK UPDATE
+    // =========================================================
 
     public function bulkUpdate(Request $request)
     {
@@ -424,19 +602,16 @@ return response()->json([
         $updatedProducts = [];
 
 
-        // UPDATE EACH PRODUCT
-
         foreach (
             $validated['products']
             as $index => $productData
         ) {
 
-            $product = Product::findOrFail(
-                $productData['id']
-            );
+            $product =
+                Product::findOrFail(
+                    $productData['id']
+                );
 
-
-            // BASIC FIELDS
 
             $product->name =
                 $productData['name'];
@@ -451,7 +626,9 @@ return response()->json([
                 $productData['quantity'];
 
 
+            // =================================================
             // REMOVE IMAGE FLAG
+            // =================================================
 
             $removeImage =
                 $request->input(
@@ -464,8 +641,6 @@ return response()->json([
                 $removeImage === true ||
                 $removeImage === 'true';
 
-
-            // REMOVE EXISTING IMAGE
 
             if (
                 $removeImage &&
@@ -480,15 +655,18 @@ return response()->json([
             }
 
 
+            // =================================================
             // NEW IMAGE
+            // =================================================
 
             $imageKey =
                 "products.$index.image";
 
 
-            if ($request->hasFile($imageKey)) {
+            if (
+                $request->hasFile($imageKey)
+            ) {
 
-                // Delete current image
                 if (!empty($product->image)) {
 
                     Storage::disk('public')->delete(
@@ -496,38 +674,29 @@ return response()->json([
                     );
                 }
 
-
-                // Store new image
                 $product->image =
                     $request
-                    ->file($imageKey)
-                    ->store(
-                        'products',
-                        'public'
-                    );
+                        ->file($imageKey)
+                        ->store(
+                            'products',
+                            'public'
+                        );
             }
 
 
-            // SAVE
-
             $product->save();
-
-
-            // ADD FRESH PRODUCT
 
             $updatedProducts[] =
                 $product->fresh();
         }
 
 
-        // RESPONSE
-
         return response()->json([
             'message' =>
-            'Selected products updated successfully.',
+                'Selected products updated successfully.',
 
             'products' =>
-            $updatedProducts,
+                $updatedProducts,
         ]);
     }
 }

@@ -1,30 +1,30 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../../stores/auth'
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../../stores/auth";
 
-const router = useRouter()
-const authStore = useAuthStore()
+const router = useRouter();
+const authStore = useAuthStore();
 
-const showProfileMenu = ref(false)
-const profileMenuRef = ref(null)
+const showProfileMenu = ref(false);
+const profileMenuRef = ref(null);
 
 // navigation
 
 function goToProducts() {
-    showProfileMenu.value = false
+    showProfileMenu.value = false;
 
     router.push({
-        name: 'products.index',
-    })
+        name: "products.index",
+    });
 }
 
 function goToProfile() {
-    showProfileMenu.value = false
+    showProfileMenu.value = false;
 
     router.push({
-        name: 'profile',
-    })
+        name: "profile",
+    });
 }
 
 /*
@@ -34,22 +34,22 @@ function goToProfile() {
 */
 
 async function logout() {
-    showProfileMenu.value = false
+    showProfileMenu.value = false;
 
     try {
-        await authStore.logout()
+        await authStore.logout();
 
         router.push({
-            name: 'login',
-        })
+            name: "login",
+        });
     } catch (error) {
-        console.error('Logout failed:', error)
+        console.error("Logout failed:", error);
 
         // Even if the server logout fails,
         // the Pinia store clears the local auth state.
         router.push({
-            name: 'login',
-        })
+            name: "login",
+        });
     }
 }
 
@@ -60,44 +60,29 @@ async function logout() {
 */
 
 function toggleProfileMenu() {
-    showProfileMenu.value =
-        !showProfileMenu.value
+    showProfileMenu.value = !showProfileMenu.value;
 }
 
 function closeProfileMenu(event) {
-    if (
-        profileMenuRef.value &&
-        !profileMenuRef.value.contains(
-            event.target
-        )
-    ) {
-        showProfileMenu.value = false
+    if (profileMenuRef.value && !profileMenuRef.value.contains(event.target)) {
+        showProfileMenu.value = false;
     }
 }
 
 onMounted(() => {
-    document.addEventListener(
-        'click',
-        closeProfileMenu
-    )
-})
+    document.addEventListener("click", closeProfileMenu);
+});
 
 onBeforeUnmount(() => {
-    document.removeEventListener(
-        'click',
-        closeProfileMenu
-    )
-})
+    document.removeEventListener("click", closeProfileMenu);
+});
 </script>
 
 <template>
-    <nav
-        class="border-b border-gray-200 bg-white"
-    >
+    <nav class="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur">
         <div
             class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8"
         >
-
             <!-- Logo -->
             <button
                 type="button"
@@ -110,18 +95,13 @@ onBeforeUnmount(() => {
                     P
                 </div>
 
-                <span
-                    class="text-lg font-bold tracking-tight text-gray-900"
-                >
+                <span class="text-lg font-bold tracking-tight text-gray-900">
                     ProductApp
                 </span>
             </button>
 
             <!-- Right Side -->
-            <div
-                class="flex items-center gap-4"
-            >
-
+            <div class="flex items-center gap-4">
                 <!-- Products -->
                 <button
                     type="button"
@@ -132,49 +112,45 @@ onBeforeUnmount(() => {
                 </button>
 
                 <!-- Profile -->
-                <div
-                    ref="profileMenuRef"
-                    class="relative"
-                >
-
+                <div ref="profileMenuRef" class="relative">
                     <button
                         type="button"
                         @click="toggleProfileMenu"
                         class="flex items-center gap-2 rounded-lg px-2 py-1.5 transition hover:bg-gray-100"
                     >
-
                         <!-- Avatar -->
                         <div
-                            class="flex h-9 w-9 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white"
+                            class="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-900"
                         >
-                            {{
-                                authStore.user?.name
-                                    ?.charAt(0)
-                                    ?.toUpperCase() ||
-                                'U'
-                            }}
+                            <img
+                                v-if="authStore.user?.profile_picture_url"
+                                :src="authStore.user.profile_picture_url"
+                                :alt="authStore.user?.name || 'User'"
+                                class="h-full w-full object-cover"
+                            />
+
+                            <div
+                                v-else
+                                class="flex h-full w-full items-center justify-center text-sm font-semibold text-white"
+                            >
+                                {{
+                                    authStore.user?.name
+                                        ?.charAt(0)
+                                        ?.toUpperCase() || "U"
+                                }}
+                            </div>
                         </div>
 
                         <!-- User -->
-                        <div
-                            class="hidden text-left sm:block"
-                        >
-                            <p
-                                class="text-sm font-semibold text-gray-900"
-                            >
-                                {{
-                                    authStore.user?.name ||
-                                    'User'
-                                }}
+                        <div class="hidden text-left sm:block">
+                            <p class="text-sm font-semibold text-gray-900">
+                                {{ authStore.user?.name || "User" }}
                             </p>
 
                             <p
                                 class="max-w-[150px] truncate text-xs text-gray-500"
                             >
-                                {{
-                                    authStore.user?.email ||
-                                    ''
-                                }}
+                                {{ authStore.user?.email || "" }}
                             </p>
                         </div>
 
@@ -182,8 +158,7 @@ onBeforeUnmount(() => {
                         <svg
                             class="hidden h-4 w-4 text-gray-400 transition sm:block"
                             :class="{
-                                'rotate-180':
-                                    showProfileMenu,
+                                'rotate-180': showProfileMenu,
                             }"
                             fill="none"
                             stroke="currentColor"
@@ -196,7 +171,6 @@ onBeforeUnmount(() => {
                                 d="M19 9l-7 7-7-7"
                             />
                         </svg>
-
                     </button>
 
                     <!-- Dropdown -->
@@ -204,54 +178,51 @@ onBeforeUnmount(() => {
                         v-if="showProfileMenu"
                         class="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg"
                     >
-
                         <!-- User Info -->
-                        <div
-                            class="border-b border-gray-100 px-4 py-4"
-                        >
-                            <div
-                                class="flex items-center gap-3"
-                            >
-
+                        <div class="border-b border-gray-100 px-4 py-4">
+                            <div class="flex items-center gap-3">
                                 <div
-                                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white"
+                                    class="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gray-900"
                                 >
-                                    {{
-                                        authStore.user?.name
-                                            ?.charAt(0)
-                                            ?.toUpperCase() ||
-                                        'U'
-                                    }}
+                                    <img
+                                        v-if="
+                                            authStore.user?.profile_picture_url
+                                        "
+                                        :src="
+                                            authStore.user.profile_picture_url
+                                        "
+                                        :alt="authStore.user?.name || 'User'"
+                                        class="h-full w-full object-cover"
+                                    />
+
+                                    <div
+                                        v-else
+                                        class="flex h-full w-full items-center justify-center text-sm font-semibold text-white"
+                                    >
+                                        {{
+                                            authStore.user?.name
+                                                ?.charAt(0)
+                                                ?.toUpperCase() || "U"
+                                        }}
+                                    </div>
                                 </div>
 
-                                <div
-                                    class="min-w-0"
-                                >
+                                <div class="min-w-0">
                                     <p
                                         class="truncate text-sm font-semibold text-gray-900"
                                     >
-                                        {{
-                                            authStore.user?.name ||
-                                            'User'
-                                        }}
+                                        {{ authStore.user?.name || "User" }}
                                     </p>
 
-                                    <p
-                                        class="truncate text-xs text-gray-500"
-                                    >
-                                        {{
-                                            authStore.user?.email ||
-                                            ''
-                                        }}
+                                    <p class="truncate text-xs text-gray-500">
+                                        {{ authStore.user?.email || "" }}
                                     </p>
                                 </div>
-
                             </div>
                         </div>
 
                         <!-- Dropdown Actions -->
                         <div class="p-1.5">
-
                             <!-- Profile -->
                             <button
                                 type="button"
@@ -297,10 +268,8 @@ onBeforeUnmount(() => {
 
                                 Logout
                             </button>
-
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
