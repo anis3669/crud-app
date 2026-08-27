@@ -3,27 +3,44 @@ import axios from "axios";
 
 export const useProductStore = defineStore("product", {
     state: () => ({
+        // =====================================================
         // PRODUCTS
+        // =====================================================
 
         products: [],
         product: null,
 
+        // =====================================================
         // PAGINATION
+        // =====================================================
 
         currentPage: 1,
         lastPage: 1,
         perPage: 10,
         total: 0,
 
+        // =====================================================
         // SEARCH
+        // =====================================================
 
         search: "",
 
-        // FILTER
+        // =====================================================
+        // PRODUCT FILTER
+        // =====================================================
 
         filter: "all",
 
+        // =====================================================
+        // PRICE FILTER
+        // =====================================================
+
+        minPrice: null,
+        maxPrice: null,
+
+        // =====================================================
         // INVENTORY STATS
+        // =====================================================
 
         stats: {
             total_products: 0,
@@ -32,20 +49,26 @@ export const useProductStore = defineStore("product", {
             total_quantity: 0,
         },
 
+        // =====================================================
         // STATE
+        // =====================================================
 
         loading: false,
         error: null,
     }),
 
     actions: {
-
+        // =====================================================
         // GET PRODUCTS
+        // SEARCH + PRODUCT FILTER + PRICE FILTER + PAGINATION
+        // =====================================================
 
         async fetchProducts(
             page = 1,
             search = this.search,
-            filter = this.filter
+            filter = this.filter,
+            minPrice = this.minPrice,
+            maxPrice = this.maxPrice
         ) {
             this.loading = true;
             this.error = null;
@@ -57,20 +80,37 @@ export const useProductStore = defineStore("product", {
                         search,
                         filter,
                         per_page: this.perPage,
+
+                        // Only send price parameters when needed
+                        ...(minPrice !== null &&
+                        minPrice !== undefined
+                            ? { min_price: minPrice }
+                            : {}),
+
+                        ...(maxPrice !== null &&
+                        maxPrice !== undefined
+                            ? { max_price: maxPrice }
+                            : {}),
                     },
                 });
 
                 const data = response.data;
 
+                // =================================================
                 // PRODUCTS
+                // =================================================
 
                 const productsData = data?.products;
 
-                this.products = Array.isArray(productsData?.data)
+                this.products = Array.isArray(
+                    productsData?.data
+                )
                     ? productsData.data
                     : [];
 
+                // =================================================
                 // PAGINATION
+                // =================================================
 
                 this.currentPage =
                     productsData?.current_page ?? 1;
@@ -85,7 +125,9 @@ export const useProductStore = defineStore("product", {
                     productsData?.total ??
                     this.products.length;
 
+                // =================================================
                 // INVENTORY STATS
+                // =================================================
 
                 this.stats = {
                     total_products:
@@ -101,10 +143,22 @@ export const useProductStore = defineStore("product", {
                         data?.stats?.total_quantity ?? 0,
                 };
 
-                // SAVE SEARCH + FILTER
+                // =================================================
+                // SAVE CURRENT SEARCH / FILTER / PRICE
+                // =================================================
 
                 this.search = search;
                 this.filter = filter;
+
+                this.minPrice =
+                    minPrice !== undefined
+                        ? minPrice
+                        : null;
+
+                this.maxPrice =
+                    maxPrice !== undefined
+                        ? maxPrice
+                        : null;
 
                 return this.products;
             } catch (error) {
@@ -123,7 +177,9 @@ export const useProductStore = defineStore("product", {
             }
         },
 
+        // =====================================================
         // SEARCH PRODUCTS
+        // =====================================================
 
         async searchProducts(search) {
             this.search = search;
@@ -131,11 +187,15 @@ export const useProductStore = defineStore("product", {
             return await this.fetchProducts(
                 1,
                 search,
-                this.filter
+                this.filter,
+                this.minPrice,
+                this.maxPrice
             );
         },
 
-        // FILTER PRODUCTS
+        // =====================================================
+        // PRODUCT FILTER
+        // =====================================================
 
         async filterProducts(filter) {
             this.filter = filter;
@@ -143,11 +203,35 @@ export const useProductStore = defineStore("product", {
             return await this.fetchProducts(
                 1,
                 this.search,
-                filter
+                filter,
+                this.minPrice,
+                this.maxPrice
             );
         },
 
+        // =====================================================
+        // PRICE FILTER
+        // =====================================================
+
+        async priceFilterProducts(
+            minPrice = null,
+            maxPrice = null
+        ) {
+            this.minPrice = minPrice;
+            this.maxPrice = maxPrice;
+
+            return await this.fetchProducts(
+                1,
+                this.search,
+                this.filter,
+                minPrice,
+                maxPrice
+            );
+        },
+
+        // =====================================================
         // CHANGE PAGE
+        // =====================================================
 
         async goToPage(page) {
             if (
@@ -161,35 +245,47 @@ export const useProductStore = defineStore("product", {
             return await this.fetchProducts(
                 page,
                 this.search,
-                this.filter
+                this.filter,
+                this.minPrice,
+                this.maxPrice
             );
         },
 
+        // =====================================================
         // NEXT PAGE
+        // =====================================================
 
         async nextPage() {
             if (this.currentPage < this.lastPage) {
                 return await this.fetchProducts(
                     this.currentPage + 1,
                     this.search,
-                    this.filter
+                    this.filter,
+                    this.minPrice,
+                    this.maxPrice
                 );
             }
         },
 
+        // =====================================================
         // PREVIOUS PAGE
+        // =====================================================
 
         async previousPage() {
             if (this.currentPage > 1) {
                 return await this.fetchProducts(
                     this.currentPage - 1,
                     this.search,
-                    this.filter
+                    this.filter,
+                    this.minPrice,
+                    this.maxPrice
                 );
             }
         },
 
+        // =====================================================
         // GET SINGLE PRODUCT
+        // =====================================================
 
         async fetchProduct(productId) {
             this.loading = true;
@@ -222,7 +318,9 @@ export const useProductStore = defineStore("product", {
             }
         },
 
+        // =====================================================
         // CREATE PRODUCT
+        // =====================================================
 
         async createProduct(productData) {
             this.loading = true;
@@ -242,7 +340,9 @@ export const useProductStore = defineStore("product", {
                 await this.fetchProducts(
                     this.currentPage,
                     this.search,
-                    this.filter
+                    this.filter,
+                    this.minPrice,
+                    this.maxPrice
                 );
 
                 return product;
@@ -262,7 +362,9 @@ export const useProductStore = defineStore("product", {
             }
         },
 
+        // =====================================================
         // UPDATE SINGLE PRODUCT
+        // =====================================================
 
         async updateProduct(
             productId,
@@ -302,11 +404,14 @@ export const useProductStore = defineStore("product", {
                 }
 
                 // REFRESH CURRENT PAGE
+                // WITH CURRENT SEARCH/FILTER/PRICE
 
                 await this.fetchProducts(
                     this.currentPage,
                     this.search,
-                    this.filter
+                    this.filter,
+                    this.minPrice,
+                    this.maxPrice
                 );
 
                 return updatedProduct;
@@ -315,8 +420,6 @@ export const useProductStore = defineStore("product", {
                     "Failed to update product:",
                     error
                 );
-
-                // VALIDATION ERRORS
 
                 if (
                     error.response?.status === 422
@@ -347,7 +450,9 @@ export const useProductStore = defineStore("product", {
             }
         },
 
+        // =====================================================
         // DELETE SINGLE PRODUCT
+        // =====================================================
 
         async deleteProduct(productId) {
             this.loading = true;
@@ -369,7 +474,9 @@ export const useProductStore = defineStore("product", {
                 await this.fetchProducts(
                     this.currentPage,
                     this.search,
-                    this.filter
+                    this.filter,
+                    this.minPrice,
+                    this.maxPrice
                 );
             } catch (error) {
                 console.error(
@@ -387,7 +494,9 @@ export const useProductStore = defineStore("product", {
             }
         },
 
+        // =====================================================
         // BULK DELETE
+        // =====================================================
 
         async bulkDelete(productsToDelete) {
             if (
@@ -418,7 +527,9 @@ export const useProductStore = defineStore("product", {
                 await this.fetchProducts(
                     this.currentPage,
                     this.search,
-                    this.filter
+                    this.filter,
+                    this.minPrice,
+                    this.maxPrice
                 );
             } catch (error) {
                 console.error(
@@ -436,7 +547,9 @@ export const useProductStore = defineStore("product", {
             }
         },
 
+        // =====================================================
         // BULK UPDATE
+        // =====================================================
 
         async bulkUpdate(products) {
             this.loading = true;
@@ -456,42 +569,30 @@ export const useProductStore = defineStore("product", {
 
                 products.forEach(
                     (product, index) => {
-                        // ID
-
                         formData.append(
                             `products[${index}][id]`,
                             String(product.id)
                         );
-
-                        // NAME
 
                         formData.append(
                             `products[${index}][name]`,
                             product.name ?? ""
                         );
 
-                        // DESCRIPTION
-
                         formData.append(
                             `products[${index}][description]`,
                             product.description ?? ""
                         );
-
-                        // PRICE
 
                         formData.append(
                             `products[${index}][price]`,
                             String(product.price ?? "")
                         );
 
-                        // QUANTITY
-
                         formData.append(
                             `products[${index}][quantity]`,
                             String(product.quantity ?? "")
                         );
-
-                        // REMOVE EXISTING IMAGE
 
                         formData.append(
                             `products[${index}][remove_image]`,
@@ -499,8 +600,6 @@ export const useProductStore = defineStore("product", {
                                 ? "1"
                                 : "0"
                         );
-
-                        // NEW IMAGE
 
                         if (
                             product.image instanceof File
@@ -521,7 +620,9 @@ export const useProductStore = defineStore("product", {
                 await this.fetchProducts(
                     this.currentPage,
                     this.search,
-                    this.filter
+                    this.filter,
+                    this.minPrice,
+                    this.maxPrice
                 );
 
                 return response.data;
@@ -530,8 +631,6 @@ export const useProductStore = defineStore("product", {
                     "Failed to bulk update products:",
                     error
                 );
-
-                // VALIDATION ERRORS
 
                 if (
                     error.response?.status === 422
@@ -562,13 +661,17 @@ export const useProductStore = defineStore("product", {
             }
         },
 
+        // =====================================================
         // CLEAR CURRENT PRODUCT
+        // =====================================================
 
         clearProduct() {
             this.product = null;
         },
 
+        // =====================================================
         // CLEAR SEARCH
+        // =====================================================
 
         async clearSearch() {
             this.search = "";
@@ -576,11 +679,15 @@ export const useProductStore = defineStore("product", {
             return await this.fetchProducts(
                 1,
                 "",
-                this.filter
+                this.filter,
+                this.minPrice,
+                this.maxPrice
             );
         },
 
-        // CLEAR FILTER
+        // =====================================================
+        // CLEAR PRODUCT FILTER
+        // =====================================================
 
         async clearFilter() {
             this.filter = "all";
@@ -588,11 +695,32 @@ export const useProductStore = defineStore("product", {
             return await this.fetchProducts(
                 1,
                 this.search,
-                "all"
+                "all",
+                this.minPrice,
+                this.maxPrice
             );
         },
 
+        // =====================================================
+        // CLEAR PRICE FILTER
+        // =====================================================
+
+        async clearPriceFilter() {
+            this.minPrice = null;
+            this.maxPrice = null;
+
+            return await this.fetchProducts(
+                1,
+                this.search,
+                this.filter,
+                null,
+                null
+            );
+        },
+
+        // =====================================================
         // CLEAR ERROR
+        // =====================================================
 
         clearError() {
             this.error = null;
