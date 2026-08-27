@@ -9,6 +9,7 @@ import {
 import { useRouter } from 'vue-router'
 
 import { useProductStore } from '../../stores/product'
+import { useToastStore } from '../../stores/toast'
 
 import ProductList from './ProductList.vue'
 
@@ -24,6 +25,7 @@ import BaseCard from '../common/BaseCard.vue'
 const router = useRouter()
 
 const productStore = useProductStore()
+const toastStore = useToastStore()
 
 
 // =========================================================
@@ -544,6 +546,7 @@ async function confirmDelete() {
         await productStore.deleteProduct(
             productToDelete.value.id
         )
+        toastStore.success('Product deleted successfully.')
 
         showDeleteModal.value = false
 
@@ -593,6 +596,7 @@ async function bulkDelete(
         await productStore.bulkDelete(
             productsToDelete
         )
+        toastStore.success('Products deleted successfully.')
 
     } catch (err) {
 
