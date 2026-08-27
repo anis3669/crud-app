@@ -15,6 +15,7 @@ import ProductView from "../components/products/ProductView.vue";
 import ProductEdit from "../components/products/ProductEdit.vue";
 import BulkEdit from "../components/products/BulkEdit.vue";
 import Profile from "../components/profile/Profile.vue";
+import Dashboard from "../components/dashboard/Dashboard.vue";
 
 const routes = [
     // ==============================
@@ -98,6 +99,12 @@ const routes = [
                 path: "profile",
                 name: "profile",
                 component: Profile,
+            },
+            // dashboard
+            {
+                path: "dashboard",
+                name: "dashboard",
+                component: Dashboard,
             },
         ],
     },

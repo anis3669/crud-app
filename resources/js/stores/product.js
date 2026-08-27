@@ -3,44 +3,36 @@ import axios from "axios";
 
 export const useProductStore = defineStore("product", {
     state: () => ({
-        // =====================================================
+
         // PRODUCTS
-        // =====================================================
+
 
         products: [],
         product: null,
 
-        // =====================================================
+
         // PAGINATION
-        // =====================================================
+
 
         currentPage: 1,
         lastPage: 1,
         perPage: 10,
         total: 0,
 
-        // =====================================================
         // SEARCH
-        // =====================================================
 
         search: "",
 
-        // =====================================================
         // PRODUCT FILTER
-        // =====================================================
 
         filter: "all",
 
-        // =====================================================
         // PRICE FILTER
-        // =====================================================
 
         minPrice: null,
         maxPrice: null,
 
-        // =====================================================
         // INVENTORY STATS
-        // =====================================================
 
         stats: {
             total_products: 0,
@@ -49,19 +41,15 @@ export const useProductStore = defineStore("product", {
             total_quantity: 0,
         },
 
-        // =====================================================
         // STATE
-        // =====================================================
 
         loading: false,
         error: null,
     }),
 
     actions: {
-        // =====================================================
         // GET PRODUCTS
         // SEARCH + PRODUCT FILTER + PRICE FILTER + PAGINATION
-        // =====================================================
 
         async fetchProducts(
             page = 1,
@@ -96,9 +84,7 @@ export const useProductStore = defineStore("product", {
 
                 const data = response.data;
 
-                // =================================================
                 // PRODUCTS
-                // =================================================
 
                 const productsData = data?.products;
 
@@ -108,9 +94,7 @@ export const useProductStore = defineStore("product", {
                     ? productsData.data
                     : [];
 
-                // =================================================
                 // PAGINATION
-                // =================================================
 
                 this.currentPage =
                     productsData?.current_page ?? 1;
@@ -125,9 +109,7 @@ export const useProductStore = defineStore("product", {
                     productsData?.total ??
                     this.products.length;
 
-                // =================================================
                 // INVENTORY STATS
-                // =================================================
 
                 this.stats = {
                     total_products:
@@ -143,9 +125,7 @@ export const useProductStore = defineStore("product", {
                         data?.stats?.total_quantity ?? 0,
                 };
 
-                // =================================================
                 // SAVE CURRENT SEARCH / FILTER / PRICE
-                // =================================================
 
                 this.search = search;
                 this.filter = filter;
@@ -177,9 +157,7 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // SEARCH PRODUCTS
-        // =====================================================
 
         async searchProducts(search) {
             this.search = search;
@@ -193,9 +171,7 @@ export const useProductStore = defineStore("product", {
             );
         },
 
-        // =====================================================
         // PRODUCT FILTER
-        // =====================================================
 
         async filterProducts(filter) {
             this.filter = filter;
@@ -209,9 +185,7 @@ export const useProductStore = defineStore("product", {
             );
         },
 
-        // =====================================================
         // PRICE FILTER
-        // =====================================================
 
         async priceFilterProducts(
             minPrice = null,
@@ -229,9 +203,7 @@ export const useProductStore = defineStore("product", {
             );
         },
 
-        // =====================================================
         // CHANGE PAGE
-        // =====================================================
 
         async goToPage(page) {
             if (
@@ -251,9 +223,7 @@ export const useProductStore = defineStore("product", {
             );
         },
 
-        // =====================================================
         // NEXT PAGE
-        // =====================================================
 
         async nextPage() {
             if (this.currentPage < this.lastPage) {
@@ -267,9 +237,7 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // PREVIOUS PAGE
-        // =====================================================
 
         async previousPage() {
             if (this.currentPage > 1) {
@@ -283,9 +251,7 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // GET SINGLE PRODUCT
-        // =====================================================
 
         async fetchProduct(productId) {
             this.loading = true;
@@ -318,9 +284,7 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // CREATE PRODUCT
-        // =====================================================
 
         async createProduct(productData) {
             this.loading = true;
@@ -362,9 +326,7 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // UPDATE SINGLE PRODUCT
-        // =====================================================
 
         async updateProduct(
             productId,
@@ -450,9 +412,7 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // DELETE SINGLE PRODUCT
-        // =====================================================
 
         async deleteProduct(productId) {
             this.loading = true;
@@ -494,9 +454,7 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // BULK DELETE
-        // =====================================================
 
         async bulkDelete(productsToDelete) {
             if (
@@ -547,9 +505,7 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // BULK UPDATE
-        // =====================================================
 
         async bulkUpdate(products) {
             this.loading = true;
@@ -661,17 +617,13 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // =====================================================
         // CLEAR CURRENT PRODUCT
-        // =====================================================
 
         clearProduct() {
             this.product = null;
         },
 
-        // =====================================================
         // CLEAR SEARCH
-        // =====================================================
 
         async clearSearch() {
             this.search = "";
@@ -685,9 +637,7 @@ export const useProductStore = defineStore("product", {
             );
         },
 
-        // =====================================================
         // CLEAR PRODUCT FILTER
-        // =====================================================
 
         async clearFilter() {
             this.filter = "all";
@@ -701,9 +651,7 @@ export const useProductStore = defineStore("product", {
             );
         },
 
-        // =====================================================
         // CLEAR PRICE FILTER
-        // =====================================================
 
         async clearPriceFilter() {
             this.minPrice = null;
@@ -718,9 +666,8 @@ export const useProductStore = defineStore("product", {
             );
         },
 
-        // =====================================================
+
         // CLEAR ERROR
-        // =====================================================
 
         clearError() {
             this.error = null;
