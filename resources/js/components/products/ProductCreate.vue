@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { useProductStore } from "../../stores/product";
+import { useToastStore } from '../../stores/toast';
 
 import BaseButton from "../common/BaseButton.vue";
 import BaseCard from "../common/BaseCard.vue";
@@ -9,7 +10,7 @@ import ImageUpload from "../common/ImageUpload.vue";
 
 const router = useRouter();
 const productStore = useProductStore();
-
+const toastStore = useToastStore();
 // FORM
 
 const form = ref({
@@ -79,6 +80,7 @@ async function submitForm() {
         // SEND TO PINIA
 
         await productStore.createProduct(productData);
+        toastStore.success('Product created successfully.')
 
         // SUCCESS
 
@@ -87,6 +89,7 @@ async function submitForm() {
         });
     } catch (err) {
         console.error("Create product error:", err);
+        toastStore.error('Failed to create product.')
 
         // UNAUTHORIZED
 

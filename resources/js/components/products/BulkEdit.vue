@@ -3,6 +3,8 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { useProductStore } from '../../stores/product'
+import { useToastStore } from '../../stores/toast'
+
 
 import BaseButton from '../common/BaseButton.vue'
 import BaseCard from '../common/BaseCard.vue'
@@ -11,6 +13,7 @@ import ImageUpload from '../common/ImageUpload.vue'
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
+const toastStore = useToastStore()
 
 const products = ref([])
 const loading = ref(true)
@@ -207,6 +210,7 @@ async function saveChanges() {
         await productStore.bulkUpdate(
             updatedProducts
         )
+        toastStore.success('Products updated successfully.')
 
 
         // ---------------------------------------------------
