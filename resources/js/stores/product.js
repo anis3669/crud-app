@@ -3,16 +3,12 @@ import axios from "axios";
 
 export const useProductStore = defineStore("product", {
     state: () => ({
-
         // PRODUCTS
-
 
         products: [],
         product: null,
 
-
         // PAGINATION
-
 
         currentPage: 1,
         lastPage: 1,
@@ -39,6 +35,7 @@ export const useProductStore = defineStore("product", {
             in_stock: 0,
             out_of_stock: 0,
             total_quantity: 0,
+            total_inventory_value: 0,
         },
 
         // STATE
@@ -56,7 +53,7 @@ export const useProductStore = defineStore("product", {
             search = this.search,
             filter = this.filter,
             minPrice = this.minPrice,
-            maxPrice = this.maxPrice
+            maxPrice = this.maxPrice,
         ) {
             this.loading = true;
             this.error = null;
@@ -70,13 +67,11 @@ export const useProductStore = defineStore("product", {
                         per_page: this.perPage,
 
                         // Only send price parameters when needed
-                        ...(minPrice !== null &&
-                        minPrice !== undefined
+                        ...(minPrice !== null && minPrice !== undefined
                             ? { min_price: minPrice }
                             : {}),
 
-                        ...(maxPrice !== null &&
-                        maxPrice !== undefined
+                        ...(maxPrice !== null && maxPrice !== undefined
                             ? { max_price: maxPrice }
                             : {}),
                     },
@@ -88,68 +83,49 @@ export const useProductStore = defineStore("product", {
 
                 const productsData = data?.products;
 
-                this.products = Array.isArray(
-                    productsData?.data
-                )
+                this.products = Array.isArray(productsData?.data)
                     ? productsData.data
                     : [];
 
                 // PAGINATION
 
-                this.currentPage =
-                    productsData?.current_page ?? 1;
+                this.currentPage = productsData?.current_page ?? 1;
 
-                this.lastPage =
-                    productsData?.last_page ?? 1;
+                this.lastPage = productsData?.last_page ?? 1;
 
-                this.perPage =
-                    productsData?.per_page ?? this.perPage;
+                this.perPage = productsData?.per_page ?? this.perPage;
 
-                this.total =
-                    productsData?.total ??
-                    this.products.length;
+                this.total = productsData?.total ?? this.products.length;
 
                 // INVENTORY STATS
 
                 this.stats = {
-                    total_products:
-                        data?.stats?.total_products ?? 0,
+                    total_products: data?.stats?.total_products ?? 0,
 
-                    in_stock:
-                        data?.stats?.in_stock ?? 0,
+                    in_stock: data?.stats?.in_stock ?? 0,
 
-                    out_of_stock:
-                        data?.stats?.out_of_stock ?? 0,
+                    out_of_stock: data?.stats?.out_of_stock ?? 0,
 
-                    total_quantity:
-                        data?.stats?.total_quantity ?? 0,
+                    total_quantity: data?.stats?.total_quantity ?? 0,
+
+                    total_inventory_value:
+                        data?.stats?.total_inventory_value ?? 0,
                 };
-
                 // SAVE CURRENT SEARCH / FILTER / PRICE
 
                 this.search = search;
                 this.filter = filter;
 
-                this.minPrice =
-                    minPrice !== undefined
-                        ? minPrice
-                        : null;
+                this.minPrice = minPrice !== undefined ? minPrice : null;
 
-                this.maxPrice =
-                    maxPrice !== undefined
-                        ? maxPrice
-                        : null;
+                this.maxPrice = maxPrice !== undefined ? maxPrice : null;
 
                 return this.products;
             } catch (error) {
-                console.error(
-                    "Failed to fetch products:",
-                    error
-                );
+                console.error("Failed to fetch products:", error);
 
                 this.error =
-                    error.response?.data?.message ||
-                    "Failed to load products.";
+                    error.response?.data?.message || "Failed to load products.";
 
                 throw error;
             } finally {
@@ -167,7 +143,7 @@ export const useProductStore = defineStore("product", {
                 search,
                 this.filter,
                 this.minPrice,
-                this.maxPrice
+                this.maxPrice,
             );
         },
 
@@ -181,16 +157,13 @@ export const useProductStore = defineStore("product", {
                 this.search,
                 filter,
                 this.minPrice,
-                this.maxPrice
+                this.maxPrice,
             );
         },
 
         // PRICE FILTER
 
-        async priceFilterProducts(
-            minPrice = null,
-            maxPrice = null
-        ) {
+        async priceFilterProducts(minPrice = null, maxPrice = null) {
             this.minPrice = minPrice;
             this.maxPrice = maxPrice;
 
@@ -199,18 +172,14 @@ export const useProductStore = defineStore("product", {
                 this.search,
                 this.filter,
                 minPrice,
-                maxPrice
+                maxPrice,
             );
         },
 
         // CHANGE PAGE
 
         async goToPage(page) {
-            if (
-                page < 1 ||
-                page > this.lastPage ||
-                page === this.currentPage
-            ) {
+            if (page < 1 || page > this.lastPage || page === this.currentPage) {
                 return;
             }
 
@@ -219,7 +188,7 @@ export const useProductStore = defineStore("product", {
                 this.search,
                 this.filter,
                 this.minPrice,
-                this.maxPrice
+                this.maxPrice,
             );
         },
 
@@ -232,7 +201,7 @@ export const useProductStore = defineStore("product", {
                     this.search,
                     this.filter,
                     this.minPrice,
-                    this.maxPrice
+                    this.maxPrice,
                 );
             }
         },
@@ -246,7 +215,7 @@ export const useProductStore = defineStore("product", {
                     this.search,
                     this.filter,
                     this.minPrice,
-                    this.maxPrice
+                    this.maxPrice,
                 );
             }
         },
@@ -258,9 +227,7 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const response = await axios.get(
-                    `/api/products/${productId}`
-                );
+                const response = await axios.get(`/api/products/${productId}`);
 
                 this.product =
                     response.data?.product ??
@@ -269,14 +236,10 @@ export const useProductStore = defineStore("product", {
 
                 return this.product;
             } catch (error) {
-                console.error(
-                    "Failed to fetch product:",
-                    error
-                );
+                console.error("Failed to fetch product:", error);
 
                 this.error =
-                    error.response?.data?.message ||
-                    "Failed to load product.";
+                    error.response?.data?.message || "Failed to load product.";
 
                 throw error;
             } finally {
@@ -291,10 +254,7 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const response = await axios.post(
-                    "/api/products",
-                    productData
-                );
+                const response = await axios.post("/api/products", productData);
 
                 const product =
                     response.data?.product ??
@@ -306,15 +266,12 @@ export const useProductStore = defineStore("product", {
                     this.search,
                     this.filter,
                     this.minPrice,
-                    this.maxPrice
+                    this.maxPrice,
                 );
 
                 return product;
             } catch (error) {
-                console.error(
-                    "Failed to create product:",
-                    error
-                );
+                console.error("Failed to create product:", error);
 
                 this.error =
                     error.response?.data?.message ||
@@ -328,10 +285,7 @@ export const useProductStore = defineStore("product", {
 
         // UPDATE SINGLE PRODUCT
 
-        async updateProduct(
-            productId,
-            productData
-        ) {
+        async updateProduct(productId, productData) {
             this.loading = true;
             this.error = null;
 
@@ -339,15 +293,12 @@ export const useProductStore = defineStore("product", {
                 let requestData = productData;
 
                 if (productData instanceof FormData) {
-                    productData.append(
-                        "_method",
-                        "PUT"
-                    );
+                    productData.append("_method", "PUT");
                 }
 
                 const response = await axios.post(
                     `/api/products/${productId}`,
-                    requestData
+                    requestData,
                 );
 
                 const updatedProduct =
@@ -359,8 +310,7 @@ export const useProductStore = defineStore("product", {
 
                 if (
                     this.product &&
-                    Number(this.product.id) ===
-                        Number(productId)
+                    Number(this.product.id) === Number(productId)
                 ) {
                     this.product = updatedProduct;
                 }
@@ -373,27 +323,18 @@ export const useProductStore = defineStore("product", {
                     this.search,
                     this.filter,
                     this.minPrice,
-                    this.maxPrice
+                    this.maxPrice,
                 );
 
                 return updatedProduct;
             } catch (error) {
-                console.error(
-                    "Failed to update product:",
-                    error
-                );
+                console.error("Failed to update product:", error);
 
-                if (
-                    error.response?.status === 422
-                ) {
-                    const errors =
-                        error.response.data?.errors;
+                if (error.response?.status === 422) {
+                    const errors = error.response.data?.errors;
 
                     if (errors) {
-                        this.error =
-                            Object.values(errors)
-                                .flat()
-                                .join(" ");
+                        this.error = Object.values(errors).flat().join(" ");
                     } else {
                         this.error =
                             error.response.data?.message ||
@@ -419,14 +360,11 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                await axios.delete(
-                    `/api/products/${productId}`
-                );
+                await axios.delete(`/api/products/${productId}`);
 
                 if (
                     this.product &&
-                    Number(this.product.id) ===
-                        Number(productId)
+                    Number(this.product.id) === Number(productId)
                 ) {
                     this.product = null;
                 }
@@ -436,13 +374,10 @@ export const useProductStore = defineStore("product", {
                     this.search,
                     this.filter,
                     this.minPrice,
-                    this.maxPrice
+                    this.maxPrice,
                 );
             } catch (error) {
-                console.error(
-                    "Failed to delete product:",
-                    error
-                );
+                console.error("Failed to delete product:", error);
 
                 this.error =
                     error.response?.data?.message ||
@@ -468,32 +403,23 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const ids =
-                    productsToDelete.map(
-                        (product) => product.id
-                    );
+                const ids = productsToDelete.map((product) => product.id);
 
-                await axios.delete(
-                    "/api/products/bulk-delete",
-                    {
-                        data: {
-                            ids,
-                        },
-                    }
-                );
+                await axios.delete("/api/products/bulk-delete", {
+                    data: {
+                        ids,
+                    },
+                });
 
                 await this.fetchProducts(
                     this.currentPage,
                     this.search,
                     this.filter,
                     this.minPrice,
-                    this.maxPrice
+                    this.maxPrice,
                 );
             } catch (error) {
-                console.error(
-                    "Failed to bulk delete products:",
-                    error
-                );
+                console.error("Failed to bulk delete products:", error);
 
                 this.error =
                     error.response?.data?.message ||
@@ -512,65 +438,54 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                if (
-                    !Array.isArray(products) ||
-                    products.length === 0
-                ) {
-                    throw new Error(
-                        "No products were provided."
-                    );
+                if (!Array.isArray(products) || products.length === 0) {
+                    throw new Error("No products were provided.");
                 }
 
                 const formData = new FormData();
 
-                products.forEach(
-                    (product, index) => {
-                        formData.append(
-                            `products[${index}][id]`,
-                            String(product.id)
-                        );
+                products.forEach((product, index) => {
+                    formData.append(
+                        `products[${index}][id]`,
+                        String(product.id),
+                    );
 
-                        formData.append(
-                            `products[${index}][name]`,
-                            product.name ?? ""
-                        );
+                    formData.append(
+                        `products[${index}][name]`,
+                        product.name ?? "",
+                    );
 
-                        formData.append(
-                            `products[${index}][description]`,
-                            product.description ?? ""
-                        );
+                    formData.append(
+                        `products[${index}][description]`,
+                        product.description ?? "",
+                    );
 
-                        formData.append(
-                            `products[${index}][price]`,
-                            String(product.price ?? "")
-                        );
+                    formData.append(
+                        `products[${index}][price]`,
+                        String(product.price ?? ""),
+                    );
 
-                        formData.append(
-                            `products[${index}][quantity]`,
-                            String(product.quantity ?? "")
-                        );
+                    formData.append(
+                        `products[${index}][quantity]`,
+                        String(product.quantity ?? ""),
+                    );
 
-                        formData.append(
-                            `products[${index}][remove_image]`,
-                            product.removeImage === true
-                                ? "1"
-                                : "0"
-                        );
+                    formData.append(
+                        `products[${index}][remove_image]`,
+                        product.removeImage === true ? "1" : "0",
+                    );
 
-                        if (
-                            product.image instanceof File
-                        ) {
-                            formData.append(
-                                `products[${index}][image]`,
-                                product.image
-                            );
-                        }
+                    if (product.image instanceof File) {
+                        formData.append(
+                            `products[${index}][image]`,
+                            product.image,
+                        );
                     }
-                );
+                });
 
                 const response = await axios.post(
                     "/api/products/bulk-update",
-                    formData
+                    formData,
                 );
 
                 await this.fetchProducts(
@@ -578,27 +493,18 @@ export const useProductStore = defineStore("product", {
                     this.search,
                     this.filter,
                     this.minPrice,
-                    this.maxPrice
+                    this.maxPrice,
                 );
 
                 return response.data;
             } catch (error) {
-                console.error(
-                    "Failed to bulk update products:",
-                    error
-                );
+                console.error("Failed to bulk update products:", error);
 
-                if (
-                    error.response?.status === 422
-                ) {
-                    const errors =
-                        error.response.data?.errors;
+                if (error.response?.status === 422) {
+                    const errors = error.response.data?.errors;
 
                     if (errors) {
-                        this.error =
-                            Object.values(errors)
-                                .flat()
-                                .join(" ");
+                        this.error = Object.values(errors).flat().join(" ");
                     } else {
                         this.error =
                             error.response.data?.message ||
@@ -633,7 +539,7 @@ export const useProductStore = defineStore("product", {
                 "",
                 this.filter,
                 this.minPrice,
-                this.maxPrice
+                this.maxPrice,
             );
         },
 
@@ -647,7 +553,7 @@ export const useProductStore = defineStore("product", {
                 this.search,
                 "all",
                 this.minPrice,
-                this.maxPrice
+                this.maxPrice,
             );
         },
 
@@ -662,10 +568,9 @@ export const useProductStore = defineStore("product", {
                 this.search,
                 this.filter,
                 null,
-                null
+                null,
             );
         },
-
 
         // CLEAR ERROR
 

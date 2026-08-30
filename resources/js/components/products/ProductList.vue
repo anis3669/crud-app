@@ -33,7 +33,6 @@ const emit = defineEmits([
 
 // Selection
 
-
 const selectedProducts = ref([])
 
 const productCount = computed(() => {
@@ -60,7 +59,6 @@ const allSelected = computed(() => {
 
 // Keep Selection In Sync
 
-
 watch(
     () => props.products,
     products => {
@@ -83,10 +81,10 @@ watch(
 
 // Selection Actions
 
-
 function toggleSelectAll() {
     if (allSelected.value) {
         selectedProducts.value = []
+
         return
     }
 
@@ -113,7 +111,6 @@ function toggleProduct(productId) {
 
 // Product Actions
 
-
 function viewProduct(product) {
     emit('view-product', product)
 }
@@ -123,9 +120,6 @@ function editProduct(product) {
 }
 
 function deleteProduct(product) {
-    /*
-     * ProductIndex handles the confirmation modal.
-     */
     emit('delete-product', product)
 
     selectedProducts.value =
@@ -136,7 +130,6 @@ function deleteProduct(product) {
 
 
 // Bulk Edit
-
 
 function bulkEdit() {
     if (!hasSelectedProducts.value) {
@@ -164,7 +157,6 @@ function bulkEdit() {
 
 
 // Bulk Delete
-
 
 function bulkDelete() {
     if (!hasSelectedProducts.value) {
@@ -197,7 +189,6 @@ function bulkDelete() {
 
 // Formatting
 
-
 function formatPrice(price) {
     const amount = Number(price)
 
@@ -211,9 +202,13 @@ function formatPrice(price) {
     })
 }
 
+function formatNumber(value) {
+    return Number(value || 0)
+        .toLocaleString('en-US')
+}
+
 
 // Stock Status
-
 
 function stockStatus(quantity) {
     const amount = Number(quantity) || 0
@@ -229,21 +224,20 @@ function stockStatus(quantity) {
     if (amount <= 5) {
         return {
             text: `${amount} left`,
-            wrapper: 'bg-yellow-50 text-yellow-700',
-            dot: 'bg-yellow-500',
+            wrapper: 'bg-amber-50 text-amber-700',
+            dot: 'bg-amber-500',
         }
     }
 
     return {
         text: `${amount} in stock`,
-        wrapper: 'bg-green-50 text-green-700',
-        dot: 'bg-green-500',
+        wrapper: 'bg-emerald-50 text-emerald-700',
+        dot: 'bg-emerald-500',
     }
 }
 
 
 // Image URL
-
 
 function imageUrl(image) {
     if (!image) {
@@ -264,7 +258,6 @@ function imageUrl(image) {
 
 // Product Number
 
-
 function productNumber(index) {
     return (
         (props.currentPage - 1) *
@@ -276,403 +269,585 @@ function productNumber(index) {
 </script>
 
 <template>
-    <div>
-
+    <div class="w-full">
 
         <!-- Bulk Actions -->
 
-
-        <div
-            v-if="hasSelectedProducts"
-            class="mb-4 flex flex-col gap-3 rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+        <Transition
+            enter-active-class="transition duration-200 ease-out"
+            enter-from-class="translate-y-1 opacity-0"
+            enter-to-class="translate-y-0 opacity-100"
+            leave-active-class="transition duration-150 ease-in"
+            leave-from-class="translate-y-0 opacity-100"
+            leave-to-class="translate-y-1 opacity-0"
         >
-            <span
-                class="text-sm font-semibold text-gray-700"
+            <div
+                v-if="hasSelectedProducts"
+                class="mb-4 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
             >
-                {{ selectedCount }} selected
-            </span>
-
-            <div class="flex gap-2">
-                <BaseButton
-                    type="button"
-                    variant="secondary"
-                    @click="bulkEdit"
+                <div
+                    class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 >
-                    Edit Selected
-                </BaseButton>
 
-                <BaseButton
-                    type="button"
-                    variant="danger"
-                    @click="bulkDelete"
-                >
-                    Delete Selected
-                </BaseButton>
+                    <div
+                        class="flex items-center gap-3"
+                    >
+
+                        <div
+                            class="flex h-8 min-w-8 items-center justify-center rounded-lg bg-gray-900 px-2 text-xs font-bold text-white"
+                        >
+                            {{ selectedCount }}
+                        </div>
+
+                        <div>
+                            <p
+                                class="text-sm font-semibold text-gray-900"
+                            >
+                                Products selected
+                            </p>
+
+                            <p
+                                class="text-xs text-gray-500"
+                            >
+                                Choose an action for the selected products.
+                            </p>
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        class="flex w-full gap-2 sm:w-auto"
+                    >
+
+                        <BaseButton
+                            type="button"
+                            variant="secondary"
+                            class="flex-1 justify-center sm:flex-none"
+                            @click="bulkEdit"
+                        >
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M16.862 3.487a2.25 2.25 0 013.182 3.182L8.25 18.463 3.75 19.5l1.037-4.5L16.862 3.487z"
+                                />
+                            </svg>
+
+                            Edit
+                        </BaseButton>
+
+
+                        <BaseButton
+                            type="button"
+                            variant="danger"
+                            class="flex-1 justify-center sm:flex-none"
+                            @click="bulkDelete"
+                        >
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M6 7h12m-9 4v5m6-5v5M9 7V5.75A1.75 1.75 0 0110.75 4h2.5A1.75 1.75 0 0115 5.75V7m-9 0l.75 12.25A1.75 1.75 0 008.5 21h7a1.75 1.75 0 001.75-1.75L18 7M4.5 7h15"
+                                />
+                            </svg>
+
+                            Delete
+                        </BaseButton>
+
+                    </div>
+
+                </div>
             </div>
-        </div>
+        </Transition>
 
 
         <!-- Product Table -->
 
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
-        <BaseTable>
-            <!-- Header -->
+            <div class="overflow-x-auto">
 
-            <template #header>
-                <tr>
+                <BaseTable>
 
-                    <!-- Select All -->
+                    <!-- Header -->
 
-                    <th class="w-12 px-6 py-4">
-                        <input
-                            type="checkbox"
-                            :checked="allSelected"
-                            @change="toggleSelectAll"
-                            class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                            aria-label="Select all products"
-                        />
-                    </th>
+                    <template #header>
 
-                    <!-- Product -->
+                        <tr>
 
-                    <th
-                        class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                        Product
-                    </th>
-
-                    <!-- Description -->
-
-                    <th
-                        class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                        Description
-                    </th>
-
-                    <!-- Price -->
-
-                    <th
-                        class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                        Price
-                    </th>
-
-                    <!-- Stock -->
-
-                    <th
-                        class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                        Stock
-                    </th>
-
-                    <!-- Actions -->
-
-                    <th
-                        class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-500"
-                    >
-                        Actions
-                    </th>
-
-                </tr>
-            </template>
-
-            <!-- Body -->
-
-            <template #body>
-
-
-                <!-- Products -->
-
-
-                <tr
-                    v-for="(product, index) in props.products"
-                    :key="product.id"
-                    class="border-t border-gray-100 transition hover:bg-gray-50"
-                >
-
-                    <!-- Checkbox -->
-
-                    <td class="px-6 py-4">
-                        <input
-                            type="checkbox"
-                            :checked="
-                                selectedProducts.includes(
-                                    product.id
-                                )
-                            "
-                            @change="
-                                toggleProduct(
-                                    product.id
-                                )
-                            "
-                            class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-900"
-                            :aria-label="`Select ${product.name}`"
-                        />
-                    </td>
-
-
-                    <!-- Product -->
-
-
-                    <td class="px-6 py-4">
-                        <div
-                            class="flex items-center gap-3"
-                        >
-
-                            <!-- Image -->
-
-                            <div
-                                class="h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100"
+                            <th
+                                class="w-12 px-4 py-4 sm:px-5"
                             >
-                                <img
-                                    v-if="
-                                        imageUrl(
-                                            product.image
-                                        )
-                                    "
-                                    :src="
-                                        imageUrl(
-                                            product.image
-                                        )
-                                    "
-                                    :alt="
-                                        product.name ||
-                                        'Product image'
-                                    "
-                                    class="h-full w-full object-cover"
+                                <input
+                                    type="checkbox"
+                                    :checked="allSelected"
+                                    @change="toggleSelectAll"
+                                    class="h-4 w-4 cursor-pointer rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0"
+                                    aria-label="Select all products"
                                 />
+                            </th>
 
-                                <div
-                                    v-else
-                                    class="flex h-full w-full items-center justify-center text-sm font-semibold text-gray-700"
-                                >
-                                    {{
-                                        product.name
-                                            ?.charAt(0)
-                                            ?.toUpperCase() ||
-                                        'P'
-                                    }}
-                                </div>
-                            </div>
 
-                            <!-- Product Information -->
+                            <th
+                                class="whitespace-nowrap px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:px-5"
+                            >
+                                Product
+                            </th>
 
-                            <div class="min-w-0">
 
-                                <div
-                                    class="truncate font-semibold text-gray-900"
-                                >
-                                    {{
-                                        product.name ||
-                                        'Unnamed Product'
-                                    }}
-                                </div>
+                            <th
+                                class="hidden px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell sm:px-5"
+                            >
+                                Description
+                            </th>
 
-                                <div
-                                    class="mt-0.5 text-xs text-gray-400"
-                                >
-                                    Product #{{
-                                        productNumber(
-                                            index
+
+                            <th
+                                class="whitespace-nowrap px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:px-5"
+                            >
+                                Price
+                            </th>
+
+
+                            <th
+                                class="whitespace-nowrap px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:px-5"
+                            >
+                                Stock
+                            </th>
+
+
+                            <th
+                                class="whitespace-nowrap px-4 py-4 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 sm:px-5"
+                            >
+                                Actions
+                            </th>
+
+                        </tr>
+
+                    </template>
+
+
+                    <!-- Body -->
+
+                    <template #body>
+
+                        <tr
+                            v-for="(product, index) in props.products"
+                            :key="product.id"
+                            class="group border-t border-gray-100 transition-colors hover:bg-gray-50/70"
+                            :class="{
+                                'bg-gray-50/40': selectedProducts.includes(product.id),
+                            }"
+                        >
+
+                            <!-- Selection -->
+
+                            <td
+                                class="px-4 py-4 sm:px-5"
+                            >
+                                <input
+                                    type="checkbox"
+                                    :checked="
+                                        selectedProducts.includes(
+                                            product.id
                                         )
+                                    "
+                                    @change="
+                                        toggleProduct(
+                                            product.id
+                                        )
+                                    "
+                                    class="h-4 w-4 cursor-pointer rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0"
+                                    :aria-label="`Select ${product.name}`"
+                                />
+                            </td>
+
+
+                            <!-- Product -->
+
+                            <td
+                                class="px-4 py-4 sm:px-5"
+                            >
+                                <div
+                                    class="flex min-w-[190px] items-center gap-3"
+                                >
+
+                                    <div
+                                        class="relative h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-gray-100"
+                                    >
+
+                                        <img
+                                            v-if="
+                                                imageUrl(
+                                                    product.image
+                                                )
+                                            "
+                                            :src="
+                                                imageUrl(
+                                                    product.image
+                                                )
+                                            "
+                                            :alt="
+                                                product.name ||
+                                                'Product image'
+                                            "
+                                            class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        />
+
+
+                                        <div
+                                            v-else
+                                            class="flex h-full w-full items-center justify-center bg-gray-100 text-sm font-bold text-gray-500"
+                                        >
+                                            {{
+                                                product.name
+                                                    ?.charAt(0)
+                                                    ?.toUpperCase() ||
+                                                'P'
+                                            }}
+                                        </div>
+
+                                    </div>
+
+
+                                    <div
+                                        class="min-w-0"
+                                    >
+
+                                        <p
+                                            class="truncate text-sm font-semibold text-gray-900"
+                                        >
+                                            {{
+                                                product.name ||
+                                                'Unnamed Product'
+                                            }}
+                                        </p>
+
+
+                                        <p
+                                            class="mt-0.5 text-xs text-gray-400"
+                                        >
+                                            Product #{{
+                                                productNumber(
+                                                    index
+                                                )
+                                            }}
+                                        </p>
+
+                                    </div>
+
+                                </div>
+                            </td>
+
+
+                            <!-- Description -->
+
+                            <td
+                                class="hidden max-w-xs px-4 py-4 md:table-cell sm:px-5"
+                            >
+                                <p
+                                    class="truncate text-sm text-gray-500"
+                                    :title="
+                                        product.description ||
+                                        'No description'
+                                    "
+                                >
+                                    {{
+                                        product.description ||
+                                        'No description'
                                     }}
+                                </p>
+                            </td>
+
+
+                            <!-- Price -->
+
+                            <td
+                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                            >
+                                <div>
+
+                                    <p
+                                        class="text-sm font-semibold text-gray-900"
+                                    >
+                                        Rs.
+                                        {{
+                                            formatPrice(
+                                                product.price
+                                            )
+                                        }}
+                                    </p>
+
+                                </div>
+                            </td>
+
+
+                            <!-- Stock -->
+
+                            <td
+                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                            >
+
+                                <span
+                                    class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold"
+                                    :class="
+                                        stockStatus(
+                                            product.quantity
+                                        ).wrapper
+                                    "
+                                >
+
+                                    <span
+                                        class="h-1.5 w-1.5 rounded-full"
+                                        :class="
+                                            stockStatus(
+                                                product.quantity
+                                            ).dot
+                                        "
+                                    ></span>
+
+
+                                    {{
+                                        stockStatus(
+                                            product.quantity
+                                        ).text
+                                    }}
+
+                                </span>
+
+                            </td>
+
+
+                            <!-- Actions -->
+
+                            <td
+                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                            >
+
+                                <div
+                                    class="flex items-center justify-end gap-1"
+                                >
+
+                                    <!-- View -->
+
+                                    <button
+                                        type="button"
+                                        title="View product"
+                                        aria-label="View product"
+                                        @click="
+                                            viewProduct(
+                                                product
+                                            )
+                                        "
+                                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M2.75 12s3.25-6 9.25-6 9.25 6 9.25 6-3.25 6-9.25 6-9.25-6-9.25-6z"
+                                            />
+
+                                            <circle
+                                                cx="12"
+                                                cy="12"
+                                                r="2.5"
+                                                stroke-width="1.8"
+                                            />
+
+                                        </svg>
+
+                                    </button>
+
+
+                                    <!-- Edit -->
+
+                                    <button
+                                        type="button"
+                                        title="Edit product"
+                                        aria-label="Edit product"
+                                        @click="
+                                            editProduct(
+                                                product
+                                            )
+                                        "
+                                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-blue-50 hover:text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M16.862 3.487a2.25 2.25 0 013.182 3.182L8.25 18.463 3.75 19.5l1.037-4.5L16.862 3.487z"
+                                            />
+
+                                        </svg>
+
+                                    </button>
+
+
+                                    <!-- Delete -->
+
+                                    <button
+                                        type="button"
+                                        title="Delete product"
+                                        aria-label="Delete product"
+                                        @click="
+                                            deleteProduct(
+                                                product
+                                            )
+                                        "
+                                        class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-100"
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M6 7h12m-9 4v5m6-5v5M9 7V5.75A1.75 1.75 0 0110.75 4h2.5A1.75 1.75 0 0115 5.75V7m-9 0l.75 12.25A1.75 1.75 0 008.5 21h7a1.75 1.75 0 001.75-1.75L18 7M4.5 7h15"
+                                            />
+
+                                        </svg>
+
+                                    </button>
+
                                 </div>
 
-                            </div>
-                        </div>
-                    </td>
+                            </td>
+
+                        </tr>
 
 
-                    <!-- Description -->
+                        <!-- Empty State -->
 
-
-                    <td class="max-w-xs px-6 py-4">
-                        <p
-                            class="truncate text-sm text-gray-500"
-                            :title="
-                                product.description ||
-                                'No description'
-                            "
-                        >
-                            {{
-                                product.description ||
-                                'No description'
-                            }}
-                        </p>
-                    </td>
-
-
-                    <!-- Price -->
-
-
-                    <td
-                        class="whitespace-nowrap px-6 py-4"
-                    >
-                        <span
-                            class="font-semibold text-gray-900"
-                        >
-                            Rs.
-                            {{
-                                formatPrice(
-                                    product.price
-                                )
-                            }}
-                        </span>
-                    </td>
-
-
-                    <!-- Stock -->
-
-
-                    <td
-                        class="whitespace-nowrap px-6 py-4"
-                    >
-                        <span
-                            class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
-                            :class="
-                                stockStatus(
-                                    product.quantity
-                                ).wrapper
-                            "
-                        >
-                            <span
-                                class="h-1.5 w-1.5 rounded-full"
-                                :class="
-                                    stockStatus(
-                                        product.quantity
-                                    ).dot
-                                "
-                            ></span>
-
-                            {{
-                                stockStatus(
-                                    product.quantity
-                                ).text
-                            }}
-                        </span>
-                    </td>
-
-
-                    <!-- Actions -->
-
-
-                    <td class="px-6 py-4">
-                        <div
-                            class="flex items-center justify-end gap-4"
+                        <tr
+                            v-if="productCount === 0"
                         >
 
-                            <!-- View -->
-
-                            <button
-                                type="button"
-                                @click="
-                                    viewProduct(
-                                        product
-                                    )
-                                "
-                                class="text-sm font-medium text-gray-500 transition hover:text-gray-900"
+                            <td
+                                colspan="6"
+                                class="px-6 py-20 text-center"
                             >
-                                View
-                            </button>
 
-                            <!-- Edit -->
-
-                            <button
-                                type="button"
-                                @click="
-                                    editProduct(
-                                        product
-                                    )
-                                "
-                                class="text-sm font-medium text-blue-600 transition hover:text-blue-800"
-                            >
-                                Edit
-                            </button>
-
-                            <!-- Delete -->
-
-                            <button
-                                type="button"
-                                @click="
-                                    deleteProduct(
-                                        product
-                                    )
-                                "
-                                class="text-sm font-medium text-red-600 transition hover:text-red-800"
-                            >
-                                Delete
-                            </button>
-
-                        </div>
-                    </td>
-
-                </tr>
-
-
-                <!-- Empty State -->
-
-
-                <tr v-if="productCount === 0">
-                    <td
-                        colspan="6"
-                        class="px-6 py-16 text-center"
-                    >
-                        <div class="mx-auto max-w-sm">
-
-                            <!-- Icon -->
-
-                            <div
-                                class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100"
-                            >
-                                <svg
-                                    class="h-6 w-6 text-gray-500"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
+                                <div
+                                    class="mx-auto flex max-w-sm flex-col items-center"
                                 >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="1.8"
-                                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                    />
-                                </svg>
-                            </div>
 
-                            <!-- Text -->
+                                    <div
+                                        class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100"
+                                    >
 
-                            <h3
-                                class="mt-4 text-base font-semibold text-gray-900"
-                            >
-                                No products found
-                            </h3>
+                                        <svg
+                                            class="h-7 w-7 text-gray-400"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
 
-                            <p
-                                class="mt-1 text-sm text-gray-500"
-                            >
-                                Get started by adding your
-                                first product.
-                            </p>
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                                            />
 
-                            <!-- Add Product -->
+                                        </svg>
 
-                            <BaseButton
-                                type="button"
-                                class="mt-5"
-                                @click="
-                                    emit(
-                                        'add-product'
-                                    )
-                                "
-                            >
-                                Add Product
-                            </BaseButton>
+                                    </div>
 
-                        </div>
-                    </td>
-                </tr>
 
-            </template>
-        </BaseTable>
+                                    <h3
+                                        class="mt-4 text-sm font-semibold text-gray-900"
+                                    >
+                                        No products found
+                                    </h3>
+
+
+                                    <p
+                                        class="mt-1 text-sm text-gray-500"
+                                    >
+                                        Try changing your search or filters.
+                                    </p>
+
+
+                                    <BaseButton
+                                        type="button"
+                                        class="mt-5"
+                                        @click="
+                                            emit(
+                                                'add-product'
+                                            )
+                                        "
+                                    >
+
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M12 5v14m-7-7h14"
+                                            />
+
+                                        </svg>
+
+                                        Add Product
+
+                                    </BaseButton>
+
+                                </div>
+
+                            </td>
+
+                        </tr>
+
+                    </template>
+
+                </BaseTable>
+
+            </div>
+
+        </div>
+
     </div>
 </template>

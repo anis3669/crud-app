@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ProductApiController extends Controller
 {
@@ -99,7 +100,6 @@ class ProductApiController extends Controller
                     'like',
                     '%' . $search . '%'
                 );
-
             });
         }
 
@@ -206,7 +206,6 @@ class ProductApiController extends Controller
                 '>=',
                 $minPrice
             );
-
         }
 
 
@@ -221,7 +220,6 @@ class ProductApiController extends Controller
                 '<=',
                 $maxPrice
             );
-
         }
 
 
@@ -246,25 +244,23 @@ class ProductApiController extends Controller
         $stats = [
 
             'total_products' =>
-                Product::count(),
+            Product::count(),
 
             'in_stock' =>
-                Product::where(
-                    'quantity',
-                    '>',
-                    0
-                )->count(),
+            Product::where('quantity', '>', 0)->count(),
 
             'out_of_stock' =>
-                Product::where(
-                    'quantity',
-                    '=',
-                    0
-                )->count(),
+            Product::where('quantity', '=', 0)->count(),
 
             'total_quantity' =>
-                Product::sum('quantity'),
+            Product::sum('quantity'),
 
+            'total_inventory_value' =>
+            DB::table('products')
+                ->selectRaw(
+                    'COALESCE(SUM(price * quantity), 0) as total'
+                )
+                ->value('total'),
         ];
 
 
@@ -324,11 +320,11 @@ class ProductApiController extends Controller
 
             $validated['image'] =
                 $request
-                    ->file('image')
-                    ->store(
-                        'products',
-                        'public'
-                    );
+                ->file('image')
+                ->store(
+                    'products',
+                    'public'
+                );
         }
 
         $product =
@@ -336,10 +332,10 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' =>
-                'Product created successfully.',
+            'Product created successfully.',
 
             'product' =>
-                $product->fresh(),
+            $product->fresh(),
         ], 201);
     }
 
@@ -453,11 +449,11 @@ class ProductApiController extends Controller
 
             $product->image =
                 $request
-                    ->file('image')
-                    ->store(
-                        'products',
-                        'public'
-                    );
+                ->file('image')
+                ->store(
+                    'products',
+                    'public'
+                );
         }
 
 
@@ -465,10 +461,10 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' =>
-                'Product updated successfully.',
+            'Product updated successfully.',
 
             'product' =>
-                $product->fresh(),
+            $product->fresh(),
         ]);
     }
 
@@ -493,7 +489,7 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' =>
-                'Product deleted successfully.',
+            'Product deleted successfully.',
         ]);
     }
 
@@ -506,10 +502,10 @@ class ProductApiController extends Controller
     {
         $validated = $request->validate([
             'ids' =>
-                'required|array|min:1',
+            'required|array|min:1',
 
             'ids.*' =>
-                'required|integer|exists:products,id',
+            'required|integer|exists:products,id',
         ]);
 
         $products =
@@ -536,10 +532,10 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' =>
-                'Selected products deleted successfully.',
+            'Selected products deleted successfully.',
 
             'deleted_count' =>
-                $deletedCount,
+            $deletedCount,
         ]);
     }
 
@@ -676,11 +672,11 @@ class ProductApiController extends Controller
 
                 $product->image =
                     $request
-                        ->file($imageKey)
-                        ->store(
-                            'products',
-                            'public'
-                        );
+                    ->file($imageKey)
+                    ->store(
+                        'products',
+                        'public'
+                    );
             }
 
 
@@ -693,10 +689,10 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' =>
-                'Selected products updated successfully.',
+            'Selected products updated successfully.',
 
             'products' =>
-                $updatedProducts,
+            $updatedProducts,
         ]);
     }
 }
