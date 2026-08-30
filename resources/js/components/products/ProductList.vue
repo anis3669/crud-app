@@ -47,10 +47,7 @@ const hasSelectedProducts = computed(() => {
 });
 
 const allSelected = computed(() => {
-    return (
-        productCount.value > 0 &&
-        selectedCount.value === productCount.value
-    );
+    return productCount.value > 0 && selectedCount.value === productCount.value;
 });
 
 // Keep selection in sync
@@ -230,7 +227,6 @@ function productNumber(index) {
 
 <template>
     <div class="w-full">
-
         <!-- Bulk actions -->
 
         <Transition
@@ -249,7 +245,6 @@ function productNumber(index) {
                     class="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 >
                     <div class="flex items-center gap-3">
-
                         <div
                             class="flex h-8 min-w-8 items-center justify-center rounded-lg bg-gray-900 px-2 text-xs font-bold text-white dark:bg-white dark:text-gray-900"
                         >
@@ -263,9 +258,7 @@ function productNumber(index) {
                                 Products selected
                             </p>
 
-                            <p
-                                class="text-xs text-gray-500 dark:text-gray-400"
-                            >
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
                                 Choose an action for the selected products.
                             </p>
                         </div>
@@ -328,9 +321,7 @@ function productNumber(index) {
             class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800"
         >
             <div class="overflow-x-auto">
-
                 <BaseTable>
-
                     <template #header>
                         <tr
                             class="border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900"
@@ -349,6 +340,11 @@ function productNumber(index) {
                                 class="whitespace-nowrap px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 sm:px-5"
                             >
                                 Product
+                            </th>
+                            <th
+                                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                            >
+                                Category
                             </th>
 
                             <th
@@ -378,7 +374,6 @@ function productNumber(index) {
                     </template>
 
                     <template #body>
-
                         <tr
                             v-for="(product, index) in props.products"
                             :key="product.id"
@@ -392,15 +387,9 @@ function productNumber(index) {
                                 <input
                                     type="checkbox"
                                     :checked="
-                                        selectedProducts.includes(
-                                            product.id,
-                                        )
+                                        selectedProducts.includes(product.id)
                                     "
-                                    @change="
-                                        toggleProduct(
-                                            product.id,
-                                        )
-                                    "
+                                    @change="toggleProduct(product.id)"
                                     class="h-4 w-4 cursor-pointer rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:ring-gray-500"
                                     :aria-label="`Select ${product.name}`"
                                 />
@@ -417,8 +406,7 @@ function productNumber(index) {
                                             v-if="imageUrl(product.image)"
                                             :src="imageUrl(product.image)"
                                             :alt="
-                                                product.name ||
-                                                'Product image'
+                                                product.name || 'Product image'
                                             "
                                             class="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                         />
@@ -430,8 +418,7 @@ function productNumber(index) {
                                             {{
                                                 product.name
                                                     ?.charAt(0)
-                                                    ?.toUpperCase() ||
-                                                "P"
+                                                    ?.toUpperCase() || "P"
                                             }}
                                         </div>
                                     </div>
@@ -449,12 +436,28 @@ function productNumber(index) {
                                         <p
                                             class="mt-0.5 text-xs text-gray-400 dark:text-gray-500"
                                         >
-                                            Product #{{
-                                                productNumber(index)
-                                            }}
+                                            Product #{{ productNumber(index) }}
                                         </p>
                                     </div>
                                 </div>
+                            </td>
+
+                            <!-- Category -->
+
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
+                                <span
+                                    v-if="product.category"
+                                    class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300"
+                                >
+                                    {{ product.category }}
+                                </span>
+
+                                <span
+                                    v-else
+                                    class="text-sm text-gray-400 dark:text-gray-500"
+                                >
+                                    Uncategorized
+                                </span>
                             </td>
 
                             <td
@@ -463,61 +466,58 @@ function productNumber(index) {
                                 <p
                                     class="truncate text-sm text-gray-500 dark:text-gray-400"
                                     :title="
-                                        product.description ||
-                                        'No description'
+                                        product.description || 'No description'
                                     "
                                 >
                                     {{
-                                        product.description ||
-                                        "No description"
+                                        product.description || "No description"
                                     }}
                                 </p>
                             </td>
 
                             <td
-                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                                class="hidden max-w-xs px-4 py-4 md:table-cell sm:px-5"
                             >
+                                <p
+                                    class="truncate text-sm text-gray-500 dark:text-gray-400"
+                                    :title="
+                                        product.description || 'No description'
+                                    "
+                                >
+                                    {{
+                                        product.description || "No description"
+                                    }}
+                                </p>
+                            </td>
+
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 dark:text-white"
                                 >
                                     Rs.
-                                    {{
-                                        formatPrice(product.price)
-                                    }}
+                                    {{ formatPrice(product.price) }}
                                 </p>
                             </td>
 
-                            <td
-                                class="whitespace-nowrap px-4 py-4 sm:px-5"
-                            >
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <span
                                     class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold"
                                     :class="
-                                        stockStatus(
-                                            product.quantity,
-                                        ).wrapper
+                                        stockStatus(product.quantity).wrapper
                                     "
                                 >
                                     <span
                                         class="h-1.5 w-1.5 rounded-full"
                                         :class="
-                                            stockStatus(
-                                                product.quantity,
-                                            ).dot
+                                            stockStatus(product.quantity).dot
                                         "
                                     ></span>
 
-                                    {{
-                                        stockStatus(
-                                            product.quantity,
-                                        ).text
-                                    }}
+                                    {{ stockStatus(product.quantity).text }}
                                 </span>
                             </td>
 
-                            <td
-                                class="whitespace-nowrap px-4 py-4 sm:px-5"
-                            >
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <div
                                     class="flex items-center justify-end gap-1"
                                 >
@@ -598,10 +598,7 @@ function productNumber(index) {
                         </tr>
 
                         <tr v-if="productCount === 0">
-                            <td
-                                colspan="6"
-                                class="px-6 py-20 text-center"
-                            >
+                            <td colspan="6" class="px-6 py-20 text-center">
                                 <div
                                     class="mx-auto flex max-w-sm flex-col items-center"
                                 >
@@ -659,13 +656,9 @@ function productNumber(index) {
                                 </div>
                             </td>
                         </tr>
-
                     </template>
-
                 </BaseTable>
-
             </div>
         </div>
-
     </div>
 </template>

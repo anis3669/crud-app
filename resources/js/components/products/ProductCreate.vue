@@ -16,6 +16,7 @@ const toastStore = useToastStore();
 
 const form = ref({
     name: "",
+    category: "",
     description: "",
     price: "",
     quantity: "",
@@ -64,20 +65,13 @@ async function submitForm() {
 
         productData.append("name", form.value.name.trim());
 
-        productData.append(
-            "description",
-            form.value.description?.trim() || "",
-        );
+        productData.append("category", form.value.category);
 
-        productData.append(
-            "price",
-            String(Number(form.value.price)),
-        );
+        productData.append("description", form.value.description?.trim() || "");
 
-        productData.append(
-            "quantity",
-            String(Number(form.value.quantity)),
-        );
+        productData.append("price", String(Number(form.value.price)));
+
+        productData.append("quantity", String(Number(form.value.quantity)));
 
         if (form.value.image instanceof File) {
             productData.append("image", form.value.image);
@@ -105,13 +99,10 @@ async function submitForm() {
             const validationErrors = err.response.data?.errors;
 
             if (validationErrors) {
-                error.value = Object.values(validationErrors)
-                    .flat()
-                    .join(" ");
+                error.value = Object.values(validationErrors).flat().join(" ");
             } else {
                 error.value =
-                    err.response.data?.message ||
-                    "Validation failed.";
+                    err.response.data?.message || "Validation failed.";
             }
 
             toastStore.error("Failed to create product.");
@@ -142,7 +133,6 @@ function cancel() {
 
 <template>
     <div class="mx-auto max-w-3xl">
-
         <!-- Header -->
 
         <div class="mb-8">
@@ -152,9 +142,7 @@ function cancel() {
                 Add Product
             </h1>
 
-            <p
-                class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-            >
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 Create a new product for your inventory.
             </p>
         </div>
@@ -165,9 +153,7 @@ function cancel() {
             v-if="error"
             class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
         >
-            <p
-                class="text-sm font-medium text-red-700 dark:text-red-400"
-            >
+            <p class="text-sm font-medium text-red-700 dark:text-red-400">
                 {{ error }}
             </p>
         </BaseCard>
@@ -175,11 +161,7 @@ function cancel() {
         <!-- Form -->
 
         <BaseCard>
-            <form
-                class="space-y-6"
-                @submit.prevent="submitForm"
-            >
-
+            <form class="space-y-6" @submit.prevent="submitForm">
                 <!-- Product Name -->
 
                 <div>
@@ -198,6 +180,43 @@ function cancel() {
                         :disabled="loading"
                         class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                     />
+                </div>
+                <!-- Category -->
+
+                <div>
+                    <label
+                        for="category"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                    >
+                        Category
+                    </label>
+
+                    <select
+                        id="category"
+                        v-model="form.category"
+                        :disabled="saving"
+                        class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
+                    >
+                        <option value="">Select a category</option>
+
+                        <option value="Electronics">Electronics</option>
+
+                        <option value="Clothing">Clothing</option>
+
+                        <option value="Food & Beverage">Food & Beverage</option>
+
+                        <option value="Home & Kitchen">Home & Kitchen</option>
+
+                        <option value="Beauty & Personal Care">
+                            Beauty & Personal Care
+                        </option>
+
+                        <option value="Sports">Sports</option>
+
+                        <option value="Books">Books</option>
+
+                        <option value="Other">Other</option>
+                    </select>
                 </div>
 
                 <!-- Description -->
@@ -267,10 +286,7 @@ function cancel() {
                 <!-- Product Image -->
 
                 <div>
-                    <ImageUpload
-                        v-model="form.image"
-                        label="Product Image"
-                    />
+                    <ImageUpload v-model="form.image" label="Product Image" />
                 </div>
 
                 <!-- Actions -->
@@ -287,14 +303,10 @@ function cancel() {
                         Cancel
                     </BaseButton>
 
-                    <BaseButton
-                        type="submit"
-                        :loading="loading"
-                    >
+                    <BaseButton type="submit" :loading="loading">
                         Create Product
                     </BaseButton>
                 </div>
-
             </form>
         </BaseCard>
     </div>

@@ -13,6 +13,10 @@ onMounted(async () => {
     }
 });
 
+// =========================================================
+// PRODUCTS
+// =========================================================
+
 const products = computed(() =>
     Array.isArray(productStore.products)
         ? productStore.products
@@ -21,9 +25,14 @@ const products = computed(() =>
 
 const loading = computed(() => productStore.loading);
 
+// =========================================================
+// STATS
+// =========================================================
+
 const stats = computed(() => ({
     total_products: 0,
     in_stock: 0,
+    low_stock: 0,
     out_of_stock: 0,
     total_quantity: 0,
     total_inventory_value: 0,
@@ -38,6 +47,10 @@ const inStock = computed(() =>
     Number(stats.value.in_stock || 0),
 );
 
+const lowStock = computed(() =>
+    Number(stats.value.low_stock || 0),
+);
+
 const outOfStock = computed(() =>
     Number(stats.value.out_of_stock || 0),
 );
@@ -50,6 +63,10 @@ const inventoryValue = computed(() =>
     Number(stats.value.total_inventory_value || 0),
 );
 
+// =========================================================
+// PERCENTAGES
+// =========================================================
+
 const inStockPercentage = computed(() => {
     if (totalProducts.value === 0) {
         return 0;
@@ -57,6 +74,16 @@ const inStockPercentage = computed(() => {
 
     return Math.round(
         (inStock.value / totalProducts.value) * 100,
+    );
+});
+
+const lowStockPercentage = computed(() => {
+    if (totalProducts.value === 0) {
+        return 0;
+    }
+
+    return Math.round(
+        (lowStock.value / totalProducts.value) * 100,
     );
 });
 
@@ -70,6 +97,10 @@ const outOfStockPercentage = computed(() => {
     );
 });
 
+// =========================================================
+// RECENT PRODUCTS
+// =========================================================
+
 const recentProducts = computed(() =>
     [...products.value]
         .sort(
@@ -79,6 +110,10 @@ const recentProducts = computed(() =>
         )
         .slice(0, 5),
 );
+
+// =========================================================
+// FORMATTERS
+// =========================================================
 
 function formatNumber(value) {
     return Number(value || 0).toLocaleString("en-US");
@@ -90,6 +125,10 @@ function formatCurrency(value) {
         maximumFractionDigits: 2,
     });
 }
+
+// =========================================================
+// IMAGE
+// =========================================================
 
 function imageUrl(image) {
     if (!image) {
@@ -107,13 +146,18 @@ function imageUrl(image) {
     return `/storage/${image}`;
 }
 
+// =========================================================
+// STOCK STATUS
+// =========================================================
+
 function stockStatus(quantity) {
     const amount = Number(quantity) || 0;
 
     if (amount === 0) {
         return {
             text: "Out of stock",
-            wrapper: "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400",
+            wrapper:
+                "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-400",
             dot: "bg-red-500",
         };
     }
@@ -121,14 +165,16 @@ function stockStatus(quantity) {
     if (amount <= 5) {
         return {
             text: `${amount} left`,
-            wrapper: "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400",
+            wrapper:
+                "bg-yellow-50 text-yellow-700 dark:bg-yellow-950/40 dark:text-yellow-400",
             dot: "bg-yellow-500",
         };
     }
 
     return {
         text: `${amount} in stock`,
-        wrapper: "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400",
+        wrapper:
+            "bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-400",
         dot: "bg-green-500",
     };
 }
@@ -141,7 +187,9 @@ function stockStatus(quantity) {
         <div
             class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
         >
-            <!-- HEADER -->
+            <!-- =====================================================
+                 HEADER
+            ====================================================== -->
 
             <div
                 class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
@@ -204,10 +252,12 @@ function stockStatus(quantity) {
                 </RouterLink>
             </div>
 
-            <!-- STATS -->
+            <!-- =====================================================
+                 STATS
+            ====================================================== -->
 
             <div
-                class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4"
+                class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:gap-4"
             >
                 <!-- TOTAL PRODUCTS -->
 
@@ -296,6 +346,52 @@ function stockStatus(quantity) {
                             class="mb-1 text-xs font-semibold text-green-600 dark:text-green-400"
                         >
                             {{ inStockPercentage }}%
+                        </span>
+                    </div>
+                </div>
+
+                <!-- LOW STOCK -->
+
+                <div
+                    class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/20 sm:p-5"
+                >
+                    <div class="flex items-start justify-between">
+                        <div
+                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-50 dark:bg-yellow-950/40"
+                        >
+                            <svg
+                                class="h-5 w-5 text-yellow-600 dark:text-yellow-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0Z"
+                                />
+                            </svg>
+                        </div>
+                    </div>
+
+                    <p
+                        class="mt-4 text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm"
+                    >
+                        Low Stock
+                    </p>
+
+                    <div class="mt-1 flex items-end gap-2">
+                        <p
+                            class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl"
+                        >
+                            {{ formatNumber(lowStock) }}
+                        </p>
+
+                        <span
+                            class="mb-1 text-xs font-semibold text-yellow-600 dark:text-yellow-400"
+                        >
+                            {{ lowStockPercentage }}%
                         </span>
                     </div>
                 </div>
@@ -399,7 +495,9 @@ function stockStatus(quantity) {
                 </div>
             </div>
 
-            <!-- INVENTORY OVERVIEW -->
+            <!-- =====================================================
+                 INVENTORY OVERVIEW
+            ====================================================== -->
 
             <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
                 <!-- INVENTORY VALUE -->
@@ -418,7 +516,8 @@ function stockStatus(quantity) {
                             <h2
                                 class="mt-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl"
                             >
-                                Rs. {{ formatCurrency(inventoryValue) }}
+                                Rs.
+                                {{ formatCurrency(inventoryValue) }}
                             </h2>
                         </div>
 
@@ -475,7 +574,9 @@ function stockStatus(quantity) {
                         <!-- IN STOCK -->
 
                         <div>
-                            <div class="mb-2 flex items-center justify-between">
+                            <div
+                                class="mb-2 flex items-center justify-between"
+                            >
                                 <div class="flex items-center gap-2">
                                     <span
                                         class="h-2 w-2 rounded-full bg-green-500"
@@ -513,10 +614,55 @@ function stockStatus(quantity) {
                             </div>
                         </div>
 
+                        <!-- LOW STOCK -->
+
+                        <div>
+                            <div
+                                class="mb-2 flex items-center justify-between"
+                            >
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="h-2 w-2 rounded-full bg-yellow-500"
+                                    ></span>
+
+                                    <span
+                                        class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >
+                                        Low Stock
+                                    </span>
+                                </div>
+
+                                <span
+                                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                                >
+                                    {{ lowStock }}
+
+                                    <span
+                                        class="font-normal text-gray-400 dark:text-gray-500"
+                                    >
+                                        ({{ lowStockPercentage }}%)
+                                    </span>
+                                </span>
+                            </div>
+
+                            <div
+                                class="h-2 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-yellow-500 transition-all duration-500"
+                                    :style="{
+                                        width: `${lowStockPercentage}%`,
+                                    }"
+                                ></div>
+                            </div>
+                        </div>
+
                         <!-- OUT OF STOCK -->
 
                         <div>
-                            <div class="mb-2 flex items-center justify-between">
+                            <div
+                                class="mb-2 flex items-center justify-between"
+                            >
                                 <div class="flex items-center gap-2">
                                     <span
                                         class="h-2 w-2 rounded-full bg-red-500"
@@ -557,7 +703,9 @@ function stockStatus(quantity) {
                 </div>
             </div>
 
-            <!-- INVENTORY CHART -->
+            <!-- =====================================================
+                 INVENTORY CHART
+            ====================================================== -->
 
             <div
                 class="mb-6 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/20"
@@ -565,11 +713,15 @@ function stockStatus(quantity) {
                 <InventoryChart :stats="productStore.stats" />
             </div>
 
-            <!-- RECENT PRODUCTS -->
+            <!-- =====================================================
+                 RECENT PRODUCTS
+            ====================================================== -->
 
             <div
                 class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/20"
             >
+                <!-- HEADER -->
+
                 <div
                     class="flex flex-col gap-3 border-b border-gray-100 px-5 py-5 dark:border-gray-800 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                 >
@@ -612,7 +764,10 @@ function stockStatus(quantity) {
                 <!-- LOADING -->
 
                 <div
-                    v-if="loading && recentProducts.length === 0"
+                    v-if="
+                        loading &&
+                        recentProducts.length === 0
+                    "
                     class="flex flex-col items-center justify-center px-6 py-16"
                 >
                     <svg
@@ -653,7 +808,11 @@ function stockStatus(quantity) {
                         :key="product.id"
                         class="flex flex-col gap-4 px-5 py-4 transition hover:bg-gray-50 dark:hover:bg-gray-800/50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                     >
-                        <div class="flex min-w-0 items-center gap-3">
+                        <!-- PRODUCT -->
+
+                        <div
+                            class="flex min-w-0 items-center gap-3"
+                        >
                             <div
                                 class="h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
                             >
@@ -703,9 +862,13 @@ function stockStatus(quantity) {
                             </div>
                         </div>
 
+                        <!-- PRODUCT DETAILS -->
+
                         <div
                             class="flex items-center justify-between gap-4 sm:justify-end"
                         >
+                            <!-- QUANTITY -->
+
                             <div class="text-right">
                                 <p
                                     class="text-xs text-gray-400 dark:text-gray-500"
@@ -724,11 +887,14 @@ function stockStatus(quantity) {
                                 </p>
                             </div>
 
+                            <!-- STATUS -->
+
                             <span
                                 class="inline-flex min-w-[92px] items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold"
                                 :class="
-                                    stockStatus(product.quantity)
-                                        .wrapper
+                                    stockStatus(
+                                        product.quantity,
+                                    ).wrapper
                                 "
                             >
                                 <span
@@ -741,10 +907,13 @@ function stockStatus(quantity) {
                                 ></span>
 
                                 {{
-                                    stockStatus(product.quantity)
-                                        .text
+                                    stockStatus(
+                                        product.quantity,
+                                    ).text
                                 }}
                             </span>
+
+                            <!-- VIEW -->
 
                             <RouterLink
                                 :to="`/products/${product.id}`"
