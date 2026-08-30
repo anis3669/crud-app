@@ -5,282 +5,151 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class ProductApiController extends Controller
 {
-    // =========================================================
-    // GET ALL PRODUCTS
-    // SEARCH + PRODUCT FILTER + PRICE FILTER + PAGINATION
-    // =========================================================
+    // Get products with search, filters, price filters and pagination
 
     public function index(Request $request)
     {
-        // =====================================================
-        // VALIDATE QUERY PARAMETERS
-        // =====================================================
-
         $validated = $request->validate([
-            'search' => [
-                'nullable',
-                'string',
-                'max:255',
-            ],
+            'search' => 'nullable|string|max:255',
 
             'filter' => [
                 'nullable',
                 'string',
-                'in:all,latest,oldest,in_stock,out_of_stock',
+                'in:all,latest,oldest,in_stock,low_stock,out_of_stock',
             ],
 
-            'min_price' => [
-                'nullable',
-                'numeric',
-                'min:0',
-            ],
+            'min_price' => 'nullable|numeric|min:0',
 
-            'max_price' => [
-                'nullable',
-                'numeric',
-                'min:0',
-            ],
+            'max_price' => 'nullable|numeric|min:0',
 
-            'per_page' => [
-                'nullable',
-                'integer',
-                'min:1',
-                'max:100',
-            ],
+            'per_page' => 'nullable|integer|min:1|max:100',
         ]);
 
-        // =====================================================
-        // VALUES
-        // =====================================================
+        $search = trim($validated['search'] ?? '');
 
-        $search =
-            trim($validated['search'] ?? '');
+        $filter = $validated['filter'] ?? 'all';
 
-        $filter =
-            $validated['filter'] ?? 'all';
+        $minPrice = $validated['min_price'] ?? null;
 
-        $minPrice =
-            $validated['min_price'] ?? null;
+        $maxPrice = $validated['max_price'] ?? null;
 
-        $maxPrice =
-            $validated['max_price'] ?? null;
-
-        $perPage =
-            $validated['per_page'] ?? 10;
-
-
-        // =====================================================
-        // PRODUCT QUERY
-        // =====================================================
+        $perPage = $validated['per_page'] ?? 10;
 
         $query = Product::query();
 
-
-        // =====================================================
-        // SEARCH
-        // =====================================================
+        // Search
 
         if ($search !== '') {
-
             $query->where(function ($q) use ($search) {
-
-                $q->where(
-                    'name',
-                    'like',
-                    '%' . $search . '%'
-                );
-
-                $q->orWhere(
-                    'description',
-                    'like',
-                    '%' . $search . '%'
-                );
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere(
+                        'description',
+                        'like',
+                        '%' . $search . '%'
+                    );
             });
         }
 
-
-        // =====================================================
-        // PRODUCT FILTER
-        // =====================================================
+        // Product filter
 
         switch ($filter) {
-
-            // -------------------------------------------------
-            // LATEST
-            // -------------------------------------------------
-
             case 'latest':
 
-                $query->orderBy(
-                    'created_at',
-                    'desc'
-                );
+                $query->orderBy('created_at', 'desc');
 
                 break;
-
-
-            // -------------------------------------------------
-            // OLDEST
-            // -------------------------------------------------
 
             case 'oldest':
 
-                $query->orderBy(
-                    'created_at',
-                    'asc'
-                );
+                $query->orderBy('created_at', 'asc');
 
                 break;
-
-
-            // -------------------------------------------------
-            // IN STOCK
-            // -------------------------------------------------
 
             case 'in_stock':
 
-                $query->where(
-                    'quantity',
-                    '>',
-                    0
-                );
-
-                $query->orderBy(
-                    'created_at',
-                    'desc'
-                );
+                $query->where('quantity', '>', 5)
+                    ->orderBy('created_at', 'desc');
 
                 break;
 
+            case 'low_stock':
 
-            // -------------------------------------------------
-            // OUT OF STOCK
-            // -------------------------------------------------
+                $query->whereBetween('quantity', [1, 5])
+                    ->orderBy('created_at', 'desc');
+
+                break;
 
             case 'out_of_stock':
 
-                $query->where(
-                    'quantity',
-                    '=',
-                    0
-                );
-
-                $query->orderBy(
-                    'created_at',
-                    'desc'
-                );
+                $query->where('quantity', 0)
+                    ->orderBy('created_at', 'desc');
 
                 break;
-
-
-            // -------------------------------------------------
-            // ALL
-            // -------------------------------------------------
 
             case 'all':
 
             default:
 
-                $query->orderBy(
-                    'created_at',
-                    'desc'
-                );
+                $query->orderBy('created_at', 'desc');
 
                 break;
         }
 
-
-        // =====================================================
-        // MINIMUM PRICE
-        // =====================================================
+        // Minimum price
 
         if ($minPrice !== null) {
-
-            $query->where(
-                'price',
-                '>=',
-                $minPrice
-            );
+            $query->where('price', '>=', $minPrice);
         }
 
-
-        // =====================================================
-        // MAXIMUM PRICE
-        // =====================================================
+        // Maximum price
 
         if ($maxPrice !== null) {
-
-            $query->where(
-                'price',
-                '<=',
-                $maxPrice
-            );
+            $query->where('price', '<=', $maxPrice);
         }
 
+        // Pagination
 
-        // =====================================================
-        // PAGINATION
-        // =====================================================
+        $products = $query->paginate($perPage);
 
-        $products = $query->paginate(
-            $perPage
-        );
-
-
-        // =====================================================
-        // INVENTORY STATISTICS
-        // =====================================================
-        //
-        // IMPORTANT:
-        // These are COMPLETE inventory statistics.
-        // They are NOT affected by filters/search/pagination.
-        //
+        // Complete inventory statistics
 
         $stats = [
+            'total_products' => Product::count(),
 
-            'total_products' =>
-            Product::count(),
+            'in_stock' => Product::where('quantity', '>', 5)->count(),
 
-            'in_stock' =>
-            Product::where('quantity', '>', 0)->count(),
+            'low_stock' => Product::whereBetween(
+                'quantity',
+                [1, 5]
+            )->count(),
 
-            'out_of_stock' =>
-            Product::where('quantity', '=', 0)->count(),
+            'out_of_stock' => Product::where(
+                'quantity',
+                0
+            )->count(),
 
-            'total_quantity' =>
-            Product::sum('quantity'),
+            'total_quantity' => Product::sum('quantity'),
 
-            'total_inventory_value' =>
-            DB::table('products')
+            'total_inventory_value' => DB::table('products')
                 ->selectRaw(
                     'COALESCE(SUM(price * quantity), 0) as total'
                 )
                 ->value('total'),
         ];
 
-
-        // =====================================================
-        // RESPONSE
-        // =====================================================
-
         return response()->json([
-
             'products' => $products,
 
             'stats' => $stats,
-
         ]);
     }
 
-
-    // =========================================================
-    // CREATE PRODUCT
-    // =========================================================
+    // Create product
 
     public function store(Request $request)
     {
@@ -317,47 +186,31 @@ class ProductApiController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-
-            $validated['image'] =
-                $request
+            $validated['image'] = $request
                 ->file('image')
-                ->store(
-                    'products',
-                    'public'
-                );
+                ->store('products', 'public');
         }
 
-        $product =
-            Product::create($validated);
+        $product = Product::create($validated);
 
         return response()->json([
-            'message' =>
-            'Product created successfully.',
+            'message' => 'Product created successfully.',
 
-            'product' =>
-            $product->fresh(),
+            'product' => $product->fresh(),
         ], 201);
     }
 
-
-    // =========================================================
-    // GET SINGLE PRODUCT
-    // =========================================================
+    // Get single product
 
     public function show(Product $product)
     {
         return response()->json($product);
     }
 
+    // Update product
 
-    // =========================================================
-    // UPDATE SINGLE PRODUCT
-    // =========================================================
-
-    public function update(
-        Request $request,
-        Product $product
-    ) {
+    public function update(Request $request, Product $product)
+    {
         $validated = $request->validate([
             'name' => [
                 'required',
@@ -394,25 +247,18 @@ class ProductApiController extends Controller
             ],
         ]);
 
-        $product->name =
-            $validated['name'];
+        $product->name = $validated['name'];
 
         $product->description =
             $validated['description'] ?? null;
 
-        $product->price =
-            $validated['price'];
+        $product->price = $validated['price'];
 
-        $product->quantity =
-            $validated['quantity'];
+        $product->quantity = $validated['quantity'];
 
+        // Remove existing image
 
-        // =====================================================
-        // REMOVE IMAGE
-        // =====================================================
-
-        $removeImage =
-            $request->input('remove_image');
+        $removeImage = $request->input('remove_image');
 
         $removeImage =
             $removeImage === '1' ||
@@ -420,12 +266,10 @@ class ProductApiController extends Controller
             $removeImage === true ||
             $removeImage === 'true';
 
-
         if (
             $removeImage &&
             !empty($product->image)
         ) {
-
             Storage::disk('public')->delete(
                 $product->image
             );
@@ -433,97 +277,76 @@ class ProductApiController extends Controller
             $product->image = null;
         }
 
-
-        // =====================================================
-        // NEW IMAGE
-        // =====================================================
+        // Upload new image
 
         if ($request->hasFile('image')) {
-
             if (!empty($product->image)) {
-
                 Storage::disk('public')->delete(
                     $product->image
                 );
             }
 
-            $product->image =
-                $request
+            $product->image = $request
                 ->file('image')
-                ->store(
-                    'products',
-                    'public'
-                );
+                ->store('products', 'public');
         }
-
 
         $product->save();
 
         return response()->json([
-            'message' =>
-            'Product updated successfully.',
+            'message' => 'Product updated successfully.',
 
-            'product' =>
-            $product->fresh(),
+            'product' => $product->fresh(),
         ]);
     }
 
-
-    // =========================================================
-    // DELETE SINGLE PRODUCT
-    // =========================================================
+    // Delete product
 
     public function destroy(Product $product)
     {
-        $image =
-            $product->image;
+        $image = $product->image;
 
         $product->delete();
 
         if ($image) {
-
-            Storage::disk('public')->delete(
-                $image
-            );
+            Storage::disk('public')->delete($image);
         }
 
         return response()->json([
-            'message' =>
-            'Product deleted successfully.',
+            'message' => 'Product deleted successfully.',
         ]);
     }
 
-
-    // =========================================================
-    // BULK DELETE
-    // =========================================================
+    // Bulk delete
 
     public function bulkDelete(Request $request)
     {
         $validated = $request->validate([
-            'ids' =>
-            'required|array|min:1',
+            'ids' => [
+                'required',
+                'array',
+                'min:1',
+            ],
 
-            'ids.*' =>
-            'required|integer|exists:products,id',
+            'ids.*' => [
+                'required',
+                'integer',
+                'exists:products,id',
+            ],
         ]);
 
-        $products =
-            Product::whereIn(
-                'id',
-                $validated['ids']
-            )->get();
+        $products = Product::whereIn(
+            'id',
+            $validated['ids']
+        )->get();
 
-        $deletedCount =
-            Product::whereIn(
-                'id',
-                $validated['ids']
-            )->delete();
+        $deletedCount = Product::whereIn(
+            'id',
+            $validated['ids']
+        )->delete();
 
         foreach ($products as $product) {
-
             if ($product->image) {
-
                 Storage::disk('public')->delete(
                     $product->image
                 );
@@ -532,17 +355,13 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' =>
-            'Selected products deleted successfully.',
+                'Selected products deleted successfully.',
 
-            'deleted_count' =>
-            $deletedCount,
+            'deleted_count' => $deletedCount,
         ]);
     }
 
-
-    // =========================================================
-    // BULK UPDATE
-    // =========================================================
+    // Bulk update
 
     public function bulkUpdate(Request $request)
     {
@@ -594,20 +413,15 @@ class ProductApiController extends Controller
             ],
         ]);
 
-
         $updatedProducts = [];
-
 
         foreach (
             $validated['products']
             as $index => $productData
         ) {
-
-            $product =
-                Product::findOrFail(
-                    $productData['id']
-                );
-
+            $product = Product::findOrFail(
+                $productData['id']
+            );
 
             $product->name =
                 $productData['name'];
@@ -621,15 +435,11 @@ class ProductApiController extends Controller
             $product->quantity =
                 $productData['quantity'];
 
+            // Remove image
 
-            // =================================================
-            // REMOVE IMAGE FLAG
-            // =================================================
-
-            $removeImage =
-                $request->input(
-                    "products.$index.remove_image"
-                );
+            $removeImage = $request->input(
+                "products.$index.remove_image"
+            );
 
             $removeImage =
                 $removeImage === '1' ||
@@ -637,12 +447,10 @@ class ProductApiController extends Controller
                 $removeImage === true ||
                 $removeImage === 'true';
 
-
             if (
                 $removeImage &&
                 !empty($product->image)
             ) {
-
                 Storage::disk('public')->delete(
                     $product->image
                 );
@@ -650,35 +458,22 @@ class ProductApiController extends Controller
                 $product->image = null;
             }
 
-
-            // =================================================
-            // NEW IMAGE
-            // =================================================
+            // Upload new image
 
             $imageKey =
                 "products.$index.image";
 
-
-            if (
-                $request->hasFile($imageKey)
-            ) {
-
+            if ($request->hasFile($imageKey)) {
                 if (!empty($product->image)) {
-
                     Storage::disk('public')->delete(
                         $product->image
                     );
                 }
 
-                $product->image =
-                    $request
+                $product->image = $request
                     ->file($imageKey)
-                    ->store(
-                        'products',
-                        'public'
-                    );
+                    ->store('products', 'public');
             }
-
 
             $product->save();
 
@@ -686,13 +481,13 @@ class ProductApiController extends Controller
                 $product->fresh();
         }
 
-
         return response()->json([
             'message' =>
-            'Selected products updated successfully.',
+                'Selected products updated successfully.',
 
             'products' =>
-            $updatedProducts,
+                $updatedProducts,
         ]);
     }
 }
+
