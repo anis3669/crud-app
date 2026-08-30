@@ -1,341 +1,312 @@
 <script setup>
-import { computed, ref, onMounted, onBeforeUnmount } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '../../stores/auth'
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faCamera } from '@fortawesome/free-solid-svg-icons'
+import { computed, ref, onMounted, onBeforeUnmount } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthStore } from "../../stores/auth";
+import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
+import { faCamera } from "@fortawesome/free-solid-svg-icons";
 
-const router = useRouter()
-const authStore = useAuthStore()
+const router = useRouter();
+const authStore = useAuthStore();
 
-const cameraIcon = faCamera
+const cameraIcon = faCamera;
 
 // STATE
 
-const user = computed(() => authStore.user)
+const user = computed(() => authStore.user);
 
-const editing = ref(false)
-const saving = ref(false)
-const uploading = ref(false)
-const deleting = ref(false)
-const loading = ref(true)
+const editing = ref(false);
+const saving = ref(false);
+const uploading = ref(false);
+const deleting = ref(false);
+const loading = ref(true);
 
-const name = ref('')
-const email = ref('')
+const name = ref("");
+const email = ref("");
 
-const selectedFile = ref(null)
-const previewUrl = ref(null)
+const selectedFile = ref(null);
+const previewUrl = ref(null);
 
-const successMessage = ref('')
-const errorMessage = ref('')
+const successMessage = ref("");
+const errorMessage = ref("");
 
-const fileInput = ref(null)
+const fileInput = ref(null);
 
-let messageTimer = null
-
+let messageTimer = null;
 
 // PROFILE PICTURE
 
 const profilePicture = computed(() => {
     if (user.value?.profile_picture_url) {
-        return user.value.profile_picture_url
+        return user.value.profile_picture_url;
     }
 
     if (user.value?.profile_picture) {
         if (
-            user.value.profile_picture.startsWith('http://') ||
-            user.value.profile_picture.startsWith('https://') ||
-            user.value.profile_picture.startsWith('/storage/')
+            user.value.profile_picture.startsWith("http://") ||
+            user.value.profile_picture.startsWith("https://") ||
+            user.value.profile_picture.startsWith("/storage/")
         ) {
-            return user.value.profile_picture
+            return user.value.profile_picture;
         }
 
-        return `/storage/${user.value.profile_picture}`
+        return `/storage/${user.value.profile_picture}`;
     }
 
-    return null
-})
+    return null;
+});
 
 const userInitial = computed(() => {
-    return (
-        user.value?.name
-            ?.charAt(0)
-            ?.toUpperCase() || 'U'
-    )
-})
-
+    return user.value?.name?.charAt(0)?.toUpperCase() || "U";
+});
 
 // MESSAGE HELPERS
 
 function clearMessageTimer() {
     if (messageTimer) {
-        clearTimeout(messageTimer)
-        messageTimer = null
+        clearTimeout(messageTimer);
+        messageTimer = null;
     }
 }
 
 function showSuccess(message) {
-    clearMessageTimer()
+    clearMessageTimer();
 
-    successMessage.value = message
-    errorMessage.value = ''
+    successMessage.value = message;
+    errorMessage.value = "";
 
     messageTimer = setTimeout(() => {
-        successMessage.value = ''
-    }, 3000)
+        successMessage.value = "";
+    }, 3000);
 }
 
 function showError(message) {
-    clearMessageTimer()
+    clearMessageTimer();
 
-    errorMessage.value = message
-    successMessage.value = ''
+    errorMessage.value = message;
+    successMessage.value = "";
 }
-
 
 // LOAD PROFILE
 
 async function loadProfile() {
-    loading.value = true
-    errorMessage.value = ''
+    loading.value = true;
+    errorMessage.value = "";
 
     try {
-        await authStore.loadProfile()
+        await authStore.loadProfile();
 
-        name.value = user.value?.name || ''
-        email.value = user.value?.email || ''
+        name.value = user.value?.name || "";
+        email.value = user.value?.email || "";
     } catch (error) {
         showError(
             error.response?.data?.message ||
-            error.data?.message ||
-            error.message ||
-            'Unable to load profile.'
-        )
+                error.data?.message ||
+                error.message ||
+                "Unable to load profile.",
+        );
     } finally {
-        loading.value = false
+        loading.value = false;
     }
 }
-
 
 // EDIT PROFILE
 
 function startEditing() {
-    name.value = user.value?.name || ''
-    email.value = user.value?.email || ''
+    name.value = user.value?.name || "";
+    email.value = user.value?.email || "";
 
-    editing.value = true
+    editing.value = true;
 
-    successMessage.value = ''
-    errorMessage.value = ''
+    successMessage.value = "";
+    errorMessage.value = "";
 }
 
 function cancelEditing() {
-    name.value = user.value?.name || ''
-    email.value = user.value?.email || ''
+    name.value = user.value?.name || "";
+    email.value = user.value?.email || "";
 
-    editing.value = false
-    errorMessage.value = ''
+    editing.value = false;
+    errorMessage.value = "";
 }
-
 
 // UPDATE PROFILE
 
 async function saveProfile() {
-    const trimmedName = name.value.trim()
-    const trimmedEmail = email.value.trim()
+    const trimmedName = name.value.trim();
+    const trimmedEmail = email.value.trim();
 
     if (!trimmedName) {
-        showError('Name is required.')
-        return
+        showError("Name is required.");
+        return;
     }
 
     if (!trimmedEmail) {
-        showError('Email is required.')
-        return
+        showError("Email is required.");
+        return;
     }
 
-    saving.value = true
+    saving.value = true;
 
-    successMessage.value = ''
-    errorMessage.value = ''
+    successMessage.value = "";
+    errorMessage.value = "";
 
     try {
         await authStore.updateProfile({
             name: trimmedName,
             email: trimmedEmail,
-        })
+        });
 
-        editing.value = false
+        editing.value = false;
 
-        showSuccess('Profile updated successfully.')
+        showSuccess("Profile updated successfully.");
     } catch (error) {
         showError(
             error.response?.data?.message ||
-            error.data?.message ||
-            error.message ||
-            'Unable to update profile.'
-        )
+                error.data?.message ||
+                error.message ||
+                "Unable to update profile.",
+        );
     } finally {
-        saving.value = false
+        saving.value = false;
     }
 }
-
 
 // FILE INPUT
 
 function openFilePicker() {
     if (uploading.value) {
-        return
+        return;
     }
 
-    fileInput.value?.click()
+    fileInput.value?.click();
 }
 
 function handleFileChange(event) {
-    const file = event.target.files?.[0]
+    const file = event.target.files?.[0];
 
     if (!file) {
-        return
+        return;
     }
 
-    const allowedTypes = [
-        'image/jpeg',
-        'image/png',
-        'image/webp',
-    ]
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
 
     if (!allowedTypes.includes(file.type)) {
-        showError(
-            'Please select a JPG, PNG, or WEBP image.'
-        )
+        showError("Please select a JPG, PNG, or WEBP image.");
 
-        event.target.value = ''
-        return
+        event.target.value = "";
+        return;
     }
 
     if (file.size > 2 * 1024 * 1024) {
-        showError(
-            'Profile picture must be smaller than 2MB.'
-        )
+        showError("Profile picture must be smaller than 2MB.");
 
-        event.target.value = ''
-        return
+        event.target.value = "";
+        return;
     }
 
-    selectedFile.value = file
+    selectedFile.value = file;
 
     if (previewUrl.value) {
-        URL.revokeObjectURL(previewUrl.value)
+        URL.revokeObjectURL(previewUrl.value);
     }
 
-    previewUrl.value = URL.createObjectURL(file)
+    previewUrl.value = URL.createObjectURL(file);
 
-    uploadProfilePicture()
+    uploadProfilePicture();
 }
-
 
 // UPLOAD PROFILE PICTURE
 
 async function uploadProfilePicture() {
     if (!selectedFile.value) {
-        return
+        return;
     }
 
-    uploading.value = true
+    uploading.value = true;
 
-    successMessage.value = ''
-    errorMessage.value = ''
+    successMessage.value = "";
+    errorMessage.value = "";
 
     try {
-        await authStore.uploadProfilePicture(
-            selectedFile.value
-        )
+        await authStore.uploadProfilePicture(selectedFile.value);
 
-        showSuccess(
-            'Profile picture updated successfully.'
-        )
+        showSuccess("Profile picture updated successfully.");
 
-        selectedFile.value = null
+        selectedFile.value = null;
 
         if (previewUrl.value) {
-            URL.revokeObjectURL(previewUrl.value)
-            previewUrl.value = null
+            URL.revokeObjectURL(previewUrl.value);
+            previewUrl.value = null;
         }
 
         if (fileInput.value) {
-            fileInput.value.value = ''
+            fileInput.value.value = "";
         }
     } catch (error) {
         showError(
             error.response?.data?.message ||
-            error.data?.message ||
-            error.message ||
-            'Unable to upload profile picture.'
-        )
+                error.data?.message ||
+                error.message ||
+                "Unable to upload profile picture.",
+        );
     } finally {
-        uploading.value = false
+        uploading.value = false;
     }
 }
-
 
 // DELETE PROFILE PICTURE
 
 async function removeProfilePicture() {
     if (!user.value?.profile_picture) {
-        return
+        return;
     }
 
-    deleting.value = true
+    deleting.value = true;
 
-    successMessage.value = ''
-    errorMessage.value = ''
+    successMessage.value = "";
+    errorMessage.value = "";
 
     try {
-        await authStore.deleteProfilePicture()
+        await authStore.deleteProfilePicture();
 
-        showSuccess(
-            'Profile picture removed successfully.'
-        )
+        showSuccess("Profile picture removed successfully.");
     } catch (error) {
         showError(
             error.response?.data?.message ||
-            error.data?.message ||
-            error.message ||
-            'Unable to remove profile picture.'
-        )
+                error.data?.message ||
+                error.message ||
+                "Unable to remove profile picture.",
+        );
     } finally {
-        deleting.value = false
+        deleting.value = false;
     }
 }
-
 
 // NAVIGATION
 
 function goBack() {
     router.push({
-        name: 'products.index',
-    })
+        name: "products.index",
+    });
 }
-
 
 // CLEANUP
 
 onMounted(async () => {
-    await loadProfile()
-})
+    await loadProfile();
+});
 
 onBeforeUnmount(() => {
-    clearMessageTimer()
+    clearMessageTimer();
 
     if (previewUrl.value) {
-        URL.revokeObjectURL(previewUrl.value)
+        URL.revokeObjectURL(previewUrl.value);
     }
-})
+});
 </script>
 
 <template>
     <div class="min-h-full bg-gray-50">
-
         <!-- Page Header -->
 
         <div class="border-b border-gray-200 bg-white">
@@ -350,9 +321,7 @@ onBeforeUnmount(() => {
                             P
                         </div>
 
-                        <span
-                            class="text-sm font-semibold text-gray-500"
-                        >
+                        <span class="text-sm font-semibold text-gray-500">
                             Account
                         </span>
                     </div>
@@ -392,13 +361,9 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-
         <!-- Main -->
 
-        <main
-            class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
-        >
-
+        <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
             <!-- Loading -->
 
             <div
@@ -410,19 +375,15 @@ onBeforeUnmount(() => {
                         class="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900"
                     ></div>
 
-                    <p
-                        class="mt-4 text-sm font-medium text-gray-500"
-                    >
+                    <p class="mt-4 text-sm font-medium text-gray-500">
                         Loading profile...
                     </p>
                 </div>
             </div>
 
-
             <!-- Content -->
 
             <template v-else>
-
                 <!-- Messages -->
 
                 <Transition
@@ -433,10 +394,7 @@ onBeforeUnmount(() => {
                     leave-from-class="translate-y-0 opacity-100"
                     leave-to-class="translate-y-1 opacity-0"
                 >
-                    <div
-                        v-if="successMessage || errorMessage"
-                        class="mb-5"
-                    >
+                    <div v-if="successMessage || errorMessage" class="mb-5">
                         <div
                             v-if="successMessage"
                             class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3"
@@ -459,9 +417,7 @@ onBeforeUnmount(() => {
                                 </svg>
                             </div>
 
-                            <p
-                                class="text-sm font-medium text-emerald-700"
-                            >
+                            <p class="text-sm font-medium text-emerald-700">
                                 {{ successMessage }}
                             </p>
                         </div>
@@ -476,22 +432,18 @@ onBeforeUnmount(() => {
                                 !
                             </div>
 
-                            <p
-                                class="text-sm font-medium text-red-700"
-                            >
+                            <p class="text-sm font-medium text-red-700">
                                 {{ errorMessage }}
                             </p>
                         </div>
                     </div>
                 </Transition>
 
-
                 <!-- Profile Card -->
 
                 <div
                     class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
-
                     <!-- Banner -->
 
                     <div
@@ -510,23 +462,18 @@ onBeforeUnmount(() => {
                         ></div>
                     </div>
 
-
                     <!-- Profile Header -->
 
                     <div class="px-5 pb-6 sm:px-8">
-
                         <div
                             class="-mt-10 flex flex-col gap-5 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between"
                         >
-
                             <!-- Avatar -->
 
                             <div class="relative w-fit">
-
                                 <div
                                     class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-gray-900 text-3xl font-bold text-white shadow-lg sm:h-28 sm:w-28 sm:text-4xl"
                                 >
-
                                     <img
                                         v-if="previewUrl"
                                         :src="previewUrl"
@@ -544,9 +491,7 @@ onBeforeUnmount(() => {
                                     <span v-else>
                                         {{ userInitial }}
                                     </span>
-
                                 </div>
-
 
                                 <!-- Camera -->
 
@@ -570,16 +515,11 @@ onBeforeUnmount(() => {
                                     class="hidden"
                                     @change="handleFileChange"
                                 />
-
                             </div>
-
 
                             <!-- Actions -->
 
-                            <div
-                                class="flex flex-wrap items-center gap-2"
-                            >
-
+                            <div class="flex flex-wrap items-center gap-2">
                                 <button
                                     v-if="profilePicture"
                                     type="button"
@@ -603,8 +543,8 @@ onBeforeUnmount(() => {
 
                                     {{
                                         deleting
-                                            ? 'Removing...'
-                                            : 'Remove Photo'
+                                            ? "Removing..."
+                                            : "Remove Photo"
                                     }}
                                 </button>
 
@@ -630,23 +570,17 @@ onBeforeUnmount(() => {
 
                                     Edit Profile
                                 </button>
-
                             </div>
-
                         </div>
-
 
                         <!-- Identity -->
 
                         <div class="mt-5">
-
-                            <div
-                                class="flex flex-wrap items-center gap-2"
-                            >
+                            <div class="flex flex-wrap items-center gap-2">
                                 <h2
                                     class="text-2xl font-bold tracking-tight text-gray-900"
                                 >
-                                    {{ user?.name || 'User' }}
+                                    {{ user?.name || "User" }}
                                 </h2>
 
                                 <span
@@ -660,59 +594,37 @@ onBeforeUnmount(() => {
                                 </span>
                             </div>
 
-                            <p
-                                class="mt-1 text-sm text-gray-500"
-                            >
-                                {{ user?.email || 'No email available' }}
+                            <p class="mt-1 text-sm text-gray-500">
+                                {{ user?.email || "No email available" }}
                             </p>
-
                         </div>
-
                     </div>
-
                 </div>
-
 
                 <!-- Lower Content -->
 
                 <div
-                    class="mt-5 grid gap-5 lg:grid-cols-3"
+                    class="-mx-5 mt-5 grid gap-3 border-t border-gray-100 bg-gray-50/50 px-5 pt-5 sm:-mx-8 sm:px-8"
                 >
-
                     <!-- Account Information -->
 
                     <div
-                        class="rounded-2xl border border-gray-200 bg-white shadow-sm lg:col-span-2"
+                        class="rounded-xl border border-gray-200 bg-white p-4 transition hover:border-gray-300 hover:shadow-sm"
                     >
-
-                        <div
-                            class="border-b border-gray-100 px-5 py-5 sm:px-6"
-                        >
-                            <h3
-                                class="text-base font-semibold text-gray-900"
-                            >
+                        <div class="border-b border-gray-100 px-5 py-5 sm:px-6">
+                            <h3 class="text-base font-semibold text-gray-900">
                                 Account Information
                             </h3>
 
-                            <p
-                                class="mt-1 text-sm text-gray-500"
-                            >
+                            <p class="mt-1 text-sm text-gray-500">
                                 Your basic account details.
                             </p>
                         </div>
 
-
                         <!-- Edit -->
 
-                        <div
-                            v-if="editing"
-                            class="px-5 py-6 sm:px-6"
-                        >
-
-                            <div
-                                class="grid gap-5 sm:grid-cols-2"
-                            >
-
+                        <div v-if="editing" class="px-5 py-6 sm:px-6">
+                            <div class="grid gap-5 sm:grid-cols-2">
                                 <!-- Name -->
 
                                 <div>
@@ -730,7 +642,6 @@ onBeforeUnmount(() => {
                                     />
                                 </div>
 
-
                                 <!-- Email -->
 
                                 <div>
@@ -747,16 +658,13 @@ onBeforeUnmount(() => {
                                         class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                     />
                                 </div>
-
                             </div>
-
 
                             <!-- Edit Actions -->
 
                             <div
                                 class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
                             >
-
                                 <button
                                     type="button"
                                     @click="cancelEditing"
@@ -772,17 +680,10 @@ onBeforeUnmount(() => {
                                     :disabled="saving"
                                     class="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    {{
-                                        saving
-                                            ? 'Saving...'
-                                            : 'Save Changes'
-                                    }}
+                                    {{ saving ? "Saving..." : "Save Changes" }}
                                 </button>
-
                             </div>
-
                         </div>
-
 
                         <!-- Information -->
 
@@ -790,15 +691,12 @@ onBeforeUnmount(() => {
                             v-else
                             class="grid gap-3 p-5 sm:grid-cols-2 sm:p-6"
                         >
-
                             <!-- Name -->
 
                             <div
                                 class="rounded-xl border border-gray-200 bg-gray-50/70 p-4"
                             >
-                                <div
-                                    class="flex items-center gap-2"
-                                >
+                                <div class="flex items-center gap-2">
                                     <div
                                         class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-500 shadow-sm"
                                     >
@@ -827,19 +725,16 @@ onBeforeUnmount(() => {
                                 <p
                                     class="mt-4 text-sm font-semibold text-gray-900"
                                 >
-                                    {{ user?.name || 'Not available' }}
+                                    {{ user?.name || "Not available" }}
                                 </p>
                             </div>
-
 
                             <!-- Email -->
 
                             <div
                                 class="rounded-xl border border-gray-200 bg-gray-50/70 p-4"
                             >
-                                <div
-                                    class="flex items-center gap-2"
-                                >
+                                <div class="flex items-center gap-2">
                                     <div
                                         class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-500 shadow-sm"
                                     >
@@ -868,19 +763,16 @@ onBeforeUnmount(() => {
                                 <p
                                     class="mt-4 break-all text-sm font-semibold text-gray-900"
                                 >
-                                    {{ user?.email || 'Not available' }}
+                                    {{ user?.email || "Not available" }}
                                 </p>
                             </div>
-
 
                             <!-- User ID -->
 
                             <div
                                 class="rounded-xl border border-gray-200 bg-gray-50/70 p-4"
                             >
-                                <div
-                                    class="flex items-center gap-2"
-                                >
+                                <div class="flex items-center gap-2">
                                     <div
                                         class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-500 shadow-sm"
                                     >
@@ -909,19 +801,16 @@ onBeforeUnmount(() => {
                                 <p
                                     class="mt-4 text-sm font-semibold text-gray-900"
                                 >
-                                    #{{ user?.id || 'N/A' }}
+                                    #{{ user?.id || "N/A" }}
                                 </p>
                             </div>
-
 
                             <!-- Status -->
 
                             <div
                                 class="rounded-xl border border-gray-200 bg-gray-50/70 p-4"
                             >
-                                <div
-                                    class="flex items-center gap-2"
-                                >
+                                <div class="flex items-center gap-2">
                                     <div
                                         class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm"
                                     >
@@ -947,9 +836,7 @@ onBeforeUnmount(() => {
                                     </p>
                                 </div>
 
-                                <div
-                                    class="mt-4 flex items-center gap-2"
-                                >
+                                <div class="mt-4 flex items-center gap-2">
                                     <span
                                         class="h-2 w-2 rounded-full bg-emerald-500"
                                     ></span>
@@ -961,15 +848,12 @@ onBeforeUnmount(() => {
                                     </span>
                                 </div>
                             </div>
-
                         </div>
-
                     </div>
-
 
                     <!-- Profile Picture Card -->
 
-                    <div
+                    <!-- <div
                         class="rounded-2xl border border-gray-200 bg-white shadow-sm"
                     >
 
@@ -1056,48 +940,34 @@ onBeforeUnmount(() => {
 
                         </div>
 
-                    </div>
-
+                    </div> -->
                 </div>
-
 
                 <!-- Account Settings -->
 
                 <div
                     class="mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm"
                 >
-
-                    <div
-                        class="border-b border-gray-100 px-5 py-5 sm:px-6"
-                    >
-                        <h3
-                            class="text-base font-semibold text-gray-900"
-                        >
+                    <div class="border-b border-gray-100 px-5 py-5 sm:px-6">
+                        <h3 class="text-base font-semibold text-gray-900">
                             Account Settings
                         </h3>
 
-                        <p
-                            class="mt-1 text-sm text-gray-500"
-                        >
+                        <p class="mt-1 text-sm text-gray-500">
                             Manage your account information.
                         </p>
                     </div>
 
                     <div class="divide-y divide-gray-100">
-
                         <div
                             class="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                         >
                             <div>
-                                <p
-                                    class="text-sm font-semibold text-gray-900"
-                                >
+                                <p class="text-sm font-semibold text-gray-900">
                                     Profile Information
                                 </p>
 
-                                <p
-                                    class="mt-1 text-xs text-gray-500"
-                                >
+                                <p class="mt-1 text-xs text-gray-500">
                                     Update your name and email address.
                                 </p>
                             </div>
@@ -1123,16 +993,10 @@ onBeforeUnmount(() => {
                                     />
                                 </svg>
                             </button>
-
                         </div>
-
                     </div>
-
                 </div>
-
             </template>
-
         </main>
-
     </div>
 </template>
