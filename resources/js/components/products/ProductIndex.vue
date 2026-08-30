@@ -1,1363 +1,1169 @@
 <script setup>
+import { computed, onMounted, ref } from "vue";
 
-import {
-    computed,
-    onMounted,
-    ref,
-} from 'vue'
+import { useRouter } from "vue-router";
 
-import { useRouter } from 'vue-router'
+import { useProductStore } from "../../stores/product";
+import { useToastStore } from "../../stores/toast";
 
-import { useProductStore } from '../../stores/product'
-import { useToastStore } from '../../stores/toast'
+import ProductList from "./ProductList.vue";
 
-import ProductList from './ProductList.vue'
-
-import BaseModal from '../common/BaseModal.vue'
-import BaseButton from '../common/BaseButton.vue'
-import BaseCard from '../common/BaseCard.vue'
-
+import BaseModal from "../common/BaseModal.vue";
+import BaseButton from "../common/BaseButton.vue";
+import BaseCard from "../common/BaseCard.vue";
 
 // router + stores
 
-const router = useRouter()
+const router = useRouter();
 
-const productStore = useProductStore()
-const toastStore = useToastStore()
-
+const productStore = useProductStore();
+const toastStore = useToastStore();
 
 // ui state
 
-const showDeleteModal = ref(false)
+const showDeleteModal = ref(false);
 
-const productToDelete = ref(null)
+const productToDelete = ref(null);
 
-const deleting = ref(false)
+const deleting = ref(false);
 
-const searchInput = ref('')
+const searchInput = ref("");
 
-const priceFilter = ref('all')
-
+const priceFilter = ref("all");
 
 // products
 
 const products = computed(() => {
-
-    return Array.isArray(productStore.products)
-        ? productStore.products
-        : []
-
-})
-
+    return Array.isArray(productStore.products) ? productStore.products : [];
+});
 
 // loading
 
 const loading = computed(() => {
-
-    return productStore.loading
-
-})
-
+    return productStore.loading;
+});
 
 // error
 
 const error = computed(() => {
-
-    return productStore.error
-
-})
-
+    return productStore.error;
+});
 
 // pagination
 
 const currentPage = computed(() => {
-
-    return productStore.currentPage
-
-})
+    return productStore.currentPage;
+});
 
 const lastPage = computed(() => {
-
-    return productStore.lastPage
-
-})
+    return productStore.lastPage;
+});
 
 const total = computed(() => {
-
-    return productStore.total
-
-})
+    return productStore.total;
+});
 
 const perPage = computed(() => {
-
-    return productStore.perPage
-
-})
+    return productStore.perPage;
+});
 
 const hasPreviousPage = computed(() => {
-
-    return currentPage.value > 1
-
-})
+    return currentPage.value > 1;
+});
 
 const hasNextPage = computed(() => {
-
-    return currentPage.value < lastPage.value
-
-})
-
+    return currentPage.value < lastPage.value;
+});
 
 // search
 
 const search = computed(() => {
-
-    return productStore.search
-
-})
-
+    return productStore.search;
+});
 
 // filter
 
 const filter = computed(() => {
-
-    return productStore.filter
-
-})
-
+    return productStore.filter;
+});
 
 // inventory stats
 
 const stats = computed(() => {
-
-    return productStore.stats || {
-        total_products: 0,
-        in_stock: 0,
-        out_of_stock: 0,
-        total_quantity: 0,
-    }
-
-})
-
+    return (
+        productStore.stats || {
+            total_products: 0,
+            in_stock: 0,
+            out_of_stock: 0,
+            total_quantity: 0,
+        }
+    );
+});
 
 // pagination information
 
 const firstProductNumber = computed(() => {
-
     if (total.value === 0) {
-        return 0
+        return 0;
     }
 
-    return (
-        (currentPage.value - 1) *
-            perPage.value +
-        1
-    )
-
-})
+    return (currentPage.value - 1) * perPage.value + 1;
+});
 
 const lastProductNumber = computed(() => {
-
-    return Math.min(
-        currentPage.value * perPage.value,
-        total.value
-    )
-
-})
-
+    return Math.min(currentPage.value * perPage.value, total.value);
+});
 
 // price range
 
 const priceRange = computed(() => {
-
     switch (priceFilter.value) {
-
-        case 'under_1000':
-
+        case "under_1000":
             return {
                 min: null,
                 max: 1000,
-            }
+            };
 
-        case '1000_5000':
-
+        case "1000_5000":
             return {
                 min: 1000,
                 max: 5000,
-            }
+            };
 
-        case '5000_10000':
-
+        case "5000_10000":
             return {
                 min: 5000,
                 max: 10000,
-            }
+            };
 
-        case 'above_10000':
-
+        case "above_10000":
             return {
                 min: 10000,
                 max: null,
-            }
+            };
 
         default:
-
             return {
                 min: null,
                 max: null,
-            }
-
+            };
     }
-
-})
-
+});
 
 // active filters
 
 const hasSearch = computed(() => {
-
-    return searchInput.value.trim() !== ''
-
-})
+    return searchInput.value.trim() !== "";
+});
 
 const hasProductFilter = computed(() => {
-
-    return filter.value !== 'all'
-
-})
+    return filter.value !== "all";
+});
 
 const hasPriceFilter = computed(() => {
-
-    return priceFilter.value !== 'all'
-
-})
+    return priceFilter.value !== "all";
+});
 
 const hasActiveFilters = computed(() => {
-
-    return (
-        hasSearch.value ||
-        hasProductFilter.value ||
-        hasPriceFilter.value
-    )
-
-})
-
+    return hasSearch.value || hasProductFilter.value || hasPriceFilter.value;
+});
 
 // filter labels
 
 const filterLabel = computed(() => {
-
     const labels = {
-        all: 'All',
-        latest: 'Latest',
-        oldest: 'Oldest',
-        in_stock: 'In Stock',
-        out_of_stock: 'Out of Stock',
-    }
+        all: "All",
+        latest: "Latest",
+        oldest: "Oldest",
+        in_stock: "In Stock",
+        out_of_stock: "Out of Stock",
+    };
 
-    return labels[filter.value] || 'All'
-
-})
+    return labels[filter.value] || "All";
+});
 
 const priceFilterLabel = computed(() => {
-
     const labels = {
-        all: 'All prices',
-        under_1000: 'Under Rs. 1,000',
-        1000_5000: 'Rs. 1,000 – Rs. 5,000',
-        5000_10000: 'Rs. 5,000 – Rs. 10,000',
-        above_10000: 'Above Rs. 10,000',
-    }
+        all: "All prices",
+        under_1000: "Under Rs. 1,000",
+        1000_5000: "Rs. 1,000 – Rs. 5,000",
+        5000_10000: "Rs. 5,000 – Rs. 10,000",
+        above_10000: "Above Rs. 10,000",
+    };
 
-    return labels[priceFilter.value] || 'All prices'
-
-})
-
+    return labels[priceFilter.value] || "All prices";
+});
 
 // load products
 
-async function loadProducts(
-    page = productStore.currentPage
-) {
-
+async function loadProducts(page = productStore.currentPage) {
     try {
-
         await productStore.fetchProducts(
             page,
             productStore.search,
             productStore.filter,
             priceRange.value.min,
-            priceRange.value.max
-        )
-
+            priceRange.value.max,
+        );
     } catch (err) {
-
-        console.error(
-            'Failed to load products:',
-            err
-        )
-
+        console.error("Failed to load products:", err);
     }
-
 }
-
 
 // search products
 
 async function performSearch() {
-
     try {
-
-        await productStore.searchProducts(
-            searchInput.value.trim()
-        )
-
+        await productStore.searchProducts(searchInput.value.trim());
     } catch (err) {
-
-        console.error(
-            'Search products error:',
-            err
-        )
-
+        console.error("Search products error:", err);
     }
-
 }
-
 
 // clear search
 
 async function clearSearch() {
-
-    searchInput.value = ''
+    searchInput.value = "";
 
     try {
-
-        await productStore.clearSearch()
-
+        await productStore.clearSearch();
     } catch (err) {
-
-        console.error(
-            'Clear search error:',
-            err
-        )
-
+        console.error("Clear search error:", err);
     }
-
 }
-
 
 // clear all filters
 
 async function clearAllFilters() {
+    searchInput.value = "";
 
-    searchInput.value = ''
-
-    priceFilter.value = 'all'
+    priceFilter.value = "all";
 
     try {
-
-        await productStore.fetchProducts(
-            1,
-            '',
-            'all',
-            null,
-            null
-        )
-
+        await productStore.fetchProducts(1, "", "all", null, null);
     } catch (err) {
-
-        console.error(
-            'Clear filters error:',
-            err
-        )
-
+        console.error("Clear filters error:", err);
     }
-
 }
-
 
 // product filter
 
 async function changeFilter(event) {
-
-    const selectedFilter =
-        event.target.value
+    const selectedFilter = event.target.value;
 
     try {
-
-        await productStore.filterProducts(
-            selectedFilter
-        )
-
+        await productStore.filterProducts(selectedFilter);
     } catch (err) {
-
-        console.error(
-            'Filter products error:',
-            err
-        )
-
+        console.error("Filter products error:", err);
     }
-
 }
-
 
 // price filter
 
 async function changePriceFilter() {
-
     try {
-
         await productStore.priceFilterProducts(
             priceRange.value.min,
-            priceRange.value.max
-        )
-
+            priceRange.value.max,
+        );
     } catch (err) {
-
-        console.error(
-            'Price filter error:',
-            err
-        )
-
+        console.error("Price filter error:", err);
     }
-
 }
-
 
 // go to page
 
 async function goToPage(page) {
-
-    if (
-        page < 1 ||
-        page > lastPage.value ||
-        page === currentPage.value
-    ) {
-
-        return
-
+    if (page < 1 || page > lastPage.value || page === currentPage.value) {
+        return;
     }
 
     try {
-
-        await loadProducts(page)
-
+        await loadProducts(page);
     } catch (err) {
-
-        console.error(
-            'Pagination error:',
-            err
-        )
-
+        console.error("Pagination error:", err);
     }
-
 }
-
 
 // previous page
 
 async function previousPage() {
-
     if (!hasPreviousPage.value) {
-        return
+        return;
     }
 
-    await goToPage(
-        currentPage.value - 1
-    )
-
+    await goToPage(currentPage.value - 1);
 }
-
 
 // next page
 
 async function nextPage() {
-
     if (!hasNextPage.value) {
-        return
+        return;
     }
 
-    await goToPage(
-        currentPage.value + 1
-    )
-
+    await goToPage(currentPage.value + 1);
 }
-
 
 // add product
 
 function addProduct() {
-
     router.push({
-        name: 'products.create',
-    })
-
+        name: "products.create",
+    });
 }
-
 
 // view product
 
 function viewProduct(product) {
-
     router.push({
-
-        name: 'products.view',
-
+        name: "products.view",
         params: {
             id: product.id,
         },
-
-    })
-
+    });
 }
-
 
 // edit product
 
 function editProduct(product) {
-
     router.push({
-
-        name: 'products.edit',
-
+        name: "products.edit",
         params: {
             id: product.id,
         },
-
-    })
-
+    });
 }
-
 
 // delete product
 
 function openDeleteModal(product) {
+    productToDelete.value = product;
 
-    productToDelete.value = product
-
-    showDeleteModal.value = true
-
+    showDeleteModal.value = true;
 }
-
 
 function closeDeleteModal() {
-
     if (deleting.value) {
-        return
+        return;
     }
 
-    showDeleteModal.value = false
+    showDeleteModal.value = false;
 
-    productToDelete.value = null
-
+    productToDelete.value = null;
 }
-
 
 async function confirmDelete() {
-
     if (!productToDelete.value) {
-        return
+        return;
     }
 
-    deleting.value = true
+    deleting.value = true;
 
     try {
+        await productStore.deleteProduct(productToDelete.value.id);
 
-        await productStore.deleteProduct(
-            productToDelete.value.id
-        )
+        toastStore.success("Product deleted successfully.");
 
-        toastStore.success(
-            'Product deleted successfully.'
-        )
+        showDeleteModal.value = false;
 
-        showDeleteModal.value = false
-
-        productToDelete.value = null
-
+        productToDelete.value = null;
     } catch (err) {
-
-        console.error(
-            'Delete product error:',
-            err
-        )
-
+        console.error("Delete product error:", err);
     } finally {
-
-        deleting.value = false
-
+        deleting.value = false;
     }
-
 }
-
 
 // bulk delete
 
-async function bulkDelete(
-    productsToDelete
-) {
-
-    if (
-        !Array.isArray(productsToDelete) ||
-        productsToDelete.length === 0
-    ) {
-
-        return
-
+async function bulkDelete(productsToDelete) {
+    if (!Array.isArray(productsToDelete) || productsToDelete.length === 0) {
+        return;
     }
 
     try {
+        await productStore.bulkDelete(productsToDelete);
 
-        await productStore.bulkDelete(
-            productsToDelete
-        )
-
-        toastStore.success(
-            'Products deleted successfully.'
-        )
-
+        toastStore.success("Products deleted successfully.");
     } catch (err) {
-
-        console.error(
-            'Bulk delete error:',
-            err
-        )
-
+        console.error("Bulk delete error:", err);
     }
-
 }
-
 
 // bulk edit
 
-function bulkEdit(
-    productsToEdit
-) {
-
-    if (
-        !Array.isArray(productsToEdit) ||
-        productsToEdit.length === 0
-    ) {
-
-        return
-
+function bulkEdit(productsToEdit) {
+    if (!Array.isArray(productsToEdit) || productsToEdit.length === 0) {
+        return;
     }
 
-    if (
-        productsToEdit.length === 1
-    ) {
+    if (productsToEdit.length === 1) {
+        editProduct(productsToEdit[0]);
 
-        editProduct(
-            productsToEdit[0]
-        )
-
-        return
-
+        return;
     }
 
     router.push({
-
-        name: 'products.bulk-edit',
-
+        name: "products.bulk-edit",
         query: {
-
-            selected_products:
-
-                productsToEdit
-                    .map(
-                        product =>
-                            product.id
-                    )
-                    .join(','),
-
+            selected_products: productsToEdit
+                .map((product) => product.id)
+                .join(","),
         },
-
-    })
-
+    });
 }
-
 
 // refresh
 
 async function refreshProducts() {
-
-    await loadProducts(
-        currentPage.value
-    )
-
+    await loadProducts(currentPage.value);
 }
-
 
 // initial load
 
 onMounted(() => {
+    searchInput.value = productStore.search;
 
-    searchInput.value =
-        productStore.search
-
-    loadProducts(
-        productStore.currentPage
-    )
-
-})
-
+    loadProducts(productStore.currentPage);
+});
 </script>
 
-
 <template>
+    <!-- FULL PAGE BACKGROUND -->
 
-    <div
-        class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
-    >
-
-        <!-- page header -->
-
-        <div class="mb-6">
-
-            <div
-                class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between"
-            >
-
-                <!-- title -->
-
-                <div
-                    class="flex min-w-0 items-center gap-4"
-                >
-
-                    <div
-                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-900 shadow-sm"
-                    >
-
-                        <svg
-                            class="h-5 w-5 text-white"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="1.8"
-                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                            />
-
-                        </svg>
-
-                    </div>
-
-
-                    <div class="min-w-0">
-
-                        <h1
-                            class="truncate text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl"
-                        >
-                            Products
-                        </h1>
-
-                        <p
-                            class="mt-1 text-sm text-gray-500"
-                        >
-                            Manage your inventory
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <!-- actions -->
-
-                <div
-                    class="flex w-full items-center gap-2 sm:w-auto"
-                >
-
-                    <!-- refresh -->
-
-                    <BaseButton
-                        type="button"
-                        variant="secondary"
-                        :disabled="loading"
-                        class="flex-1 justify-center sm:flex-none"
-                        @click="refreshProducts"
-                    >
-
-                        <svg
-                            class="h-4 w-4"
-                            :class="{
-                                'animate-spin': loading,
-                            }"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M4 4v5h5M20 20v-5h-5M5.07 9A7 7 0 0117.9 6.1L20 9M19 15a7 7 0 01-12.83 2.9L4 15"
-                            />
-
-                        </svg>
-
-                        <span class="hidden sm:inline">
-                            {{ loading ? 'Refreshing...' : 'Refresh' }}
-                        </span>
-
-                    </BaseButton>
-
-
-                    <!-- add -->
-
-                    <BaseButton
-                        type="button"
-                        class="flex-1 justify-center sm:flex-none"
-                        @click="addProduct"
-                    >
-
-                        <svg
-                            class="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 4v16m8-8H4"
-                            />
-
-                        </svg>
-
-                        <span>
-                            Add Product
-                        </span>
-
-                    </BaseButton>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
-        <!-- inventory stats -->
-
+    <div class="min-h-[calc(100vh-4rem)] bg-gray-50 transition-colors duration-300 dark:bg-gray-950">
         <div
-            class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4"
+            class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
         >
+            <!-- PAGE HEADER -->
 
-            <!-- total -->
-
-            <div
-                class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-
+            <div class="mb-6">
                 <div
-                    class="flex items-center gap-2"
+                    class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900 sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between"
                 >
+                    <!-- title -->
 
-                    <div
-                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100"
-                    >
-
-                        <svg
-                            class="h-4 w-4 text-gray-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="1.8"
-                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                            />
-
-                        </svg>
-
-                    </div>
-
-                    <p
-                        class="text-xs font-medium text-gray-500 sm:text-sm"
-                    >
-                        Products
-                    </p>
-
-                </div>
-
-                <p
-                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
-                >
-                    {{ stats.total_products }}
-                </p>
-
-            </div>
-
-
-            <!-- in stock -->
-
-            <div
-                class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-
-                <div
-                    class="flex items-center gap-2"
-                >
-
-                    <div
-                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50"
-                    >
-
-                        <span
-                            class="h-2.5 w-2.5 rounded-full bg-green-500"
-                        ></span>
-
-                    </div>
-
-                    <p
-                        class="text-xs font-medium text-gray-500 sm:text-sm"
-                    >
-                        In Stock
-                    </p>
-
-                </div>
-
-                <p
-                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
-                >
-                    {{ stats.in_stock }}
-                </p>
-
-            </div>
-
-
-            <!-- out of stock -->
-
-            <div
-                class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-
-                <div
-                    class="flex items-center gap-2"
-                >
-
-                    <div
-                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50"
-                    >
-
-                        <span
-                            class="h-2.5 w-2.5 rounded-full bg-red-500"
-                        ></span>
-
-                    </div>
-
-                    <p
-                        class="text-xs font-medium text-gray-500 sm:text-sm"
-                    >
-                        Out of Stock
-                    </p>
-
-                </div>
-
-                <p
-                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
-                >
-                    {{ stats.out_of_stock }}
-                </p>
-
-            </div>
-
-
-            <!-- quantity -->
-
-            <div
-                class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-
-                <div
-                    class="flex items-center gap-2"
-                >
-
-                    <div
-                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50"
-                    >
-
-                        <svg
-                            class="h-4 w-4 text-blue-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="1.8"
-                                d="M4 7h16M4 12h16M4 17h16"
-                            />
-
-                        </svg>
-
-                    </div>
-
-                    <p
-                        class="text-xs font-medium text-gray-500 sm:text-sm"
-                    >
-                        Total Units
-                    </p>
-
-                </div>
-
-                <p
-                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
-                >
-                    {{ stats.total_quantity }}
-                </p>
-
-            </div>
-
-        </div>
-
-
-        <!-- search + filters -->
-
-        <BaseCard
-            class="mb-6 overflow-visible"
-        >
-
-            <div class="space-y-4">
-
-                <!-- search -->
-
-                <form
-                    class="flex flex-col gap-2 sm:flex-row"
-                    @submit.prevent="performSearch"
-                >
-
-                    <div
-                        class="relative min-w-0 flex-1"
-                    >
-
-                        <!-- search icon -->
-
+                    <div class="flex min-w-0 items-center gap-4">
                         <div
-                            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4"
+                            class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-900 shadow-sm dark:bg-white"
                         >
-
                             <svg
-                                class="h-5 w-5 text-gray-400"
+                                class="h-5 w-5 text-white dark:text-gray-900"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="1.8"
-                                    d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
                                 />
-
                             </svg>
-
                         </div>
 
+                        <div class="min-w-0">
+                            <h1
+                                class="truncate text-xl font-semibold tracking-tight text-gray-900 transition-colors dark:text-white sm:text-2xl"
+                            >
+                                Products
+                            </h1>
 
-                        <!-- input -->
+                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                Manage your inventory
+                            </p>
+                        </div>
+                    </div>
 
-                        <input
-                            v-model="searchInput"
-                            type="text"
-                            placeholder="Search products..."
-                            autocomplete="off"
-                            class="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-12 pr-11 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
-                        />
+                    <!-- actions -->
 
+                    <div class="flex w-full items-center gap-2 sm:w-auto">
+                        <!-- refresh -->
 
-                        <!-- clear -->
-
-                        <button
-                            v-if="searchInput"
+                        <BaseButton
                             type="button"
-                            aria-label="Clear search"
-                            class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-200 hover:text-gray-700"
-                            @click="clearSearch"
+                            variant="secondary"
+                            :disabled="loading"
+                            class="flex-1 justify-center sm:flex-none"
+                            @click="refreshProducts"
                         >
-
                             <svg
                                 class="h-4 w-4"
+                                :class="{
+                                    'animate-spin': loading,
+                                }"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="2"
-                                    d="M6 18L18 6M6 6l12 12"
+                                    d="M4 4v5h5M20 20v-5h-5M5.07 9A7 7 0 0117.9 6.1L20 9M19 15a7 7 0 01-12.83 2.9L4 15"
                                 />
-
                             </svg>
 
-                        </button>
+                            <span class="hidden sm:inline">
+                                {{ loading ? "Refreshing..." : "Refresh" }}
+                            </span>
+                        </BaseButton>
 
-                    </div>
+                        <!-- add -->
 
-
-                    <!-- search button -->
-
-                    <BaseButton
-                        type="submit"
-                        :disabled="loading"
-                        class="h-12 w-full justify-center px-6 sm:w-auto"
-                    >
-
-                        <svg
-                            v-if="!loading"
-                            class="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
+                        <BaseButton
+                            type="button"
+                            class="flex-1 justify-center sm:flex-none"
+                            @click="addProduct"
                         >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="1.8"
-                                d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
-                            />
-
-                        </svg>
-
-
-                        <svg
-                            v-else
-                            class="h-4 w-4 animate-spin"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <circle
-                                class="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
                                 stroke="currentColor"
-                                stroke-width="4"
-                            />
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 4v16m8-8H4"
+                                />
+                            </svg>
 
-                            <path
-                                class="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                            />
+                            <span>Add Product</span>
+                        </BaseButton>
+                    </div>
+                </div>
+            </div>
 
-                        </svg>
+            <!-- INVENTORY STATS -->
 
-                        <span>
-                            {{ loading ? 'Searching...' : 'Search' }}
-                        </span>
-
-                    </BaseButton>
-
-                </form>
-
-
-                <!-- filters -->
+            <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <!-- total -->
 
                 <div
-                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                    class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
                 >
-
-                    <div
-                        class="flex flex-wrap items-center gap-2"
-                    >
-
-                        <!-- product filter -->
-
-                        <div class="relative">
-
-                            <select
-                                :value="filter"
-                                :disabled="loading"
-                                aria-label="Product filter"
-                                class="h-10 min-w-[135px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                @change="changeFilter"
-                            >
-
-                                <option value="all">
-                                    All Products
-                                </option>
-
-                                <option value="latest">
-                                    Latest Added
-                                </option>
-
-                                <option value="oldest">
-                                    Oldest Added
-                                </option>
-
-                                <option value="in_stock">
-                                    In Stock
-                                </option>
-
-                                <option value="out_of_stock">
-                                    Out of Stock
-                                </option>
-
-                            </select>
-
-
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800"
+                        >
                             <svg
-                                class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                class="h-4 w-4 text-gray-600 dark:text-gray-300"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="1.8"
-                                    d="m6 9 6 6 6-6"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
                                 />
-
                             </svg>
-
                         </div>
 
-
-                        <!-- price filter -->
-
-                        <div class="relative">
-
-                            <select
-                                v-model="priceFilter"
-                                :disabled="loading"
-                                aria-label="Price filter"
-                                class="h-10 min-w-[125px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-                                @change="changePriceFilter"
-                            >
-
-                                <option value="all">
-                                    All Prices
-                                </option>
-
-                                <option value="under_1000">
-                                    Under Rs. 1,000
-                                </option>
-
-                                <option value="1000_5000">
-                                    Rs. 1,000 – Rs. 5,000
-                                </option>
-
-                                <option value="5000_10000">
-                                    Rs. 5,000 – Rs. 10,000
-                                </option>
-
-                                <option value="above_10000">
-                                    Above Rs. 10,000
-                                </option>
-
-                            </select>
-
-
-                            <svg
-                                class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="1.8"
-                                    d="m6 9 6 6 6-6"
-                                />
-
-                            </svg>
-
-                        </div>
-
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm">
+                            Products
+                        </p>
                     </div>
 
-
-                    <!-- active filters -->
-
-                    <div
-                        v-if="hasActiveFilters"
-                        class="flex flex-wrap items-center gap-2"
+                    <p
+                        class="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
                     >
+                        {{ stats.total_products }}
+                    </p>
+                </div>
 
-                        <!-- search chip -->
+                <!-- in stock -->
 
-                        <span
-                            v-if="hasSearch"
-                            class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700"
+                <div
+                    class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+                >
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50 dark:bg-green-950/40"
                         >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full bg-green-500"
+                            ></span>
+                        </div>
 
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm">
+                            In Stock
+                        </p>
+                    </div>
+
+                    <p
+                        class="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+                    >
+                        {{ stats.in_stock }}
+                    </p>
+                </div>
+
+                <!-- out of stock -->
+
+                <div
+                    class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+                >
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40"
+                        >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full bg-red-500"
+                            ></span>
+                        </div>
+
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm">
+                            Out of Stock
+                        </p>
+                    </div>
+
+                    <p
+                        class="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+                    >
+                        {{ stats.out_of_stock }}
+                    </p>
+                </div>
+
+                <!-- quantity -->
+
+                <div
+                    class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+                >
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-950/40"
+                        >
                             <svg
-                                class="h-3 w-3 shrink-0 text-gray-400"
+                                class="h-4 w-4 text-blue-600 dark:text-blue-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M4 7h16M4 12h16M4 17h16"
+                                />
+                            </svg>
+                        </div>
 
+                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm">
+                            Total Units
+                        </p>
+                    </div>
+
+                    <p
+                        class="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+                    >
+                        {{ stats.total_quantity }}
+                    </p>
+                </div>
+            </div>
+
+            <!-- SEARCH + FILTERS -->
+
+            <BaseCard class="mb-6 overflow-visible">
+                <div class="space-y-4">
+                    <!-- search -->
+
+                    <form
+                        class="flex flex-col gap-2 sm:flex-row"
+                        @submit.prevent="performSearch"
+                    >
+                        <div class="relative min-w-0 flex-1">
+                            <div
+                                class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4"
+                            >
+                                <svg
+                                    class="h-5 w-5 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.8"
+                                        d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
+                                    />
+                                </svg>
+                            </div>
+
+                            <input
+                                v-model="searchInput"
+                                type="text"
+                                placeholder="Search products..."
+                                autocomplete="off"
+                                class="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-12 pr-11 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:hover:border-gray-600 dark:hover:bg-gray-800 dark:focus:border-gray-500 dark:focus:bg-gray-800 dark:focus:ring-gray-700/50"
+                            />
+
+                            <button
+                                v-if="searchInput"
+                                type="button"
+                                aria-label="Clear search"
+                                class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+                                @click="clearSearch"
+                            >
+                                <svg
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <BaseButton
+                            type="submit"
+                            :disabled="loading"
+                            class="h-12 w-full justify-center px-6 sm:w-auto"
+                        >
+                            <svg
+                                v-if="!loading"
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
                                     stroke-width="1.8"
                                     d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
                                 />
-
                             </svg>
 
-                            <span class="max-w-[150px] truncate">
-                                {{ searchInput }}
+                            <svg
+                                v-else
+                                class="h-4 w-4 animate-spin"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                />
+
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                />
+                            </svg>
+
+                            <span>
+                                {{ loading ? "Searching..." : "Search" }}
+                            </span>
+                        </BaseButton>
+                    </form>
+
+                    <!-- filters -->
+
+                    <div
+                        class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- product filter -->
+
+                            <div class="relative">
+                                <select
+                                    :value="filter"
+                                    :disabled="loading"
+                                    aria-label="Product filter"
+                                    class="h-10 min-w-[135px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:border-gray-500 dark:focus:ring-gray-700/50"
+                                    @change="changeFilter"
+                                >
+                                    <option value="all">
+                                        All Products
+                                    </option>
+
+                                    <option value="latest">
+                                        Latest Added
+                                    </option>
+
+                                    <option value="oldest">
+                                        Oldest Added
+                                    </option>
+
+                                    <option value="in_stock">
+                                        In Stock
+                                    </option>
+
+                                    <option value="out_of_stock">
+                                        Out of Stock
+                                    </option>
+                                </select>
+
+                                <svg
+                                    class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.8"
+                                        d="m6 9 6 6 6-6"
+                                    />
+                                </svg>
+                            </div>
+
+                            <!-- price filter -->
+
+                            <div class="relative">
+                                <select
+                                    v-model="priceFilter"
+                                    :disabled="loading"
+                                    aria-label="Price filter"
+                                    class="h-10 min-w-[125px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:border-gray-500 dark:focus:ring-gray-700/50"
+                                    @change="changePriceFilter"
+                                >
+                                    <option value="all">All Prices</option>
+
+                                    <option value="under_1000">
+                                        Under Rs. 1,000
+                                    </option>
+
+                                    <option value="1000_5000">
+                                        Rs. 1,000 – Rs. 5,000
+                                    </option>
+
+                                    <option value="5000_10000">
+                                        Rs. 5,000 – Rs. 10,000
+                                    </option>
+
+                                    <option value="above_10000">
+                                        Above Rs. 10,000
+                                    </option>
+                                </select>
+
+                                <svg
+                                    class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.8"
+                                        d="m6 9 6 6 6-6"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- active filters -->
+
+                        <div
+                            v-if="hasActiveFilters"
+                            class="flex flex-wrap items-center gap-2"
+                        >
+                            <span
+                                v-if="hasSearch"
+                                class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                                <svg
+                                    class="h-3 w-3 shrink-0 text-gray-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.8"
+                                        d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
+                                    />
+                                </svg>
+
+                                <span class="max-w-[150px] truncate">
+                                    {{ searchInput }}
+                                </span>
                             </span>
 
-                        </span>
+                            <span
+                                v-if="hasProductFilter"
+                                class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                                {{ filterLabel }}
+                            </span>
 
+                            <span
+                                v-if="hasPriceFilter"
+                                class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                                {{ priceFilterLabel }}
+                            </span>
 
-                        <!-- product filter chip -->
+                            <button
+                                type="button"
+                                aria-label="Clear all filters"
+                                class="inline-flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                @click="clearAllFilters"
+                            >
+                                <svg
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="1.8"
+                                        d="M6 18L18 6M6 6l12 12"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </BaseCard>
+
+            <!-- ERROR -->
+
+            <BaseCard
+                v-if="error"
+                class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
+            >
+                <div
+                    class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div class="flex gap-3">
+                        <div
+                            class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40"
+                        >
+                            <svg
+                                class="h-5 w-5 text-red-600 dark:text-red-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
+                                />
+                            </svg>
+                        </div>
+
+                        <div>
+                            <h3
+                                class="text-sm font-semibold text-red-800 dark:text-red-300"
+                            >
+                                Something went wrong
+                            </h3>
+
+                            <p class="mt-1 text-sm text-red-700 dark:text-red-400">
+                                {{ error }}
+                            </p>
+                        </div>
+                    </div>
+
+                    <BaseButton
+                        type="button"
+                        variant="secondary"
+                        @click="refreshProducts"
+                    >
+                        Try Again
+                    </BaseButton>
+                </div>
+            </BaseCard>
+
+            <!-- LOADING -->
+
+            <BaseCard
+                v-if="loading && products.length === 0"
+                class="py-20"
+            >
+                <div class="flex flex-col items-center justify-center">
+                    <div
+                        class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"
+                    >
+                        <svg
+                            class="h-7 w-7 animate-spin text-gray-700 dark:text-gray-300"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle
+                                class="opacity-20"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                stroke-width="3"
+                            />
+
+                            <path
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+                            />
+                        </svg>
+                    </div>
+
+                    <p
+                        class="mt-5 text-sm font-semibold text-gray-700 dark:text-gray-300"
+                    >
+                        Loading products
+                    </p>
+                </div>
+            </BaseCard>
+
+            <!-- PRODUCT LIST -->
+
+            <div
+                v-else
+                class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900"
+            >
+                <ProductList
+                    :products="products"
+                    :current-page="currentPage"
+                    :per-page="perPage"
+                    @add-product="addProduct"
+                    @view-product="viewProduct"
+                    @edit-product="editProduct"
+                    @delete-product="openDeleteModal"
+                    @bulk-delete="bulkDelete"
+                    @bulk-edit="bulkEdit"
+                />
+
+                <!-- loading overlay -->
+
+                <div
+                    v-if="loading"
+                    class="absolute inset-0 z-10 flex items-center justify-center bg-white/60 backdrop-blur-[1px] dark:bg-gray-950/60"
+                >
+                    <div
+                        class="flex items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-gray-900"
+                    >
+                        <svg
+                            class="h-5 w-5 animate-spin text-gray-700 dark:text-gray-300"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle
+                                class="opacity-20"
+                                cx="12"
+                                cy="12"
+                                r="9"
+                                stroke="currentColor"
+                                stroke-width="3"
+                            />
+
+                            <path
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
+                            />
+                        </svg>
 
                         <span
-                            v-if="hasProductFilter"
-                            class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700"
+                            class="text-sm font-medium text-gray-700 dark:text-gray-300"
                         >
+                            Loading...
+                        </span>
+                    </div>
+                </div>
+            </div>
 
-                            {{ filterLabel }}
+            <!-- PAGINATION -->
 
+            <div
+                v-if="total > 0"
+                class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900"
+            >
+                <div
+                    class="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
+                >
+                    <!-- information -->
+
+                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        <span class="font-semibold text-gray-900 dark:text-white">
+                            {{ firstProductNumber }}–{{ lastProductNumber }}
                         </span>
 
+                        <span class="text-gray-400"> of </span>
 
-                        <!-- price chip -->
-
-                        <span
-                            v-if="hasPriceFilter"
-                            class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700"
-                        >
-
-                            {{ priceFilterLabel }}
-
+                        <span class="font-semibold text-gray-900 dark:text-white">
+                            {{ total }}
                         </span>
 
+                        <span class="text-gray-500 dark:text-gray-400">
+                            products
+                        </span>
+                    </p>
 
-                        <!-- clear -->
+                    <!-- controls -->
 
-                        <button
+                    <div
+                        class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end"
+                    >
+                        <!-- previous -->
+
+                        <BaseButton
                             type="button"
-                            aria-label="Clear all filters"
-                            class="inline-flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
-                            @click="clearAllFilters"
+                            variant="secondary"
+                            :disabled="!hasPreviousPage || loading"
+                            class="h-9 justify-center"
+                            @click="previousPage"
                         >
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M15 19l-7-7 7-7"
+                                />
+                            </svg>
+
+                            <span class="hidden sm:inline">Previous</span>
+                        </BaseButton>
+
+                        <!-- page -->
+
+                        <div
+                            class="flex h-9 items-center rounded-lg bg-gray-900 px-3 text-sm font-semibold text-white dark:bg-white dark:text-gray-900"
+                        >
+                            {{ currentPage }}
+
+                            <span class="mx-1 text-gray-400">/</span>
+
+                            {{ lastPage }}
+                        </div>
+
+                        <!-- next -->
+
+                        <BaseButton
+                            type="button"
+                            variant="secondary"
+                            :disabled="!hasNextPage || loading"
+                            class="h-9 justify-center"
+                            @click="nextPage"
+                        >
+                            <span class="hidden sm:inline">Next</span>
 
                             <svg
                                 class="h-4 w-4"
@@ -1365,439 +1171,116 @@ onMounted(() => {
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
                             >
-
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
-                                    stroke-width="1.8"
-                                    d="M6 18L18 6M6 6l12 12"
+                                    stroke-width="2"
+                                    d="M9 5l7 7-7 7"
                                 />
-
                             </svg>
-
-                        </button>
-
+                        </BaseButton>
                     </div>
-
                 </div>
-
             </div>
 
-        </BaseCard>
+            <!-- DELETE MODAL -->
 
-
-        <!-- error -->
-
-        <BaseCard
-            v-if="error"
-            class="mb-6 border-red-200 bg-red-50"
-        >
-
-            <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            <BaseModal
+                :show="showDeleteModal"
+                title="Delete Product"
+                size="sm"
+                @close="closeDeleteModal"
             >
-
-                <div class="flex gap-3">
-
+                <div class="text-center">
                     <div
-                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100"
+                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/40"
                     >
-
                         <svg
-                            class="h-5 w-5 text-red-600"
+                            class="h-7 w-7 text-red-600 dark:text-red-400"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
                         >
-
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                                 stroke-width="1.8"
                                 d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
                             />
-
                         </svg>
-
                     </div>
 
-
-                    <div>
-
-                        <h3
-                            class="text-sm font-semibold text-red-800"
-                        >
-                            Something went wrong
-                        </h3>
-
-                        <p
-                            class="mt-1 text-sm text-red-700"
-                        >
-                            {{ error }}
-                        </p>
-
-                    </div>
-
-                </div>
-
-
-                <BaseButton
-                    type="button"
-                    variant="secondary"
-                    @click="refreshProducts"
-                >
-                    Try Again
-                </BaseButton>
-
-            </div>
-
-        </BaseCard>
-
-
-        <!-- loading -->
-
-        <BaseCard
-            v-if="loading && products.length === 0"
-            class="py-20"
-        >
-
-            <div
-                class="flex flex-col items-center justify-center"
-            >
-
-                <div
-                    class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100"
-                >
-
-                    <svg
-                        class="h-7 w-7 animate-spin text-gray-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
+                    <h3
+                        class="mt-5 text-lg font-bold text-gray-900 dark:text-white"
                     >
+                        Delete Product?
+                    </h3>
 
-                        <circle
-                            class="opacity-20"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            stroke-width="3"
-                        />
-
-                        <path
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z"
-                        />
-
-                    </svg>
-
-                </div>
-
-
-                <p
-                    class="mt-5 text-sm font-semibold text-gray-700"
-                >
-                    Loading products
-                </p>
-
-            </div>
-
-        </BaseCard>
-
-
-        <!-- product list -->
-
-        <div
-            v-else
-            class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-        >
-
-            <ProductList
-                :products="products"
-                :current-page="currentPage"
-                :per-page="perPage"
-                @add-product="addProduct"
-                @view-product="viewProduct"
-                @edit-product="editProduct"
-                @delete-product="openDeleteModal"
-                @bulk-delete="bulkDelete"
-                @bulk-edit="bulkEdit"
-            />
-
-        </div>
-
-
-        <!-- pagination -->
-
-        <div
-            v-if="total > 0"
-            class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
-        >
-
-            <div
-                class="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
-            >
-
-                <!-- information -->
-
-                <p
-                    class="text-sm font-medium text-gray-700"
-                >
-
-                    <span class="font-semibold text-gray-900">
-                        {{ firstProductNumber }}–{{ lastProductNumber }}
-                    </span>
-
-                    <span class="text-gray-400">
-                        of
-                    </span>
-
-                    <span class="font-semibold text-gray-900">
-                        {{ total }}
-                    </span>
-
-                    <span class="text-gray-500">
-                        products
-                    </span>
-
-                </p>
-
-
-                <!-- controls -->
-
-                <div
-                    class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end"
-                >
-
-                    <!-- previous -->
-
-                    <BaseButton
-                        type="button"
-                        variant="secondary"
-                        :disabled="
-                            !hasPreviousPage ||
-                            loading
-                        "
-                        class="h-9 justify-center"
-                        @click="previousPage"
+                    <p
+                        class="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500 dark:text-gray-400"
                     >
+                        Are you sure you want to delete
 
-                        <svg
-                            class="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M15 19l-7-7 7-7"
-                            />
-
-                        </svg>
-
-                        <span class="hidden sm:inline">
-                            Previous
+                        <span class="font-semibold text-gray-800 dark:text-gray-200">
+                            {{ productToDelete?.name }}
                         </span>
 
-                    </BaseButton>
+                        ?
 
+                        <br />
 
-                    <!-- page -->
+                        This action cannot be undone.
+                    </p>
+                </div>
 
+                <template #footer>
                     <div
-                        class="flex h-9 items-center rounded-lg bg-gray-900 px-3 text-sm font-semibold text-white"
+                        class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
                     >
-
-                        {{ currentPage }}
-
-                        <span
-                            class="mx-1 text-gray-400"
+                        <BaseButton
+                            type="button"
+                            variant="secondary"
+                            :disabled="deleting"
+                            class="justify-center"
+                            @click="closeDeleteModal"
                         >
-                            /
-                        </span>
+                            Cancel
+                        </BaseButton>
 
-                        {{ lastPage }}
+                        <BaseButton
+                            type="button"
+                            variant="danger"
+                            :disabled="deleting"
+                            class="justify-center"
+                            @click="confirmDelete"
+                        >
+                            <svg
+                                v-if="deleting"
+                                class="h-4 w-4 animate-spin"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                />
 
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                />
+                            </svg>
+
+                            {{ deleting ? "Deleting..." : "Delete Product" }}
+                        </BaseButton>
                     </div>
-
-
-                    <!-- next -->
-
-                    <BaseButton
-                        type="button"
-                        variant="secondary"
-                        :disabled="
-                            !hasNextPage ||
-                            loading
-                        "
-                        class="h-9 justify-center"
-                        @click="nextPage"
-                    >
-
-                        <span class="hidden sm:inline">
-                            Next
-                        </span>
-
-                        <svg
-                            class="h-4 w-4"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M9 5l7 7-7 7"
-                            />
-
-                        </svg>
-
-                    </BaseButton>
-
-                </div>
-
-            </div>
-
+                </template>
+            </BaseModal>
         </div>
-
-
-        <!-- delete modal -->
-
-        <BaseModal
-            :show="showDeleteModal"
-            title="Delete Product"
-            size="sm"
-            @close="closeDeleteModal"
-        >
-
-            <div class="text-center">
-
-                <div
-                    class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50"
-                >
-
-                    <svg
-                        class="h-7 w-7 text-red-600"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="1.8"
-                            d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
-                        />
-
-                    </svg>
-
-                </div>
-
-
-                <h3
-                    class="mt-5 text-lg font-bold text-gray-900"
-                >
-                    Delete Product?
-                </h3>
-
-
-                <p
-                    class="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500"
-                >
-
-                    Are you sure you want to delete
-
-                    <span
-                        class="font-semibold text-gray-800"
-                    >
-                        {{ productToDelete?.name }}
-                    </span>
-
-                    ?
-
-                    <br />
-
-                    This action cannot be undone.
-
-                </p>
-
-            </div>
-
-
-            <template #footer>
-
-                <div
-                    class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
-                >
-
-                    <!-- cancel -->
-
-                    <BaseButton
-                        type="button"
-                        variant="secondary"
-                        :disabled="deleting"
-                        class="justify-center"
-                        @click="closeDeleteModal"
-                    >
-                        Cancel
-                    </BaseButton>
-
-
-                    <!-- delete -->
-
-                    <BaseButton
-                        type="button"
-                        variant="danger"
-                        :disabled="deleting"
-                        class="justify-center"
-                        @click="confirmDelete"
-                    >
-
-                        <svg
-                            v-if="deleting"
-                            class="h-4 w-4 animate-spin"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                        >
-
-                            <circle
-                                class="opacity-25"
-                                cx="12"
-                                cy="12"
-                                r="10"
-                                stroke="currentColor"
-                                stroke-width="4"
-                            />
-
-                            <path
-                                class="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
-                            />
-
-                        </svg>
-
-
-                        {{
-                            deleting
-                                ? 'Deleting...'
-                                : 'Delete Product'
-                        }}
-
-                    </BaseButton>
-
-                </div>
-
-            </template>
-
-        </BaseModal>
-
     </div>
-
 </template>

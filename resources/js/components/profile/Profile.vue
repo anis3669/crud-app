@@ -35,6 +35,7 @@ let messageTimer = null;
 
 // PROFILE PICTURE
 
+
 const profilePicture = computed(() => {
     if (user.value?.profile_picture_url) {
         return user.value.profile_picture_url;
@@ -59,7 +60,9 @@ const userInitial = computed(() => {
     return user.value?.name?.charAt(0)?.toUpperCase() || "U";
 });
 
-// MESSAGE HELPERS
+// ==============================
+// MESSAGES
+// ==============================
 
 function clearMessageTimer() {
     if (messageTimer) {
@@ -86,7 +89,9 @@ function showError(message) {
     successMessage.value = "";
 }
 
+// ==============================
 // LOAD PROFILE
+// ==============================
 
 async function loadProfile() {
     loading.value = true;
@@ -109,7 +114,9 @@ async function loadProfile() {
     }
 }
 
+// ==============================
 // EDIT PROFILE
+// ==============================
 
 function startEditing() {
     name.value = user.value?.name || "";
@@ -126,10 +133,13 @@ function cancelEditing() {
     email.value = user.value?.email || "";
 
     editing.value = false;
+
     errorMessage.value = "";
 }
 
+// ==============================
 // UPDATE PROFILE
+// ==============================
 
 async function saveProfile() {
     const trimmedName = name.value.trim();
@@ -171,10 +181,12 @@ async function saveProfile() {
     }
 }
 
-// FILE INPUT
+// ==============================
+// PROFILE IMAGE
+// ==============================
 
 function openFilePicker() {
-    if (uploading.value) {
+    if (uploading.value || deleting.value) {
         return;
     }
 
@@ -188,7 +200,11 @@ function handleFileChange(event) {
         return;
     }
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+    ];
 
     if (!allowedTypes.includes(file.type)) {
         showError("Please select a JPG, PNG, or WEBP image.");
@@ -214,8 +230,6 @@ function handleFileChange(event) {
 
     uploadProfilePicture();
 }
-
-// UPLOAD PROFILE PICTURE
 
 async function uploadProfilePicture() {
     if (!selectedFile.value) {
@@ -254,8 +268,6 @@ async function uploadProfilePicture() {
     }
 }
 
-// DELETE PROFILE PICTURE
-
 async function removeProfilePicture() {
     if (!user.value?.profile_picture) {
         return;
@@ -282,7 +294,9 @@ async function removeProfilePicture() {
     }
 }
 
+// ==============================
 // NAVIGATION
+// ==============================
 
 function goBack() {
     router.push({
@@ -290,7 +304,9 @@ function goBack() {
     });
 }
 
-// CLEANUP
+// ==============================
+// LIFECYCLE
+// ==============================
 
 onMounted(async () => {
     await loadProfile();
@@ -306,33 +322,43 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="min-h-full bg-gray-50">
-        <!-- Page Header -->
+    <div
+        class="min-h-full bg-gray-50 text-gray-900 transition-colors duration-200 dark:bg-gray-950 dark:text-gray-100"
+    >
+        <!-- ================================= -->
+        <!-- PAGE HEADER -->
+        <!-- ================================= -->
 
-        <div class="border-b border-gray-200 bg-white">
+        <div
+            class="border-b border-gray-200 bg-white transition-colors duration-200 dark:border-gray-800 dark:bg-gray-900"
+        >
             <div
                 class="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8"
             >
                 <div>
                     <div class="flex items-center gap-2">
                         <div
-                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white"
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-900 text-sm font-bold text-white dark:bg-white dark:text-gray-900"
                         >
                             P
                         </div>
 
-                        <span class="text-sm font-semibold text-gray-500">
+                        <span
+                            class="text-sm font-semibold text-gray-500 dark:text-gray-400"
+                        >
                             Account
                         </span>
                     </div>
 
                     <h1
-                        class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
+                        class="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
                     >
                         My Profile
                     </h1>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p
+                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                    >
                         Manage your personal information and account settings.
                     </p>
                 </div>
@@ -340,7 +366,7 @@ onBeforeUnmount(() => {
                 <button
                     type="button"
                     @click="goBack"
-                    class="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900"
+                    class="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-gray-600 dark:hover:bg-gray-750 dark:hover:text-white"
                 >
                     <svg
                         class="h-4 w-4"
@@ -361,30 +387,42 @@ onBeforeUnmount(() => {
             </div>
         </div>
 
-        <!-- Main -->
+        <!-- ================================= -->
+        <!-- MAIN -->
+        <!-- ================================= -->
 
-        <main class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-            <!-- Loading -->
+        <main
+            class="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+        >
+            <!-- ================================= -->
+            <!-- LOADING -->
+            <!-- ================================= -->
 
             <div
                 v-if="loading"
-                class="rounded-2xl border border-gray-200 bg-white p-12 shadow-sm"
+                class="rounded-2xl border border-gray-200 bg-white p-12 shadow-sm dark:border-gray-800 dark:bg-gray-900"
             >
                 <div class="flex flex-col items-center justify-center">
                     <div
-                        class="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900"
+                        class="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900 dark:border-gray-700 dark:border-t-white"
                     ></div>
 
-                    <p class="mt-4 text-sm font-medium text-gray-500">
+                    <p
+                        class="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400"
+                    >
                         Loading profile...
                     </p>
                 </div>
             </div>
 
-            <!-- Content -->
+            <!-- ================================= -->
+            <!-- CONTENT -->
+            <!-- ================================= -->
 
             <template v-else>
-                <!-- Messages -->
+                <!-- ================================= -->
+                <!-- MESSAGES -->
+                <!-- ================================= -->
 
                 <Transition
                     enter-active-class="transition duration-200 ease-out"
@@ -394,10 +432,15 @@ onBeforeUnmount(() => {
                     leave-from-class="translate-y-0 opacity-100"
                     leave-to-class="translate-y-1 opacity-0"
                 >
-                    <div v-if="successMessage || errorMessage" class="mb-5">
+                    <div
+                        v-if="successMessage || errorMessage"
+                        class="mb-5"
+                    >
+                        <!-- SUCCESS -->
+
                         <div
                             v-if="successMessage"
-                            class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3"
+                            class="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/60 dark:bg-emerald-950/40"
                         >
                             <div
                                 class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-white"
@@ -417,14 +460,18 @@ onBeforeUnmount(() => {
                                 </svg>
                             </div>
 
-                            <p class="text-sm font-medium text-emerald-700">
+                            <p
+                                class="text-sm font-medium text-emerald-700 dark:text-emerald-400"
+                            >
                                 {{ successMessage }}
                             </p>
                         </div>
 
+                        <!-- ERROR -->
+
                         <div
-                            v-else-if="errorMessage"
-                            class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3"
+                            v-else
+                            class="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/60 dark:bg-red-950/40"
                         >
                             <div
                                 class="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white"
@@ -432,22 +479,26 @@ onBeforeUnmount(() => {
                                 !
                             </div>
 
-                            <p class="text-sm font-medium text-red-700">
+                            <p
+                                class="text-sm font-medium text-red-700 dark:text-red-400"
+                            >
                                 {{ errorMessage }}
                             </p>
                         </div>
                     </div>
                 </Transition>
 
-                <!-- Profile Card -->
+                <!-- ================================= -->
+                <!-- PROFILE CARD -->
+                <!-- ================================= -->
 
                 <div
-                    class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                    class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-200 dark:border-gray-800 dark:bg-gray-900"
                 >
-                    <!-- Banner -->
+                    <!-- BANNER -->
 
                     <div
-                        class="relative h-28 overflow-hidden bg-gray-900 sm:h-36"
+                        class="relative h-28 overflow-hidden bg-gray-900 sm:h-36 dark:bg-black"
                     >
                         <div
                             class="absolute -right-16 -top-24 h-64 w-64 rounded-full border border-white/10"
@@ -458,21 +509,21 @@ onBeforeUnmount(() => {
                         ></div>
 
                         <div
-                            class="absolute inset-0 bg-gradient-to-r from-gray-950/40 via-transparent to-gray-700/20"
+                            class="absolute inset-0 bg-gradient-to-r from-black/40 via-transparent to-gray-700/20"
                         ></div>
                     </div>
 
-                    <!-- Profile Header -->
+                    <!-- PROFILE HEADER -->
 
                     <div class="px-5 pb-6 sm:px-8">
                         <div
                             class="-mt-10 flex flex-col gap-5 sm:-mt-12 sm:flex-row sm:items-end sm:justify-between"
                         >
-                            <!-- Avatar -->
+                            <!-- AVATAR -->
 
                             <div class="relative w-fit">
                                 <div
-                                    class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-gray-900 text-3xl font-bold text-white shadow-lg sm:h-28 sm:w-28 sm:text-4xl"
+                                    class="flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border-4 border-white bg-gray-900 text-3xl font-bold text-white shadow-lg dark:border-gray-900 dark:bg-gray-800 sm:h-28 sm:w-28 sm:text-4xl"
                                 >
                                     <img
                                         v-if="previewUrl"
@@ -493,14 +544,14 @@ onBeforeUnmount(() => {
                                     </span>
                                 </div>
 
-                                <!-- Camera -->
+                                <!-- CAMERA -->
 
                                 <button
                                     type="button"
                                     @click="openFilePicker"
-                                    :disabled="uploading"
-                                    class="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-xl border-2 border-white bg-gray-900 text-white shadow-md transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                    :disabled="uploading || deleting"
                                     title="Change profile picture"
+                                    class="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-xl border-2 border-white bg-gray-900 text-white shadow-md transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-900 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
                                 >
                                     <font-awesome-icon
                                         :icon="cameraIcon"
@@ -517,15 +568,19 @@ onBeforeUnmount(() => {
                                 />
                             </div>
 
-                            <!-- Actions -->
+                            <!-- ACTIONS -->
 
-                            <div class="flex flex-wrap items-center gap-2">
+                            <div
+                                class="flex flex-wrap items-center gap-2"
+                            >
+                                <!-- REMOVE PHOTO -->
+
                                 <button
                                     v-if="profilePicture"
                                     type="button"
                                     @click="removeProfilePicture"
                                     :disabled="deleting || uploading"
-                                    class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2.5 text-sm font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-900/60 dark:bg-gray-900 dark:text-red-400 dark:hover:bg-red-950/40"
                                 >
                                     <svg
                                         class="h-4 w-4"
@@ -548,11 +603,13 @@ onBeforeUnmount(() => {
                                     }}
                                 </button>
 
+                                <!-- EDIT -->
+
                                 <button
                                     v-if="!editing"
                                     type="button"
                                     @click="startEditing"
-                                    class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700"
+                                    class="inline-flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-700 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
                                 >
                                     <svg
                                         class="h-4 w-4"
@@ -573,18 +630,20 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <!-- Identity -->
+                        <!-- IDENTITY -->
 
                         <div class="mt-5">
-                            <div class="flex flex-wrap items-center gap-2">
+                            <div
+                                class="flex flex-wrap items-center gap-2"
+                            >
                                 <h2
-                                    class="text-2xl font-bold tracking-tight text-gray-900"
+                                    class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
                                 >
                                     {{ user?.name || "User" }}
                                 </h2>
 
                                 <span
-                                    class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700"
+                                    class="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400"
                                 >
                                     <span
                                         class="h-1.5 w-1.5 rounded-full bg-emerald-500"
@@ -594,380 +653,236 @@ onBeforeUnmount(() => {
                                 </span>
                             </div>
 
-                            <p class="mt-1 text-sm text-gray-500">
+                            <p
+                                class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                            >
                                 {{ user?.email || "No email available" }}
                             </p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Lower Content -->
+                <!-- ================================= -->
+                <!-- ACCOUNT INFORMATION -->
+                <!-- ================================= -->
 
                 <div
-                    class="-mx-5 mt-5 grid gap-3 border-t border-gray-100 bg-gray-50/50 px-5 pt-5 sm:-mx-8 sm:px-8"
+                    class="mt-5 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-200 dark:border-gray-800 dark:bg-gray-900"
                 >
-                    <!-- Account Information -->
+                    <!-- HEADER -->
 
                     <div
-                        class="rounded-xl border border-gray-200 bg-white p-4 transition hover:border-gray-300 hover:shadow-sm"
+                        class="border-b border-gray-100 px-5 py-5 sm:px-6 dark:border-gray-800"
                     >
-                        <div class="border-b border-gray-100 px-5 py-5 sm:px-6">
-                            <h3 class="text-base font-semibold text-gray-900">
-                                Account Information
-                            </h3>
-
-                            <p class="mt-1 text-sm text-gray-500">
-                                Your basic account details.
-                            </p>
-                        </div>
-
-                        <!-- Edit -->
-
-                        <div v-if="editing" class="px-5 py-6 sm:px-6">
-                            <div class="grid gap-5 sm:grid-cols-2">
-                                <!-- Name -->
-
-                                <div>
-                                    <label
-                                        class="mb-2 block text-sm font-medium text-gray-700"
-                                    >
-                                        Full Name
-                                    </label>
-
-                                    <input
-                                        v-model="name"
-                                        type="text"
-                                        placeholder="Enter your name"
-                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                                    />
-                                </div>
-
-                                <!-- Email -->
-
-                                <div>
-                                    <label
-                                        class="mb-2 block text-sm font-medium text-gray-700"
-                                    >
-                                        Email Address
-                                    </label>
-
-                                    <input
-                                        v-model="email"
-                                        type="email"
-                                        placeholder="Enter your email"
-                                        class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                                    />
-                                </div>
-                            </div>
-
-                            <!-- Edit Actions -->
-
-                            <div
-                                class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
-                            >
-                                <button
-                                    type="button"
-                                    @click="cancelEditing"
-                                    :disabled="saving"
-                                    class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    Cancel
-                                </button>
-
-                                <button
-                                    type="button"
-                                    @click="saveProfile"
-                                    :disabled="saving"
-                                    class="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    {{ saving ? "Saving..." : "Save Changes" }}
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Information -->
-
-                        <div
-                            v-else
-                            class="grid gap-3 p-5 sm:grid-cols-2 sm:p-6"
+                        <h3
+                            class="text-base font-semibold text-gray-900 dark:text-white"
                         >
-                            <!-- Name -->
+                            Account Information
+                        </h3>
 
-                            <div
-                                class="rounded-xl border border-gray-200 bg-gray-50/70 p-4"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <div
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-500 shadow-sm"
-                                    >
-                                        <svg
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="1.8"
-                                                d="M15.75 6.75a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a7.5 7.5 0 0115 0"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                    <p
-                                        class="text-xs font-semibold uppercase tracking-wide text-gray-500"
-                                    >
-                                        Full Name
-                                    </p>
-                                </div>
-
-                                <p
-                                    class="mt-4 text-sm font-semibold text-gray-900"
-                                >
-                                    {{ user?.name || "Not available" }}
-                                </p>
-                            </div>
-
-                            <!-- Email -->
-
-                            <div
-                                class="rounded-xl border border-gray-200 bg-gray-50/70 p-4"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <div
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-500 shadow-sm"
-                                    >
-                                        <svg
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="1.8"
-                                                d="M3 7.5l9 6 9-6M4.5 19.5h15A1.5 1.5 0 0021 18V6a1.5 1.5 0 00-1.5-1.5h-15A1.5 1.5 0 003 6v12a1.5 1.5 0 001.5 1.5z"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                    <p
-                                        class="text-xs font-semibold uppercase tracking-wide text-gray-500"
-                                    >
-                                        Email Address
-                                    </p>
-                                </div>
-
-                                <p
-                                    class="mt-4 break-all text-sm font-semibold text-gray-900"
-                                >
-                                    {{ user?.email || "Not available" }}
-                                </p>
-                            </div>
-
-                            <!-- User ID -->
-
-                            <div
-                                class="rounded-xl border border-gray-200 bg-gray-50/70 p-4"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <div
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-500 shadow-sm"
-                                    >
-                                        <svg
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="1.8"
-                                                d="M15 7.5V6a3 3 0 00-6 0v1.5M6 7.5h12l.75 12H5.25L6 7.5z"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                    <p
-                                        class="text-xs font-semibold uppercase tracking-wide text-gray-500"
-                                    >
-                                        User ID
-                                    </p>
-                                </div>
-
-                                <p
-                                    class="mt-4 text-sm font-semibold text-gray-900"
-                                >
-                                    #{{ user?.id || "N/A" }}
-                                </p>
-                            </div>
-
-                            <!-- Status -->
-
-                            <div
-                                class="rounded-xl border border-gray-200 bg-gray-50/70 p-4"
-                            >
-                                <div class="flex items-center gap-2">
-                                    <div
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-emerald-600 shadow-sm"
-                                    >
-                                        <svg
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="1.8"
-                                                d="M5 13l4 4L19 7"
-                                            />
-                                        </svg>
-                                    </div>
-
-                                    <p
-                                        class="text-xs font-semibold uppercase tracking-wide text-gray-500"
-                                    >
-                                        Account Status
-                                    </p>
-                                </div>
-
-                                <div class="mt-4 flex items-center gap-2">
-                                    <span
-                                        class="h-2 w-2 rounded-full bg-emerald-500"
-                                    ></span>
-
-                                    <span
-                                        class="text-sm font-semibold text-emerald-700"
-                                    >
-                                        Active
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
+                        <p
+                            class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                        >
+                            Your basic account details.
+                        </p>
                     </div>
 
-                    <!-- Profile Picture Card -->
+                    <!-- ================================= -->
+                    <!-- EDIT MODE -->
+                    <!-- ================================= -->
 
-                    <!-- <div
-                        class="rounded-2xl border border-gray-200 bg-white shadow-sm"
+                    <div
+                        v-if="editing"
+                        class="px-5 py-6 sm:px-6"
                     >
+                        <div class="grid gap-5 sm:grid-cols-2">
+                            <!-- NAME -->
 
-                        <div
-                            class="border-b border-gray-100 px-5 py-5"
-                        >
-                            <h3
-                                class="text-base font-semibold text-gray-900"
-                            >
-                                Profile Picture
-                            </h3>
-
-                            <p
-                                class="mt-1 text-sm text-gray-500"
-                            >
-                                Keep your profile recognizable.
-                            </p>
-                        </div>
-
-                        <div class="p-5">
-
-                            <div
-                                class="flex items-center gap-4"
-                            >
-
-                                <div
-                                    class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-900 text-xl font-bold text-white"
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
                                 >
-                                    <img
-                                        v-if="previewUrl"
-                                        :src="previewUrl"
-                                        alt="Profile preview"
-                                        class="h-full w-full object-cover"
-                                    />
+                                    Full Name
+                                </label>
 
-                                    <img
-                                        v-else-if="profilePicture"
-                                        :src="profilePicture"
-                                        alt="Profile picture"
-                                        class="h-full w-full object-cover"
-                                    />
-
-                                    <span v-else>
-                                        {{ userInitial }}
-                                    </span>
-                                </div>
-
-                                <div class="min-w-0">
-                                    <p
-                                        class="text-sm font-semibold text-gray-900"
-                                    >
-                                        {{ user?.name || 'User' }}
-                                    </p>
-
-                                    <p
-                                        class="mt-1 text-xs leading-5 text-gray-500"
-                                    >
-                                        JPG, PNG or WEBP
-                                        <br />
-                                        Maximum 2MB
-                                    </p>
-                                </div>
-
+                                <input
+                                    v-model="name"
+                                    type="text"
+                                    placeholder="Enter your name"
+                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white"
+                                />
                             </div>
 
+                            <!-- EMAIL -->
+
+                            <div>
+                                <label
+                                    class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                                >
+                                    Email Address
+                                </label>
+
+                                <input
+                                    v-model="email"
+                                    type="email"
+                                    placeholder="Enter your email"
+                                    class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- EDIT ACTIONS -->
+
+                        <div
+                            class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                        >
+                            <button
+                                type="button"
+                                @click="cancelEditing"
+                                :disabled="saving"
+                                class="rounded-lg border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-750"
+                            >
+                                Cancel
+                            </button>
 
                             <button
                                 type="button"
-                                @click="openFilePicker"
-                                :disabled="uploading"
-                                class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                @click="saveProfile"
+                                :disabled="saving"
+                                class="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-200"
                             >
-                                <font-awesome-icon
-                                    :icon="cameraIcon"
-                                    class="text-xs"
-                                />
-
-                                {{
-                                    uploading
-                                        ? 'Uploading...'
-                                        : 'Change Photo'
-                                }}
+                                {{ saving ? "Saving..." : "Save Changes" }}
                             </button>
+                        </div>
+                    </div>
 
+                    <!-- ================================= -->
+                    <!-- VIEW MODE -->
+                    <!-- ================================= -->
+
+                    <div
+                        v-else
+                        class="grid gap-3 p-5 sm:grid-cols-2 sm:p-6"
+                    >
+                        <!-- NAME -->
+
+                        <div
+                            class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-800/50"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                            >
+                                Full Name
+                            </p>
+
+                            <p
+                                class="mt-3 text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                {{ user?.name || "Not available" }}
+                            </p>
                         </div>
 
-                    </div> -->
+                        <!-- EMAIL -->
+
+                        <div
+                            class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-800/50"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                            >
+                                Email Address
+                            </p>
+
+                            <p
+                                class="mt-3 break-all text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                {{ user?.email || "Not available" }}
+                            </p>
+                        </div>
+
+                        <!-- USER ID -->
+
+                        <div
+                            class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-800/50"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                            >
+                                User ID
+                            </p>
+
+                            <p
+                                class="mt-3 text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                #{{ user?.id || "N/A" }}
+                            </p>
+                        </div>
+
+                        <!-- STATUS -->
+
+                        <div
+                            class="rounded-xl border border-gray-200 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-800/50"
+                        >
+                            <p
+                                class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                            >
+                                Account Status
+                            </p>
+
+                            <div
+                                class="mt-3 flex items-center gap-2"
+                            >
+                                <span
+                                    class="h-2 w-2 rounded-full bg-emerald-500"
+                                ></span>
+
+                                <span
+                                    class="text-sm font-semibold text-emerald-700 dark:text-emerald-400"
+                                >
+                                    Active
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Account Settings -->
+                <!-- ================================= -->
+                <!-- ACCOUNT SETTINGS -->
+                <!-- ================================= -->
 
                 <div
-                    class="mt-5 rounded-2xl border border-gray-200 bg-white shadow-sm"
+                    class="mt-5 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-200 dark:border-gray-800 dark:bg-gray-900"
                 >
-                    <div class="border-b border-gray-100 px-5 py-5 sm:px-6">
-                        <h3 class="text-base font-semibold text-gray-900">
+                    <div
+                        class="border-b border-gray-100 px-5 py-5 sm:px-6 dark:border-gray-800"
+                    >
+                        <h3
+                            class="text-base font-semibold text-gray-900 dark:text-white"
+                        >
                             Account Settings
                         </h3>
 
-                        <p class="mt-1 text-sm text-gray-500">
+                        <p
+                            class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                        >
                             Manage your account information.
                         </p>
                     </div>
 
-                    <div class="divide-y divide-gray-100">
+                    <div>
                         <div
                             class="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                         >
                             <div>
-                                <p class="text-sm font-semibold text-gray-900">
+                                <p
+                                    class="text-sm font-semibold text-gray-900 dark:text-white"
+                                >
                                     Profile Information
                                 </p>
 
-                                <p class="mt-1 text-xs text-gray-500">
+                                <p
+                                    class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                                >
                                     Update your name and email address.
                                 </p>
                             </div>
@@ -975,7 +890,7 @@ onBeforeUnmount(() => {
                             <button
                                 type="button"
                                 @click="startEditing"
-                                class="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-900"
+                                class="inline-flex w-fit items-center gap-2 rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 hover:text-gray-900 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
                             >
                                 Edit
 

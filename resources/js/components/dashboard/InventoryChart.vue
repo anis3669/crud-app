@@ -1,18 +1,18 @@
 <script setup>
-import { computed } from "vue"
+import { computed } from "vue";
 import {
-    Chart as ChartJS,
     ArcElement,
-    Tooltip,
+    Chart as ChartJS,
     Legend,
-} from "chart.js"
-import { Doughnut } from "vue-chartjs"
+    Tooltip,
+} from "chart.js";
+import { Doughnut } from "vue-chartjs";
 
 ChartJS.register(
     ArcElement,
     Tooltip,
-    Legend
-)
+    Legend,
+);
 
 const props = defineProps({
     stats: {
@@ -23,28 +23,32 @@ const props = defineProps({
             out_of_stock: 0,
         }),
     },
-})
+});
 
-const totalProducts = computed(() => {
-    return Number(props.stats?.total_products) || 0
-})
+const totalProducts = computed(() =>
+    Number(props.stats?.total_products) || 0,
+);
 
-const inStock = computed(() => {
-    return Number(props.stats?.in_stock) || 0
-})
+const inStock = computed(() =>
+    Number(props.stats?.in_stock) || 0,
+);
 
-const outOfStock = computed(() => {
-    return Number(props.stats?.out_of_stock) || 0
-})
+const outOfStock = computed(() =>
+    Number(props.stats?.out_of_stock) || 0,
+);
 
-const lowStock = computed(() => {
-    return Math.max(
+const lowStock = computed(() =>
+    Math.max(
         totalProducts.value -
             inStock.value -
             outOfStock.value,
-        0
-    )
-})
+        0,
+    ),
+);
+
+const hasData = computed(() =>
+    totalProducts.value > 0,
+);
 
 const chartData = computed(() => ({
     labels: [
@@ -68,19 +72,13 @@ const chartData = computed(() => ({
             ],
 
             borderWidth: 0,
-
             hoverOffset: 6,
         },
     ],
-}))
-
-const hasData = computed(() => {
-    return totalProducts.value > 0
-})
+}));
 
 const chartOptions = {
     responsive: true,
-
     maintainAspectRatio: false,
 
     cutout: "72%",
@@ -95,38 +93,45 @@ const chartOptions = {
 
             callbacks: {
                 label(context) {
-                    return ` ${context.label}: ${context.raw}`
+                    return ` ${context.label}: ${context.raw}`;
                 },
             },
         },
     },
-}
+};
 </script>
 
 <template>
-    <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div
+        class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900"
+    >
+        <!-- HEADER -->
 
-        <!-- Header -->
-
-        <div class="border-b border-gray-100 px-5 py-5 sm:px-6">
-
-            <div class="flex items-center justify-between">
-
+        <div
+            class="border-b border-gray-100 px-5 py-5 dark:border-gray-800 sm:px-6"
+        >
+            <div
+                class="flex items-center justify-between"
+            >
                 <div>
-                    <h2 class="text-base font-semibold text-gray-900">
+                    <h2
+                        class="text-base font-semibold text-gray-900 dark:text-white"
+                    >
                         Inventory Overview
                     </h2>
 
-                    <p class="mt-1 text-sm text-gray-500">
+                    <p
+                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                    >
                         Current product stock status
                     </p>
                 </div>
 
                 <div
-                    class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800"
                 >
                     <svg
-                        class="h-5 w-5 text-gray-600"
+                        class="h-5 w-5 text-gray-600 dark:text-gray-300"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -139,123 +144,114 @@ const chartOptions = {
                         />
                     </svg>
                 </div>
-
             </div>
-
         </div>
 
-        <!-- Chart -->
+        <!-- CHART -->
 
         <div
             v-if="hasData"
             class="px-5 py-6 sm:px-6"
         >
-
-            <div class="mx-auto h-64 max-w-xs">
+            <div
+                class="mx-auto h-64 max-w-xs"
+            >
                 <Doughnut
                     :data="chartData"
                     :options="chartOptions"
                 />
             </div>
 
-            <!-- Legend -->
+            <!-- LEGEND -->
 
-            <div class="mt-6 grid grid-cols-3 gap-3">
-
-                <!-- In Stock -->
+            <div
+                class="mt-6 grid grid-cols-3 gap-3"
+            >
+                <!-- IN STOCK -->
 
                 <div class="text-center">
-
-                    <div class="flex items-center justify-center gap-1.5">
-
+                    <div
+                        class="flex items-center justify-center gap-1.5"
+                    >
                         <span
                             class="h-2 w-2 rounded-full bg-emerald-500"
                         ></span>
 
                         <span
-                            class="text-xs font-medium text-gray-500"
+                            class="text-xs font-medium text-gray-500 dark:text-gray-400"
                         >
                             In Stock
                         </span>
-
                     </div>
 
                     <p
-                        class="mt-1 text-lg font-bold text-gray-900"
+                        class="mt-1 text-lg font-bold text-gray-900 dark:text-white"
                     >
                         {{ inStock }}
                     </p>
-
                 </div>
 
-                <!-- Low Stock -->
+                <!-- LOW STOCK -->
 
                 <div class="text-center">
-
-                    <div class="flex items-center justify-center gap-1.5">
-
+                    <div
+                        class="flex items-center justify-center gap-1.5"
+                    >
                         <span
                             class="h-2 w-2 rounded-full bg-amber-500"
                         ></span>
 
                         <span
-                            class="text-xs font-medium text-gray-500"
+                            class="text-xs font-medium text-gray-500 dark:text-gray-400"
                         >
                             Low Stock
                         </span>
-
                     </div>
 
                     <p
-                        class="mt-1 text-lg font-bold text-gray-900"
+                        class="mt-1 text-lg font-bold text-gray-900 dark:text-white"
                     >
                         {{ lowStock }}
                     </p>
-
                 </div>
 
-                <!-- Out Of Stock -->
+                <!-- OUT OF STOCK -->
 
                 <div class="text-center">
-
-                    <div class="flex items-center justify-center gap-1.5">
-
+                    <div
+                        class="flex items-center justify-center gap-1.5"
+                    >
                         <span
                             class="h-2 w-2 rounded-full bg-red-500"
                         ></span>
 
                         <span
-                            class="text-xs font-medium text-gray-500"
+                            class="text-xs font-medium text-gray-500 dark:text-gray-400"
                         >
                             Out
                         </span>
-
                     </div>
 
                     <p
-                        class="mt-1 text-lg font-bold text-gray-900"
+                        class="mt-1 text-lg font-bold text-gray-900 dark:text-white"
                     >
                         {{ outOfStock }}
                     </p>
-
                 </div>
-
             </div>
-
         </div>
 
-        <!-- Empty -->
+        <!-- EMPTY STATE -->
 
         <div
             v-else
             class="flex min-h-[330px] flex-col items-center justify-center px-6 text-center"
         >
-
             <div
-                class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100"
+                class="flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800"
             >
                 <svg
-                    class="h-7 w-7 text-gray-400"
+                    class="h-7 w-7 text-gray-400 dark:text-gray-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -269,15 +265,17 @@ const chartOptions = {
                 </svg>
             </div>
 
-            <p class="mt-4 text-sm font-semibold text-gray-900">
+            <p
+                class="mt-4 text-sm font-semibold text-gray-900 dark:text-white"
+            >
                 No inventory data
             </p>
 
-            <p class="mt-1 text-sm text-gray-500">
+            <p
+                class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+            >
                 Add products to see your inventory overview.
             </p>
-
         </div>
-
     </div>
 </template>

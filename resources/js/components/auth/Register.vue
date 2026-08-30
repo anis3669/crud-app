@@ -12,7 +12,6 @@ const password = ref("");
 const passwordConfirmation = ref("");
 
 const error = ref("");
-
 const nameError = ref("");
 const emailError = ref("");
 const passwordError = ref("");
@@ -26,40 +25,47 @@ function clearErrors() {
     passwordConfirmationError.value = "";
 }
 
-async function register() {
-    clearErrors();
-
-    // Client-side validation
+function validateForm() {
     if (!name.value.trim()) {
         nameError.value = "Please enter your name.";
-        return;
+        return false;
     }
 
     if (!email.value.trim()) {
         emailError.value = "Please enter your email address.";
-        return;
+        return false;
     }
 
     if (!password.value) {
         passwordError.value = "Please enter a password.";
-        return;
+        return false;
     }
 
     if (password.value.length < 8) {
         passwordError.value =
             "Password must be at least 8 characters.";
-        return;
+        return false;
     }
 
     if (!passwordConfirmation.value) {
         passwordConfirmationError.value =
             "Please confirm your password.";
-        return;
+        return false;
     }
 
     if (password.value !== passwordConfirmation.value) {
         passwordConfirmationError.value =
             "Password confirmation does not match.";
+        return false;
+    }
+
+    return true;
+}
+
+async function register() {
+    clearErrors();
+
+    if (!validateForm()) {
         return;
     }
 
@@ -71,7 +77,6 @@ async function register() {
             password_confirmation: passwordConfirmation.value,
         });
 
-        // Laravel already logs the user in.
         await router.push("/products");
     } catch (err) {
         console.error("Registration failed:", err);
@@ -79,20 +84,13 @@ async function register() {
         if (err.status === 422) {
             const errors = err.data?.errors || {};
 
-            nameError.value =
-                errors.name?.[0] || "";
-
-            emailError.value =
-                errors.email?.[0] || "";
-
-            passwordError.value =
-                errors.password?.[0] || "";
-
+            nameError.value = errors.name?.[0] || "";
+            emailError.value = errors.email?.[0] || "";
+            passwordError.value = errors.password?.[0] || "";
             passwordConfirmationError.value =
                 errors.password_confirmation?.[0] || "";
 
-            error.value =
-                err.data?.message || "";
+            error.value = err.data?.message || "";
 
             return;
         }
@@ -110,7 +108,7 @@ function showLogin() {
 <template>
     <div class="min-h-screen bg-gray-50 px-4 py-12">
         <div class="mx-auto max-w-md">
-
+            <!-- Header -->
             <div class="mb-8 text-center">
                 <h1
                     class="text-2xl font-bold tracking-tight text-gray-900"
@@ -123,10 +121,10 @@ function showLogin() {
                 </p>
             </div>
 
+            <!-- Register Card -->
             <div
                 class="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
             >
-
                 <!-- General Error -->
                 <div
                     v-if="error"
@@ -138,10 +136,9 @@ function showLogin() {
                 </div>
 
                 <form
-                    @submit.prevent="register"
                     class="space-y-5"
+                    @submit.prevent="register"
                 >
-
                     <!-- Name -->
                     <div>
                         <label
@@ -155,10 +152,11 @@ function showLogin() {
                             id="name"
                             v-model="name"
                             type="text"
+                            name="name"
                             autocomplete="name"
                             placeholder="Enter your name"
                             :disabled="auth.loading"
-                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-1"
+                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
                             :class="
                                 nameError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -187,10 +185,11 @@ function showLogin() {
                             id="email"
                             v-model="email"
                             type="email"
+                            name="email"
                             autocomplete="email"
                             placeholder="name@example.com"
                             :disabled="auth.loading"
-                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-1"
+                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
                             :class="
                                 emailError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -219,10 +218,11 @@ function showLogin() {
                             id="password"
                             v-model="password"
                             type="password"
+                            name="password"
                             autocomplete="new-password"
                             placeholder="Minimum 8 characters"
                             :disabled="auth.loading"
-                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-1"
+                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
                             :class="
                                 passwordError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -251,10 +251,11 @@ function showLogin() {
                             id="password_confirmation"
                             v-model="passwordConfirmation"
                             type="password"
+                            name="password_confirmation"
                             autocomplete="new-password"
                             placeholder="Re-enter your password"
                             :disabled="auth.loading"
-                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none focus:ring-1"
+                            class="block w-full rounded-lg border px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:ring-1"
                             :class="
                                 passwordConfirmationError
                                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
@@ -270,11 +271,11 @@ function showLogin() {
                         </p>
                     </div>
 
-                    <!-- Register -->
+                    <!-- Submit -->
                     <button
                         type="submit"
                         :disabled="auth.loading"
-                        class="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                        class="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                         <svg
                             v-if="auth.loading"
@@ -306,10 +307,9 @@ function showLogin() {
                             }}
                         </span>
                     </button>
-
                 </form>
 
-                <!-- Login -->
+                <!-- Login Link -->
                 <div
                     class="mt-6 border-t border-gray-100 pt-5 text-center"
                 >
@@ -325,7 +325,6 @@ function showLogin() {
                         </button>
                     </p>
                 </div>
-
             </div>
         </div>
     </div>
