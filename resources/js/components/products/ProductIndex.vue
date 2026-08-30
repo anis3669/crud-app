@@ -18,9 +18,7 @@ import BaseButton from '../common/BaseButton.vue'
 import BaseCard from '../common/BaseCard.vue'
 
 
-
-// ROUTER + STORE
-
+// router + stores
 
 const router = useRouter()
 
@@ -28,9 +26,7 @@ const productStore = useProductStore()
 const toastStore = useToastStore()
 
 
-// =========================================================
-// UI STATE
-// =========================================================
+// ui state
 
 const showDeleteModal = ref(false)
 
@@ -40,17 +36,10 @@ const deleting = ref(false)
 
 const searchInput = ref('')
 
-
-
-// PRICE FILTER
-
-
 const priceFilter = ref('all')
 
 
-
-// PRODUCTS
-
+// products
 
 const products = computed(() => {
 
@@ -61,9 +50,7 @@ const products = computed(() => {
 })
 
 
-
-// LOADING
-
+// loading
 
 const loading = computed(() => {
 
@@ -72,9 +59,7 @@ const loading = computed(() => {
 })
 
 
-
-// ERROR
-
+// error
 
 const error = computed(() => {
 
@@ -83,9 +68,7 @@ const error = computed(() => {
 })
 
 
-
-// PAGINATION
-
+// pagination
 
 const currentPage = computed(() => {
 
@@ -124,9 +107,7 @@ const hasNextPage = computed(() => {
 })
 
 
-
-// SEARCH
-
+// search
 
 const search = computed(() => {
 
@@ -135,9 +116,7 @@ const search = computed(() => {
 })
 
 
-
-// FILTER
-
+// filter
 
 const filter = computed(() => {
 
@@ -146,9 +125,7 @@ const filter = computed(() => {
 })
 
 
-
-// INVENTORY STATS
-
+// inventory stats
 
 const stats = computed(() => {
 
@@ -162,9 +139,7 @@ const stats = computed(() => {
 })
 
 
-
-// PAGINATION INFORMATION
-
+// pagination information
 
 const firstProductNumber = computed(() => {
 
@@ -180,7 +155,6 @@ const firstProductNumber = computed(() => {
 
 })
 
-
 const lastProductNumber = computed(() => {
 
     return Math.min(
@@ -191,7 +165,7 @@ const lastProductNumber = computed(() => {
 })
 
 
-// PRICE RANGE
+// price range
 
 const priceRange = computed(() => {
 
@@ -204,14 +178,12 @@ const priceRange = computed(() => {
                 max: 1000,
             }
 
-
         case '1000_5000':
 
             return {
                 min: 1000,
                 max: 5000,
             }
-
 
         case '5000_10000':
 
@@ -220,14 +192,12 @@ const priceRange = computed(() => {
                 max: 10000,
             }
 
-
         case 'above_10000':
 
             return {
                 min: 10000,
                 max: null,
             }
-
 
         default:
 
@@ -241,9 +211,69 @@ const priceRange = computed(() => {
 })
 
 
-// =========================================================
-// LOAD PRODUCTS
-// =========================================================
+// active filters
+
+const hasSearch = computed(() => {
+
+    return searchInput.value.trim() !== ''
+
+})
+
+const hasProductFilter = computed(() => {
+
+    return filter.value !== 'all'
+
+})
+
+const hasPriceFilter = computed(() => {
+
+    return priceFilter.value !== 'all'
+
+})
+
+const hasActiveFilters = computed(() => {
+
+    return (
+        hasSearch.value ||
+        hasProductFilter.value ||
+        hasPriceFilter.value
+    )
+
+})
+
+
+// filter labels
+
+const filterLabel = computed(() => {
+
+    const labels = {
+        all: 'All',
+        latest: 'Latest',
+        oldest: 'Oldest',
+        in_stock: 'In Stock',
+        out_of_stock: 'Out of Stock',
+    }
+
+    return labels[filter.value] || 'All'
+
+})
+
+const priceFilterLabel = computed(() => {
+
+    const labels = {
+        all: 'All prices',
+        under_1000: 'Under Rs. 1,000',
+        1000_5000: 'Rs. 1,000 – Rs. 5,000',
+        5000_10000: 'Rs. 5,000 – Rs. 10,000',
+        above_10000: 'Above Rs. 10,000',
+    }
+
+    return labels[priceFilter.value] || 'All prices'
+
+})
+
+
+// load products
 
 async function loadProducts(
     page = productStore.currentPage
@@ -271,20 +301,11 @@ async function loadProducts(
 }
 
 
-// =========================================================
-// SEARCH PRODUCTS
-// =========================================================
+// search products
 
 async function performSearch() {
 
     try {
-
-        /*
-         * Search should start from page 1.
-         *
-         * The store keeps the existing
-         * filter and price filter state.
-         */
 
         await productStore.searchProducts(
             searchInput.value.trim()
@@ -302,9 +323,7 @@ async function performSearch() {
 }
 
 
-// =========================================================
-// CLEAR SEARCH
-// =========================================================
+// clear search
 
 async function clearSearch() {
 
@@ -326,9 +345,37 @@ async function clearSearch() {
 }
 
 
-// =========================================================
-// PRODUCT FILTER
-// =========================================================
+// clear all filters
+
+async function clearAllFilters() {
+
+    searchInput.value = ''
+
+    priceFilter.value = 'all'
+
+    try {
+
+        await productStore.fetchProducts(
+            1,
+            '',
+            'all',
+            null,
+            null
+        )
+
+    } catch (err) {
+
+        console.error(
+            'Clear filters error:',
+            err
+        )
+
+    }
+
+}
+
+
+// product filter
 
 async function changeFilter(event) {
 
@@ -353,24 +400,15 @@ async function changeFilter(event) {
 }
 
 
-// =========================================================
-// PRICE FILTER
-// =========================================================
+// price filter
 
 async function changePriceFilter() {
 
     try {
 
-        const minPrice =
-            priceRange.value.min
-
-        const maxPrice =
-            priceRange.value.max
-
-
         await productStore.priceFilterProducts(
-            minPrice,
-            maxPrice
+            priceRange.value.min,
+            priceRange.value.max
         )
 
     } catch (err) {
@@ -385,26 +423,19 @@ async function changePriceFilter() {
 }
 
 
-// =========================================================
-// GO TO PAGE
-// =========================================================
+// go to page
 
 async function goToPage(page) {
 
     if (
-
         page < 1 ||
-
         page > lastPage.value ||
-
         page === currentPage.value
-
     ) {
 
         return
 
     }
-
 
     try {
 
@@ -422,9 +453,7 @@ async function goToPage(page) {
 }
 
 
-// =========================================================
-// PREVIOUS PAGE
-// =========================================================
+// previous page
 
 async function previousPage() {
 
@@ -439,9 +468,7 @@ async function previousPage() {
 }
 
 
-// =========================================================
-// NEXT PAGE
-// =========================================================
+// next page
 
 async function nextPage() {
 
@@ -456,9 +483,7 @@ async function nextPage() {
 }
 
 
-// =========================================================
-// ADD PRODUCT
-// =========================================================
+// add product
 
 function addProduct() {
 
@@ -469,9 +494,7 @@ function addProduct() {
 }
 
 
-// =========================================================
-// VIEW PRODUCT
-// =========================================================
+// view product
 
 function viewProduct(product) {
 
@@ -488,9 +511,7 @@ function viewProduct(product) {
 }
 
 
-// =========================================================
-// EDIT PRODUCT
-// =========================================================
+// edit product
 
 function editProduct(product) {
 
@@ -507,9 +528,7 @@ function editProduct(product) {
 }
 
 
-// =========================================================
-// DELETE PRODUCT
-// =========================================================
+// delete product
 
 function openDeleteModal(product) {
 
@@ -546,7 +565,10 @@ async function confirmDelete() {
         await productStore.deleteProduct(
             productToDelete.value.id
         )
-        toastStore.success('Product deleted successfully.')
+
+        toastStore.success(
+            'Product deleted successfully.'
+        )
 
         showDeleteModal.value = false
 
@@ -568,35 +590,30 @@ async function confirmDelete() {
 }
 
 
-// =========================================================
-// BULK DELETE
-// =========================================================
+// bulk delete
 
 async function bulkDelete(
     productsToDelete
 ) {
 
     if (
-
-        !Array.isArray(
-            productsToDelete
-        ) ||
-
+        !Array.isArray(productsToDelete) ||
         productsToDelete.length === 0
-
     ) {
 
         return
 
     }
 
-
     try {
 
         await productStore.bulkDelete(
             productsToDelete
         )
-        toastStore.success('Products deleted successfully.')
+
+        toastStore.success(
+            'Products deleted successfully.'
+        )
 
     } catch (err) {
 
@@ -610,28 +627,20 @@ async function bulkDelete(
 }
 
 
-// =========================================================
-// BULK EDIT
-// =========================================================
+// bulk edit
 
 function bulkEdit(
     productsToEdit
 ) {
 
     if (
-
-        !Array.isArray(
-            productsToEdit
-        ) ||
-
+        !Array.isArray(productsToEdit) ||
         productsToEdit.length === 0
-
     ) {
 
         return
 
     }
-
 
     if (
         productsToEdit.length === 1
@@ -644,7 +653,6 @@ function bulkEdit(
         return
 
     }
-
 
     router.push({
 
@@ -668,9 +676,7 @@ function bulkEdit(
 }
 
 
-// =========================================================
-// REFRESH
-// =========================================================
+// refresh
 
 async function refreshProducts() {
 
@@ -681,9 +687,7 @@ async function refreshProducts() {
 }
 
 
-// =========================================================
-// INITIAL LOAD
-// =========================================================
+// initial load
 
 onMounted(() => {
 
@@ -702,83 +706,78 @@ onMounted(() => {
 <template>
 
     <div
-        class="mx-auto w-full max-w-7xl px-3 sm:px-4 lg:px-6"
+        class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
     >
 
-        <!-- PAGE HEADER -->
-
+        <!-- page header -->
 
         <div class="mb-6">
 
             <div
-                class="flex flex-col gap-4 rounded-xl border border-gray-200 bg-white px-5 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between"
             >
 
-                <!-- TITLE -->
+                <!-- title -->
 
-                <div class="min-w-0">
+                <div
+                    class="flex min-w-0 items-center gap-4"
+                >
 
                     <div
-                        class="flex items-center gap-3"
+                        class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-900 shadow-sm"
                     >
 
-                        <div
-                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-900"
+                        <svg
+                            class="h-5 w-5 text-white"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
                         >
 
-                            <svg
-                                class="h-5 w-5 text-white"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                            />
 
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="1.8"
-                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                                />
+                        </svg>
 
-                            </svg>
-
-                        </div>
+                    </div>
 
 
-                        <div class="min-w-0">
+                    <div class="min-w-0">
 
-                            <h1
-                                class="truncate text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl"
-                            >
-                                Product Management
-                            </h1>
+                        <h1
+                            class="truncate text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl"
+                        >
+                            Products
+                        </h1>
 
-                            <p
-                                class="mt-1 text-sm text-gray-500"
-                            >
-                                Manage your inventory
-                            </p>
-
-                        </div>
+                        <p
+                            class="mt-1 text-sm text-gray-500"
+                        >
+                            Manage your inventory
+                        </p>
 
                     </div>
 
                 </div>
 
 
-                <!-- ACTIONS -->
+                <!-- actions -->
 
                 <div
                     class="flex w-full items-center gap-2 sm:w-auto"
                 >
 
-                    <!-- REFRESH -->
+                    <!-- refresh -->
 
                     <BaseButton
                         type="button"
                         variant="secondary"
                         :disabled="loading"
-                        class="flex-1 sm:flex-none"
+                        class="flex-1 justify-center sm:flex-none"
                         @click="refreshProducts"
                     >
 
@@ -802,21 +801,17 @@ onMounted(() => {
                         </svg>
 
                         <span class="hidden sm:inline">
-                            {{
-                                loading
-                                    ? 'Loading...'
-                                    : 'Refresh'
-                            }}
+                            {{ loading ? 'Refreshing...' : 'Refresh' }}
                         </span>
 
                     </BaseButton>
 
 
-                    <!-- ADD PRODUCT -->
+                    <!-- add -->
 
                     <BaseButton
                         type="button"
-                        class="flex-1 sm:flex-none"
+                        class="flex-1 justify-center sm:flex-none"
                         @click="addProduct"
                     >
 
@@ -849,28 +844,54 @@ onMounted(() => {
         </div>
 
 
-        <!-- ================================================= -->
-        <!-- INVENTORY SUMMARY -->
-        <!-- ================================================= -->
+        <!-- inventory stats -->
 
         <div
             class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4"
         >
 
-            <!-- TOTAL PRODUCTS -->
+            <!-- total -->
 
             <div
-                class="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+                class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
 
-                <p
-                    class="text-xs font-medium text-gray-500"
+                <div
+                    class="flex items-center gap-2"
                 >
-                    Total Products
-                </p>
+
+                    <div
+                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100"
+                    >
+
+                        <svg
+                            class="h-4 w-4 text-gray-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+                            />
+
+                        </svg>
+
+                    </div>
+
+                    <p
+                        class="text-xs font-medium text-gray-500 sm:text-sm"
+                    >
+                        Products
+                    </p>
+
+                </div>
 
                 <p
-                    class="mt-1 text-2xl font-bold text-gray-900"
+                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
                 >
                     {{ stats.total_products }}
                 </p>
@@ -878,20 +899,36 @@ onMounted(() => {
             </div>
 
 
-            <!-- IN STOCK -->
+            <!-- in stock -->
 
             <div
-                class="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+                class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
 
-                <p
-                    class="text-xs font-medium text-gray-500"
+                <div
+                    class="flex items-center gap-2"
                 >
-                    In Stock
-                </p>
+
+                    <div
+                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-green-50"
+                    >
+
+                        <span
+                            class="h-2.5 w-2.5 rounded-full bg-green-500"
+                        ></span>
+
+                    </div>
+
+                    <p
+                        class="text-xs font-medium text-gray-500 sm:text-sm"
+                    >
+                        In Stock
+                    </p>
+
+                </div>
 
                 <p
-                    class="mt-1 text-2xl font-bold text-gray-900"
+                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
                 >
                     {{ stats.in_stock }}
                 </p>
@@ -899,20 +936,36 @@ onMounted(() => {
             </div>
 
 
-            <!-- OUT OF STOCK -->
+            <!-- out of stock -->
 
             <div
-                class="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+                class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
 
-                <p
-                    class="text-xs font-medium text-gray-500"
+                <div
+                    class="flex items-center gap-2"
                 >
-                    Out of Stock
-                </p>
+
+                    <div
+                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50"
+                    >
+
+                        <span
+                            class="h-2.5 w-2.5 rounded-full bg-red-500"
+                        ></span>
+
+                    </div>
+
+                    <p
+                        class="text-xs font-medium text-gray-500 sm:text-sm"
+                    >
+                        Out of Stock
+                    </p>
+
+                </div>
 
                 <p
-                    class="mt-1 text-2xl font-bold text-gray-900"
+                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
                 >
                     {{ stats.out_of_stock }}
                 </p>
@@ -920,20 +973,48 @@ onMounted(() => {
             </div>
 
 
-            <!-- TOTAL QUANTITY -->
+            <!-- quantity -->
 
             <div
-                class="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm"
+                class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
 
-                <p
-                    class="text-xs font-medium text-gray-500"
+                <div
+                    class="flex items-center gap-2"
                 >
-                    Total Quantity
-                </p>
+
+                    <div
+                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50"
+                    >
+
+                        <svg
+                            class="h-4 w-4 text-blue-600"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="M4 7h16M4 12h16M4 17h16"
+                            />
+
+                        </svg>
+
+                    </div>
+
+                    <p
+                        class="text-xs font-medium text-gray-500 sm:text-sm"
+                    >
+                        Total Units
+                    </p>
+
+                </div>
 
                 <p
-                    class="mt-1 text-2xl font-bold text-gray-900"
+                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900"
                 >
                     {{ stats.total_quantity }}
                 </p>
@@ -943,22 +1024,18 @@ onMounted(() => {
         </div>
 
 
-        <!-- ================================================= -->
-        <!-- SEARCH + FILTERS -->
-        <!-- ================================================= -->
+        <!-- search + filters -->
 
         <BaseCard
-            class="mb-6 overflow-hidden"
+            class="mb-6 overflow-visible"
         >
 
-            <div
-                class="flex flex-col gap-3"
-            >
+            <div class="space-y-4">
 
-                <!-- SEARCH -->
+                <!-- search -->
 
                 <form
-                    class="flex min-w-0 flex-col gap-2 sm:flex-row"
+                    class="flex flex-col gap-2 sm:flex-row"
                     @submit.prevent="performSearch"
                 >
 
@@ -966,16 +1043,14 @@ onMounted(() => {
                         class="relative min-w-0 flex-1"
                     >
 
+                        <!-- search icon -->
+
                         <div
                             class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4"
                         >
 
                             <svg
                                 class="h-5 w-5 text-gray-400"
-                                :class="{
-                                    'text-gray-700':
-                                        searchInput,
-                                }"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -993,20 +1068,24 @@ onMounted(() => {
                         </div>
 
 
+                        <!-- input -->
+
                         <input
                             v-model="searchInput"
                             type="text"
                             placeholder="Search products..."
-                            class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3.5 pl-12 pr-12 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
+                            autocomplete="off"
+                            class="h-12 w-full rounded-xl border border-gray-200 bg-gray-50 pl-12 pr-11 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100"
                         />
 
 
-                        <!-- CLEAR SEARCH -->
+                        <!-- clear -->
 
                         <button
                             v-if="searchInput"
                             type="button"
-                            class="absolute inset-y-0 right-3 flex h-full w-7 items-center justify-center text-gray-400 transition hover:text-gray-700"
+                            aria-label="Clear search"
+                            class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-200 hover:text-gray-700"
                             @click="clearSearch"
                         >
 
@@ -1031,12 +1110,12 @@ onMounted(() => {
                     </div>
 
 
-                    <!-- SEARCH BUTTON -->
+                    <!-- search button -->
 
                     <BaseButton
                         type="submit"
                         :disabled="loading"
-                        class="justify-center px-6 sm:min-w-[110px]"
+                        class="h-12 w-full justify-center px-6 sm:w-auto"
                     >
 
                         <svg
@@ -1081,73 +1160,62 @@ onMounted(() => {
 
                         </svg>
 
-
-                        {{
-                            loading
-                                ? 'Searching...'
-                                : 'Search'
-                        }}
+                        <span>
+                            {{ loading ? 'Searching...' : 'Search' }}
+                        </span>
 
                     </BaseButton>
 
                 </form>
 
 
-                <!-- FILTERS -->
+                <!-- filters -->
 
                 <div
-                    class="grid grid-cols-1 gap-3 sm:grid-cols-2"
+                    class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                 >
 
-                    <!-- PRODUCT FILTER -->
+                    <div
+                        class="flex flex-wrap items-center gap-2"
+                    >
 
-                    <div class="relative">
+                        <!-- product filter -->
 
-                        <label
-                            for="product-filter"
-                            class="mb-1.5 block text-xs font-semibold text-gray-500"
-                        >
-                            Product Filter
-                        </label>
+                        <div class="relative">
 
+                            <select
+                                :value="filter"
+                                :disabled="loading"
+                                aria-label="Product filter"
+                                class="h-10 min-w-[135px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                @change="changeFilter"
+                            >
 
-                        <select
-                            id="product-filter"
-                            :value="filter"
-                            :disabled="loading"
-                            class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 pr-10 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            @change="changeFilter"
-                        >
+                                <option value="all">
+                                    All Products
+                                </option>
 
-                            <option value="all">
-                                All Products
-                            </option>
+                                <option value="latest">
+                                    Latest Added
+                                </option>
 
-                            <option value="latest">
-                                Latest Added
-                            </option>
+                                <option value="oldest">
+                                    Oldest Added
+                                </option>
 
-                            <option value="oldest">
-                                Oldest Added
-                            </option>
+                                <option value="in_stock">
+                                    In Stock
+                                </option>
 
-                            <option value="in_stock">
-                                In Stock
-                            </option>
+                                <option value="out_of_stock">
+                                    Out of Stock
+                                </option>
 
-                            <option value="out_of_stock">
-                                Out of Stock
-                            </option>
+                            </select>
 
-                        </select>
-
-
-                        <div
-                            class="pointer-events-none absolute bottom-0 right-3 flex h-[48px] items-center"
-                        >
 
                             <svg
-                                class="h-4 w-4 text-gray-400"
+                                class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -1156,7 +1224,61 @@ onMounted(() => {
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
-                                    stroke-width="2"
+                                    stroke-width="1.8"
+                                    d="m6 9 6 6 6-6"
+                                />
+
+                            </svg>
+
+                        </div>
+
+
+                        <!-- price filter -->
+
+                        <div class="relative">
+
+                            <select
+                                v-model="priceFilter"
+                                :disabled="loading"
+                                aria-label="Price filter"
+                                class="h-10 min-w-[125px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
+                                @change="changePriceFilter"
+                            >
+
+                                <option value="all">
+                                    All Prices
+                                </option>
+
+                                <option value="under_1000">
+                                    Under Rs. 1,000
+                                </option>
+
+                                <option value="1000_5000">
+                                    Rs. 1,000 – Rs. 5,000
+                                </option>
+
+                                <option value="5000_10000">
+                                    Rs. 5,000 – Rs. 10,000
+                                </option>
+
+                                <option value="above_10000">
+                                    Above Rs. 10,000
+                                </option>
+
+                            </select>
+
+
+                            <svg
+                                class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
                                     d="m6 9 6 6 6-6"
                                 />
 
@@ -1167,55 +1289,22 @@ onMounted(() => {
                     </div>
 
 
-                    <!-- PRICE FILTER -->
+                    <!-- active filters -->
 
-                    <div class="relative">
+                    <div
+                        v-if="hasActiveFilters"
+                        class="flex flex-wrap items-center gap-2"
+                    >
 
-                        <label
-                            for="price-filter"
-                            class="mb-1.5 block text-xs font-semibold text-gray-500"
-                        >
-                            Price Range
-                        </label>
+                        <!-- search chip -->
 
-
-                        <select
-                            id="price-filter"
-                            v-model="priceFilter"
-                            :disabled="loading"
-                            class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3.5 pr-10 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 hover:bg-white focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60"
-                            @change="changePriceFilter"
-                        >
-
-                            <option value="all">
-                                All Prices
-                            </option>
-
-                            <option value="under_1000">
-                                Under Rs. 1,000
-                            </option>
-
-                            <option value="1000_5000">
-                                Rs. 1,000 – Rs. 5,000
-                            </option>
-
-                            <option value="5000_10000">
-                                Rs. 5,000 – Rs. 10,000
-                            </option>
-
-                            <option value="above_10000">
-                                Above Rs. 10,000
-                            </option>
-
-                        </select>
-
-
-                        <div
-                            class="pointer-events-none absolute bottom-0 right-3 flex h-[48px] items-center"
+                        <span
+                            v-if="hasSearch"
+                            class="inline-flex max-w-full items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700"
                         >
 
                             <svg
-                                class="h-4 w-4 text-gray-400"
+                                class="h-3 w-3 shrink-0 text-gray-400"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -1224,13 +1313,69 @@ onMounted(() => {
                                 <path
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="m6 9 6 6 6-6"
+                                    stroke-width="1.8"
+                                    d="m21 21-4.35-4.35m2.1-5.15a7.25 7.25 0 1 1-14.5 0 7.25 7.25 0 0 1 14.5 0Z"
                                 />
 
                             </svg>
 
-                        </div>
+                            <span class="max-w-[150px] truncate">
+                                {{ searchInput }}
+                            </span>
+
+                        </span>
+
+
+                        <!-- product filter chip -->
+
+                        <span
+                            v-if="hasProductFilter"
+                            class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700"
+                        >
+
+                            {{ filterLabel }}
+
+                        </span>
+
+
+                        <!-- price chip -->
+
+                        <span
+                            v-if="hasPriceFilter"
+                            class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700"
+                        >
+
+                            {{ priceFilterLabel }}
+
+                        </span>
+
+
+                        <!-- clear -->
+
+                        <button
+                            type="button"
+                            aria-label="Clear all filters"
+                            class="inline-flex h-7 w-7 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-100 hover:text-gray-700"
+                            @click="clearAllFilters"
+                        >
+
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M6 18L18 6M6 6l12 12"
+                                />
+
+                            </svg>
+
+                        </button>
 
                     </div>
 
@@ -1241,9 +1386,7 @@ onMounted(() => {
         </BaseCard>
 
 
-        <!-- ================================================= -->
-        <!-- ERROR -->
-        <!-- ================================================= -->
+        <!-- error -->
 
         <BaseCard
             v-if="error"
@@ -1311,9 +1454,7 @@ onMounted(() => {
         </BaseCard>
 
 
-        <!-- ================================================= -->
-        <!-- LOADING -->
-        <!-- ================================================= -->
+        <!-- loading -->
 
         <BaseCard
             v-if="loading && products.length === 0"
@@ -1359,21 +1500,12 @@ onMounted(() => {
                     Loading products
                 </p>
 
-
-                <p
-                    class="mt-1 text-xs text-gray-400"
-                >
-                    Please wait while we fetch your inventory.
-                </p>
-
             </div>
 
         </BaseCard>
 
 
-        <!-- ================================================= -->
-        <!-- PRODUCT LIST -->
-        <!-- ================================================= -->
+        <!-- product list -->
 
         <div
             v-else
@@ -1382,6 +1514,8 @@ onMounted(() => {
 
             <ProductList
                 :products="products"
+                :current-page="currentPage"
+                :per-page="perPage"
                 @add-product="addProduct"
                 @view-product="viewProduct"
                 @edit-product="editProduct"
@@ -1393,9 +1527,7 @@ onMounted(() => {
         </div>
 
 
-        <!-- ================================================= -->
-        <!-- PAGINATION -->
-        <!-- ================================================= -->
+        <!-- pagination -->
 
         <div
             v-if="total > 0"
@@ -1406,34 +1538,38 @@ onMounted(() => {
                 class="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
             >
 
-                <!-- PAGINATION INFORMATION -->
+                <!-- information -->
 
-                <div class="flex flex-col gap-1">
-
-                    <p
-                        class="text-sm font-semibold text-gray-800"
-                    >
-                        Products
-                        {{ firstProductNumber }}–{{ lastProductNumber }}
-                    </p>
-
-                    <p
-                        class="text-xs text-gray-500"
-                    >
-                        Showing {{ products.length }} of
-                        {{ total }} products
-                    </p>
-
-                </div>
-
-
-                <!-- PAGINATION CONTROLS -->
-
-                <div
-                    class="flex flex-wrap items-center gap-2"
+                <p
+                    class="text-sm font-medium text-gray-700"
                 >
 
-                    <!-- PREVIOUS -->
+                    <span class="font-semibold text-gray-900">
+                        {{ firstProductNumber }}–{{ lastProductNumber }}
+                    </span>
+
+                    <span class="text-gray-400">
+                        of
+                    </span>
+
+                    <span class="font-semibold text-gray-900">
+                        {{ total }}
+                    </span>
+
+                    <span class="text-gray-500">
+                        products
+                    </span>
+
+                </p>
+
+
+                <!-- controls -->
+
+                <div
+                    class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end"
+                >
+
+                    <!-- previous -->
 
                     <BaseButton
                         type="button"
@@ -1442,7 +1578,7 @@ onMounted(() => {
                             !hasPreviousPage ||
                             loading
                         "
-                        class="justify-center"
+                        class="h-9 justify-center"
                         @click="previousPage"
                     >
 
@@ -1462,7 +1598,6 @@ onMounted(() => {
 
                         </svg>
 
-
                         <span class="hidden sm:inline">
                             Previous
                         </span>
@@ -1470,32 +1605,26 @@ onMounted(() => {
                     </BaseButton>
 
 
-                    <!-- PAGE NUMBERS -->
+                    <!-- page -->
 
                     <div
-                        class="flex items-center gap-1 rounded-xl border border-gray-200 bg-gray-50 p-1"
+                        class="flex h-9 items-center rounded-lg bg-gray-900 px-3 text-sm font-semibold text-white"
                     >
 
-                        <button
-                            v-for="page in lastPage"
-                            :key="page"
-                            type="button"
-                            :disabled="loading"
-                            @click="goToPage(page)"
-                            class="flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-sm font-semibold transition"
-                            :class="
-                                page === currentPage
-                                    ? 'bg-gray-900 text-white shadow-sm'
-                                    : 'text-gray-600 hover:bg-white hover:text-gray-900'
-                            "
+                        {{ currentPage }}
+
+                        <span
+                            class="mx-1 text-gray-400"
                         >
-                            {{ page }}
-                        </button>
+                            /
+                        </span>
+
+                        {{ lastPage }}
 
                     </div>
 
 
-                    <!-- NEXT -->
+                    <!-- next -->
 
                     <BaseButton
                         type="button"
@@ -1504,14 +1633,13 @@ onMounted(() => {
                             !hasNextPage ||
                             loading
                         "
-                        class="justify-center"
+                        class="h-9 justify-center"
                         @click="nextPage"
                     >
 
                         <span class="hidden sm:inline">
                             Next
                         </span>
-
 
                         <svg
                             class="h-4 w-4"
@@ -1538,9 +1666,7 @@ onMounted(() => {
         </div>
 
 
-        <!-- ================================================= -->
-        <!-- DELETE CONFIRMATION MODAL -->
-        <!-- ================================================= -->
+        <!-- delete modal -->
 
         <BaseModal
             :show="showDeleteModal"
@@ -1610,7 +1736,7 @@ onMounted(() => {
                     class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
                 >
 
-                    <!-- CANCEL -->
+                    <!-- cancel -->
 
                     <BaseButton
                         type="button"
@@ -1623,7 +1749,7 @@ onMounted(() => {
                     </BaseButton>
 
 
-                    <!-- DELETE -->
+                    <!-- delete -->
 
                     <BaseButton
                         type="button"
