@@ -2,15 +2,15 @@
 import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useAuthStore } from "../../stores/auth";
+import { useThemeStore } from "../../stores/theme";
 
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+const themeStore = useThemeStore();
 
 const showProfileMenu = ref(false);
 const profileMenuRef = ref(null);
-
-// Navigation
 
 function goToDashboard() {
     showProfileMenu.value = false;
@@ -36,13 +36,9 @@ function goToProfile() {
     });
 }
 
-// Active Navigation
-
 function isActive(name) {
     return route.name === name;
 }
-
-// Logout
 
 async function logout() {
     showProfileMenu.value = false;
@@ -62,22 +58,15 @@ async function logout() {
     }
 }
 
-// Dropdown
-
 function toggleProfileMenu() {
     showProfileMenu.value = !showProfileMenu.value;
 }
 
 function closeProfileMenu(event) {
-    if (
-        profileMenuRef.value &&
-        !profileMenuRef.value.contains(event.target)
-    ) {
+    if (profileMenuRef.value && !profileMenuRef.value.contains(event.target)) {
         showProfileMenu.value = false;
     }
 }
-
-// Lifecycle
 
 onMounted(() => {
     document.addEventListener("click", closeProfileMenu);
@@ -90,7 +79,7 @@ onBeforeUnmount(() => {
 
 <template>
     <nav
-        class="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur"
+        class="sticky top-0 z-50 border-b border-gray-200 bg-white/95 shadow-sm backdrop-blur dark:border-gray-800 dark:bg-gray-950/95"
     >
         <div
             class="mx-auto flex h-16 max-w-7xl items-center justify-between px-3 sm:px-6 lg:px-8"
@@ -100,13 +89,13 @@ onBeforeUnmount(() => {
             <button
                 type="button"
                 @click="goToDashboard"
-                class="group flex shrink-0 items-center gap-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200"
+                class="group flex shrink-0 items-center gap-2.5 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700"
             >
                 <div
-                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-900 shadow-sm transition duration-200 group-hover:scale-105 group-hover:shadow-md"
+                    class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-900 shadow-sm transition duration-200 group-hover:scale-105 group-hover:shadow-md dark:bg-white"
                 >
                     <svg
-                        class="h-5 w-5 text-white"
+                        class="h-5 w-5 text-white dark:text-gray-900"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -122,13 +111,13 @@ onBeforeUnmount(() => {
 
                 <div class="hidden text-left sm:block">
                     <p
-                        class="text-base font-bold leading-tight tracking-tight text-gray-900"
+                        class="text-base font-bold leading-tight tracking-tight text-gray-900 dark:text-white"
                     >
                         ProductApp
                     </p>
 
                     <p
-                        class="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-400"
+                        class="mt-0.5 text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500"
                     >
                         Inventory
                     </p>
@@ -146,16 +135,16 @@ onBeforeUnmount(() => {
                     class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
                     :class="
                         isActive('dashboard')
-                            ? 'bg-gray-100 text-gray-900'
-                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white'
                     "
                 >
                     <svg
                         class="h-4.5 w-4.5 transition"
                         :class="
                             isActive('dashboard')
-                                ? 'text-gray-900'
-                                : 'text-gray-400 group-hover:text-gray-700'
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-300'
                         "
                         fill="none"
                         stroke="currentColor"
@@ -183,8 +172,8 @@ onBeforeUnmount(() => {
                         isActive('products.create') ||
                         isActive('products.edit') ||
                         isActive('products.view')
-                            ? 'bg-gray-100 text-gray-900'
-                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white'
                     "
                 >
                     <svg
@@ -194,8 +183,8 @@ onBeforeUnmount(() => {
                             isActive('products.create') ||
                             isActive('products.edit') ||
                             isActive('products.view')
-                                ? 'text-gray-900'
-                                : 'text-gray-400 group-hover:text-gray-700'
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-300'
                         "
                         fill="none"
                         stroke="currentColor"
@@ -211,6 +200,49 @@ onBeforeUnmount(() => {
 
                     Products
                 </button>
+
+                <!-- Theme -->
+
+                <button
+                    type="button"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                    :aria-label="
+                        themeStore.dark
+                            ? 'Switch to light mode'
+                            : 'Switch to dark mode'
+                    "
+                    @click="themeStore.toggleTheme"
+                >
+                    <svg
+                        v-if="themeStore.dark"
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M12 3v1.5M12 19.5V21M4.22 4.22l1.06 1.06M18.72 18.72l1.06 1.06M3 12h1.5M19.5 12H21M4.22 19.78l1.06-1.06M18.72 5.28l1.06-1.06M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
+                        />
+                    </svg>
+
+                    <svg
+                        v-else
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"
+                        />
+                    </svg>
+                </button>
             </div>
 
             <!-- Right Side -->
@@ -221,7 +253,7 @@ onBeforeUnmount(() => {
                 <button
                     type="button"
                     @click="goToProducts"
-                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 md:hidden"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white md:hidden"
                     title="Products"
                     aria-label="Products"
                 >
@@ -242,41 +274,32 @@ onBeforeUnmount(() => {
 
                 <!-- Divider -->
 
-                <div class="hidden h-7 w-px bg-gray-200 sm:block"></div>
+                <div
+                    class="hidden h-7 w-px bg-gray-200 dark:bg-gray-800 sm:block"
+                ></div>
 
                 <!-- Profile -->
 
-                <div
-                    ref="profileMenuRef"
-                    class="relative"
-                >
+                <div ref="profileMenuRef" class="relative">
                     <button
                         type="button"
                         @click="toggleProfileMenu"
-                        class="group flex items-center gap-2 rounded-xl border border-transparent px-1.5 py-1.5 transition hover:border-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 sm:px-2"
+                        class="group flex items-center gap-2 rounded-xl border border-transparent px-1.5 py-1.5 transition hover:border-gray-200 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:hover:border-gray-700 dark:hover:bg-gray-900 dark:focus:ring-gray-700 sm:px-2"
                         :aria-expanded="showProfileMenu"
                     >
-                        <!-- Avatar -->
-
                         <div
-                            class="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-900 ring-2 ring-white shadow-sm"
+                            class="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-900 ring-2 ring-white shadow-sm dark:bg-white dark:ring-gray-950"
                         >
                             <img
-                                v-if="
-                                    authStore.user?.profile_picture_url
-                                "
-                                :src="
-                                    authStore.user.profile_picture_url
-                                "
-                                :alt="
-                                    authStore.user?.name || 'User'
-                                "
+                                v-if="authStore.user?.profile_picture_url"
+                                :src="authStore.user.profile_picture_url"
+                                :alt="authStore.user?.name || 'User'"
                                 class="h-full w-full object-cover"
                             />
 
                             <div
                                 v-else
-                                class="flex h-full w-full items-center justify-center text-sm font-semibold text-white"
+                                class="flex h-full w-full items-center justify-center text-sm font-semibold text-white dark:text-gray-900"
                             >
                                 {{
                                     authStore.user?.name
@@ -286,34 +309,22 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <!-- User Information -->
-
-                        <div
-                            class="hidden max-w-[150px] text-left lg:block"
-                        >
+                        <div class="hidden max-w-[150px] text-left lg:block">
                             <p
-                                class="truncate text-sm font-semibold leading-tight text-gray-900"
+                                class="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-white"
                             >
-                                {{
-                                    authStore.user?.name ||
-                                    "User"
-                                }}
+                                {{ authStore.user?.name || "User" }}
                             </p>
 
                             <p
-                                class="mt-0.5 truncate text-[11px] text-gray-400"
+                                class="mt-0.5 truncate text-[11px] text-gray-400 dark:text-gray-500"
                             >
-                                {{
-                                    authStore.user?.email ||
-                                    ""
-                                }}
+                                {{ authStore.user?.email || "" }}
                             </p>
                         </div>
 
-                        <!-- Chevron -->
-
                         <svg
-                            class="hidden h-4 w-4 text-gray-400 transition duration-200 lg:block"
+                            class="hidden h-4 w-4 text-gray-400 transition duration-200 dark:text-gray-500 lg:block"
                             :class="{
                                 'rotate-180': showProfileMenu,
                             }"
@@ -342,18 +353,16 @@ onBeforeUnmount(() => {
                     >
                         <div
                             v-if="showProfileMenu"
-                            class="absolute right-0 z-50 mt-2 w-[280px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl shadow-gray-200/50"
+                            class="absolute right-0 z-50 mt-2 w-[280px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl shadow-gray-200/50 dark:border-gray-700 dark:bg-gray-900 dark:shadow-black/30"
                         >
                             <!-- User Header -->
 
                             <div
-                                class="border-b border-gray-100 bg-gray-50/70 px-4 py-4"
+                                class="border-b border-gray-100 bg-gray-50/70 px-4 py-4 dark:border-gray-800 dark:bg-gray-800/50"
                             >
-                                <div
-                                    class="flex items-center gap-3"
-                                >
+                                <div class="flex items-center gap-3">
                                     <div
-                                        class="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-gray-900 shadow-sm"
+                                        class="h-11 w-11 shrink-0 overflow-hidden rounded-full bg-gray-900 shadow-sm dark:bg-white"
                                     >
                                         <img
                                             v-if="
@@ -365,42 +374,34 @@ onBeforeUnmount(() => {
                                                     .profile_picture_url
                                             "
                                             :alt="
-                                                authStore.user?.name ||
-                                                'User'
+                                                authStore.user?.name || 'User'
                                             "
                                             class="h-full w-full object-cover"
                                         />
 
                                         <div
                                             v-else
-                                            class="flex h-full w-full items-center justify-center text-sm font-semibold text-white"
+                                            class="flex h-full w-full items-center justify-center text-sm font-semibold text-white dark:text-gray-900"
                                         >
                                             {{
                                                 authStore.user?.name
                                                     ?.charAt(0)
-                                                    ?.toUpperCase() ||
-                                                "U"
+                                                    ?.toUpperCase() || "U"
                                             }}
                                         </div>
                                     </div>
 
                                     <div class="min-w-0">
                                         <p
-                                            class="truncate text-sm font-semibold text-gray-900"
+                                            class="truncate text-sm font-semibold text-gray-900 dark:text-white"
                                         >
-                                            {{
-                                                authStore.user?.name ||
-                                                "User"
-                                            }}
+                                            {{ authStore.user?.name || "User" }}
                                         </p>
 
                                         <p
-                                            class="mt-0.5 truncate text-xs text-gray-500"
+                                            class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
                                         >
-                                            {{
-                                                authStore.user?.email ||
-                                                ""
-                                            }}
+                                            {{ authStore.user?.email || "" }}
                                         </p>
                                     </div>
                                 </div>
@@ -409,24 +410,22 @@ onBeforeUnmount(() => {
                             <!-- Dropdown Actions -->
 
                             <div class="p-2">
-                                <!-- Dashboard -->
-
                                 <button
                                     type="button"
                                     @click="goToDashboard"
                                     class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition"
                                     :class="
                                         isActive('dashboard')
-                                            ? 'bg-gray-100 text-gray-900'
-                                            : 'text-gray-700 hover:bg-gray-50'
+                                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                                            : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
                                     "
                                 >
                                     <span
                                         class="flex h-8 w-8 items-center justify-center rounded-lg"
                                         :class="
                                             isActive('dashboard')
-                                                ? 'bg-white text-gray-900 shadow-sm'
-                                                : 'bg-gray-100 text-gray-500'
+                                                ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white'
+                                                : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
                                         "
                                     >
                                         <svg
@@ -444,12 +443,10 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Dashboard
-                                    </span>
+                                    <span class="flex-1">Dashboard</span>
 
                                     <svg
-                                        class="h-4 w-4 text-gray-300"
+                                        class="h-4 w-4 text-gray-300 dark:text-gray-600"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -463,20 +460,18 @@ onBeforeUnmount(() => {
                                     </svg>
                                 </button>
 
-                                <!-- Products -->
-
                                 <button
                                     type="button"
                                     @click="goToProducts"
                                     class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition"
                                     :class="
                                         isActive('products.index')
-                                            ? 'bg-gray-100 text-gray-900'
-                                            : 'text-gray-700 hover:bg-gray-50'
+                                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                                            : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
                                     "
                                 >
                                     <span
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500"
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
                                     >
                                         <svg
                                             class="h-4 w-4"
@@ -493,12 +488,10 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Products
-                                    </span>
+                                    <span class="flex-1">Products</span>
 
                                     <svg
-                                        class="h-4 w-4 text-gray-300"
+                                        class="h-4 w-4 text-gray-300 dark:text-gray-600"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -512,15 +505,13 @@ onBeforeUnmount(() => {
                                     </svg>
                                 </button>
 
-                                <!-- Profile -->
-
                                 <button
                                     type="button"
                                     @click="goToProfile"
-                                    class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                    class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800"
                                 >
                                     <span
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500"
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
                                     >
                                         <svg
                                             class="h-4 w-4"
@@ -537,12 +528,10 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Profile
-                                    </span>
+                                    <span class="flex-1">Profile</span>
 
                                     <svg
-                                        class="h-4 w-4 text-gray-300"
+                                        class="h-4 w-4 text-gray-300 dark:text-gray-600"
                                         fill="none"
                                         stroke="currentColor"
                                         viewBox="0 0 24 24"
@@ -556,21 +545,15 @@ onBeforeUnmount(() => {
                                     </svg>
                                 </button>
 
-                                <!-- Divider -->
-
-                                <div
-                                    class="my-2 h-px bg-gray-100"
-                                ></div>
-
-                                <!-- Logout -->
+                                <div class="my-2 h-px bg-gray-100 dark:bg-gray-800"></div>
 
                                 <button
                                     type="button"
                                     @click="logout"
-                                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50"
+                                    class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30"
                                 >
                                     <span
-                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50"
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/30"
                                     >
                                         <svg
                                             class="h-4 w-4"
@@ -587,9 +570,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Logout
-                                    </span>
+                                    <span class="flex-1">Logout</span>
                                 </button>
                             </div>
                         </div>
