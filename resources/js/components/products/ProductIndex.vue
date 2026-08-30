@@ -1,6 +1,5 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
-
 import { useRouter } from "vue-router";
 
 import { useProductStore } from "../../stores/product";
@@ -12,44 +11,29 @@ import BaseModal from "../common/BaseModal.vue";
 import BaseButton from "../common/BaseButton.vue";
 import BaseCard from "../common/BaseCard.vue";
 
-// router + stores
-
 const router = useRouter();
 
 const productStore = useProductStore();
 const toastStore = useToastStore();
 
-// ui state
-
 const showDeleteModal = ref(false);
-
 const productToDelete = ref(null);
-
 const deleting = ref(false);
 
 const searchInput = ref("");
-
 const priceFilter = ref("all");
-
-// products
 
 const products = computed(() => {
     return Array.isArray(productStore.products) ? productStore.products : [];
 });
 
-// loading
-
 const loading = computed(() => {
     return productStore.loading;
 });
 
-// error
-
 const error = computed(() => {
     return productStore.error;
 });
-
-// pagination
 
 const currentPage = computed(() => {
     return productStore.currentPage;
@@ -75,32 +59,25 @@ const hasNextPage = computed(() => {
     return currentPage.value < lastPage.value;
 });
 
-// search
-
 const search = computed(() => {
     return productStore.search;
 });
 
-// filter
-
 const filter = computed(() => {
     return productStore.filter;
 });
-
-// inventory stats
 
 const stats = computed(() => {
     return (
         productStore.stats || {
             total_products: 0,
             in_stock: 0,
+            low_stock: 0,
             out_of_stock: 0,
             total_quantity: 0,
         }
     );
 });
-
-// pagination information
 
 const firstProductNumber = computed(() => {
     if (total.value === 0) {
@@ -113,8 +90,6 @@ const firstProductNumber = computed(() => {
 const lastProductNumber = computed(() => {
     return Math.min(currentPage.value * perPage.value, total.value);
 });
-
-// price range
 
 const priceRange = computed(() => {
     switch (priceFilter.value) {
@@ -150,8 +125,6 @@ const priceRange = computed(() => {
     }
 });
 
-// active filters
-
 const hasSearch = computed(() => {
     return searchInput.value.trim() !== "";
 });
@@ -168,14 +141,13 @@ const hasActiveFilters = computed(() => {
     return hasSearch.value || hasProductFilter.value || hasPriceFilter.value;
 });
 
-// filter labels
-
 const filterLabel = computed(() => {
     const labels = {
         all: "All",
         latest: "Latest",
         oldest: "Oldest",
         in_stock: "In Stock",
+        low_stock: "Low Stock",
         out_of_stock: "Out of Stock",
     };
 
@@ -194,8 +166,6 @@ const priceFilterLabel = computed(() => {
     return labels[priceFilter.value] || "All prices";
 });
 
-// load products
-
 async function loadProducts(page = productStore.currentPage) {
     try {
         await productStore.fetchProducts(
@@ -210,8 +180,6 @@ async function loadProducts(page = productStore.currentPage) {
     }
 }
 
-// search products
-
 async function performSearch() {
     try {
         await productStore.searchProducts(searchInput.value.trim());
@@ -219,8 +187,6 @@ async function performSearch() {
         console.error("Search products error:", err);
     }
 }
-
-// clear search
 
 async function clearSearch() {
     searchInput.value = "";
@@ -232,11 +198,8 @@ async function clearSearch() {
     }
 }
 
-// clear all filters
-
 async function clearAllFilters() {
     searchInput.value = "";
-
     priceFilter.value = "all";
 
     try {
@@ -245,8 +208,6 @@ async function clearAllFilters() {
         console.error("Clear filters error:", err);
     }
 }
-
-// product filter
 
 async function changeFilter(event) {
     const selectedFilter = event.target.value;
@@ -258,8 +219,6 @@ async function changeFilter(event) {
     }
 }
 
-// price filter
-
 async function changePriceFilter() {
     try {
         await productStore.priceFilterProducts(
@@ -270,8 +229,6 @@ async function changePriceFilter() {
         console.error("Price filter error:", err);
     }
 }
-
-// go to page
 
 async function goToPage(page) {
     if (page < 1 || page > lastPage.value || page === currentPage.value) {
@@ -285,8 +242,6 @@ async function goToPage(page) {
     }
 }
 
-// previous page
-
 async function previousPage() {
     if (!hasPreviousPage.value) {
         return;
@@ -294,8 +249,6 @@ async function previousPage() {
 
     await goToPage(currentPage.value - 1);
 }
-
-// next page
 
 async function nextPage() {
     if (!hasNextPage.value) {
@@ -305,15 +258,11 @@ async function nextPage() {
     await goToPage(currentPage.value + 1);
 }
 
-// add product
-
 function addProduct() {
     router.push({
         name: "products.create",
     });
 }
-
-// view product
 
 function viewProduct(product) {
     router.push({
@@ -324,8 +273,6 @@ function viewProduct(product) {
     });
 }
 
-// edit product
-
 function editProduct(product) {
     router.push({
         name: "products.edit",
@@ -335,11 +282,8 @@ function editProduct(product) {
     });
 }
 
-// delete product
-
 function openDeleteModal(product) {
     productToDelete.value = product;
-
     showDeleteModal.value = true;
 }
 
@@ -349,7 +293,6 @@ function closeDeleteModal() {
     }
 
     showDeleteModal.value = false;
-
     productToDelete.value = null;
 }
 
@@ -366,7 +309,6 @@ async function confirmDelete() {
         toastStore.success("Product deleted successfully.");
 
         showDeleteModal.value = false;
-
         productToDelete.value = null;
     } catch (err) {
         console.error("Delete product error:", err);
@@ -374,8 +316,6 @@ async function confirmDelete() {
         deleting.value = false;
     }
 }
-
-// bulk delete
 
 async function bulkDelete(productsToDelete) {
     if (!Array.isArray(productsToDelete) || productsToDelete.length === 0) {
@@ -390,8 +330,6 @@ async function bulkDelete(productsToDelete) {
         console.error("Bulk delete error:", err);
     }
 }
-
-// bulk edit
 
 function bulkEdit(productsToEdit) {
     if (!Array.isArray(productsToEdit) || productsToEdit.length === 0) {
@@ -414,13 +352,9 @@ function bulkEdit(productsToEdit) {
     });
 }
 
-// refresh
-
 async function refreshProducts() {
     await loadProducts(currentPage.value);
 }
-
-// initial load
 
 onMounted(() => {
     searchInput.value = productStore.search;
@@ -430,20 +364,16 @@ onMounted(() => {
 </script>
 
 <template>
-    <!-- FULL PAGE BACKGROUND -->
-
-    <div class="min-h-[calc(100vh-4rem)] bg-gray-50 transition-colors duration-300 dark:bg-gray-950">
+    <div
+        class="min-h-[calc(100vh-4rem)] bg-gray-50 transition-colors duration-300 dark:bg-gray-950"
+    >
         <div
             class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
         >
-            <!-- PAGE HEADER -->
-
             <div class="mb-6">
                 <div
                     class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900 sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between"
                 >
-                    <!-- title -->
-
                     <div class="flex min-w-0 items-center gap-4">
                         <div
                             class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-900 shadow-sm dark:bg-white"
@@ -470,17 +400,15 @@ onMounted(() => {
                                 Products
                             </h1>
 
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                            <p
+                                class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                            >
                                 Manage your inventory
                             </p>
                         </div>
                     </div>
 
-                    <!-- actions -->
-
                     <div class="flex w-full items-center gap-2 sm:w-auto">
-                        <!-- refresh -->
-
                         <BaseButton
                             type="button"
                             variant="secondary"
@@ -510,8 +438,6 @@ onMounted(() => {
                             </span>
                         </BaseButton>
 
-                        <!-- add -->
-
                         <BaseButton
                             type="button"
                             class="flex-1 justify-center sm:flex-none"
@@ -537,11 +463,7 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- INVENTORY STATS -->
-
-            <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <!-- total -->
-
+            <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div
                     class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
                 >
@@ -564,7 +486,9 @@ onMounted(() => {
                             </svg>
                         </div>
 
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm">
+                        <p
+                            class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm"
+                        >
                             Products
                         </p>
                     </div>
@@ -575,8 +499,6 @@ onMounted(() => {
                         {{ stats.total_products }}
                     </p>
                 </div>
-
-                <!-- in stock -->
 
                 <div
                     class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
@@ -590,7 +512,9 @@ onMounted(() => {
                             ></span>
                         </div>
 
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm">
+                        <p
+                            class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm"
+                        >
                             In Stock
                         </p>
                     </div>
@@ -602,7 +526,31 @@ onMounted(() => {
                     </p>
                 </div>
 
-                <!-- out of stock -->
+                <div
+                    class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
+                >
+                    <div class="flex items-center gap-2">
+                        <div
+                            class="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 dark:bg-amber-950/40"
+                        >
+                            <span
+                                class="h-2.5 w-2.5 rounded-full bg-amber-500"
+                            ></span>
+                        </div>
+
+                        <p
+                            class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm"
+                        >
+                            Low Stock
+                        </p>
+                    </div>
+
+                    <p
+                        class="mt-3 text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+                    >
+                        {{ stats.low_stock }}
+                    </p>
+                </div>
 
                 <div
                     class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
@@ -616,7 +564,9 @@ onMounted(() => {
                             ></span>
                         </div>
 
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm">
+                        <p
+                            class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm"
+                        >
                             Out of Stock
                         </p>
                     </div>
@@ -627,8 +577,6 @@ onMounted(() => {
                         {{ stats.out_of_stock }}
                     </p>
                 </div>
-
-                <!-- quantity -->
 
                 <div
                     class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
@@ -652,7 +600,9 @@ onMounted(() => {
                             </svg>
                         </div>
 
-                        <p class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm">
+                        <p
+                            class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm"
+                        >
                             Total Units
                         </p>
                     </div>
@@ -665,12 +615,8 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- SEARCH + FILTERS -->
-
             <BaseCard class="mb-6 overflow-visible">
                 <div class="space-y-4">
-                    <!-- search -->
-
                     <form
                         class="flex flex-col gap-2 sm:flex-row"
                         @submit.prevent="performSearch"
@@ -773,20 +719,16 @@ onMounted(() => {
                         </BaseButton>
                     </form>
 
-                    <!-- filters -->
-
                     <div
                         class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                     >
                         <div class="flex flex-wrap items-center gap-2">
-                            <!-- product filter -->
-
                             <div class="relative">
                                 <select
                                     :value="filter"
                                     :disabled="loading"
                                     aria-label="Product filter"
-                                    class="h-10 min-w-[135px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:border-gray-500 dark:focus:ring-gray-700/50"
+                                    class="h-10 min-w-[150px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:border-gray-500 dark:focus:ring-gray-700/50"
                                     @change="changeFilter"
                                 >
                                     <option value="all">
@@ -803,6 +745,10 @@ onMounted(() => {
 
                                     <option value="in_stock">
                                         In Stock
+                                    </option>
+
+                                    <option value="low_stock">
+                                        Low Stock
                                     </option>
 
                                     <option value="out_of_stock">
@@ -824,8 +770,6 @@ onMounted(() => {
                                     />
                                 </svg>
                             </div>
-
-                            <!-- price filter -->
 
                             <div class="relative">
                                 <select
@@ -869,8 +813,6 @@ onMounted(() => {
                                 </svg>
                             </div>
                         </div>
-
-                        <!-- active filters -->
 
                         <div
                             v-if="hasActiveFilters"
@@ -938,8 +880,6 @@ onMounted(() => {
                 </div>
             </BaseCard>
 
-            <!-- ERROR -->
-
             <BaseCard
                 v-if="error"
                 class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
@@ -973,7 +913,9 @@ onMounted(() => {
                                 Something went wrong
                             </h3>
 
-                            <p class="mt-1 text-sm text-red-700 dark:text-red-400">
+                            <p
+                                class="mt-1 text-sm text-red-700 dark:text-red-400"
+                            >
                                 {{ error }}
                             </p>
                         </div>
@@ -988,8 +930,6 @@ onMounted(() => {
                     </BaseButton>
                 </div>
             </BaseCard>
-
-            <!-- LOADING -->
 
             <BaseCard
                 v-if="loading && products.length === 0"
@@ -1028,8 +968,6 @@ onMounted(() => {
                 </div>
             </BaseCard>
 
-            <!-- PRODUCT LIST -->
-
             <div
                 v-else
                 class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900"
@@ -1045,8 +983,6 @@ onMounted(() => {
                     @bulk-delete="bulkDelete"
                     @bulk-edit="bulkEdit"
                 />
-
-                <!-- loading overlay -->
 
                 <div
                     v-if="loading"
@@ -1084,8 +1020,6 @@ onMounted(() => {
                 </div>
             </div>
 
-            <!-- PAGINATION -->
-
             <div
                 v-if="total > 0"
                 class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900"
@@ -1093,16 +1027,20 @@ onMounted(() => {
                 <div
                     class="flex flex-col gap-4 p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between"
                 >
-                    <!-- information -->
-
-                    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <span class="font-semibold text-gray-900 dark:text-white">
+                    <p
+                        class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                        <span
+                            class="font-semibold text-gray-900 dark:text-white"
+                        >
                             {{ firstProductNumber }}–{{ lastProductNumber }}
                         </span>
 
                         <span class="text-gray-400"> of </span>
 
-                        <span class="font-semibold text-gray-900 dark:text-white">
+                        <span
+                            class="font-semibold text-gray-900 dark:text-white"
+                        >
                             {{ total }}
                         </span>
 
@@ -1111,13 +1049,9 @@ onMounted(() => {
                         </span>
                     </p>
 
-                    <!-- controls -->
-
                     <div
                         class="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end"
                     >
-                        <!-- previous -->
-
                         <BaseButton
                             type="button"
                             variant="secondary"
@@ -1142,8 +1076,6 @@ onMounted(() => {
                             <span class="hidden sm:inline">Previous</span>
                         </BaseButton>
 
-                        <!-- page -->
-
                         <div
                             class="flex h-9 items-center rounded-lg bg-gray-900 px-3 text-sm font-semibold text-white dark:bg-white dark:text-gray-900"
                         >
@@ -1153,8 +1085,6 @@ onMounted(() => {
 
                             {{ lastPage }}
                         </div>
-
-                        <!-- next -->
 
                         <BaseButton
                             type="button"
@@ -1182,8 +1112,6 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
-
-            <!-- DELETE MODAL -->
 
             <BaseModal
                 :show="showDeleteModal"
@@ -1221,7 +1149,9 @@ onMounted(() => {
                     >
                         Are you sure you want to delete
 
-                        <span class="font-semibold text-gray-800 dark:text-gray-200">
+                        <span
+                            class="font-semibold text-gray-800 dark:text-gray-200"
+                        >
                             {{ productToDelete?.name }}
                         </span>
 

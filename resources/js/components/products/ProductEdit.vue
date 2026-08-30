@@ -21,6 +21,7 @@ const error = ref("");
 
 const form = ref({
     name: "",
+    category: "",
     description: "",
     price: "",
     quantity: "",
@@ -55,9 +56,7 @@ async function fetchProduct() {
     error.value = "";
 
     try {
-        const product = await productStore.fetchProduct(
-            route.params.id,
-        );
+        const product = await productStore.fetchProduct(route.params.id);
 
         if (!product) {
             error.value = "Product not found.";
@@ -66,6 +65,7 @@ async function fetchProduct() {
 
         form.value = {
             name: product.name ?? "",
+            category: product.category ?? "",
             description: product.description ?? "",
             price: product.price ?? "",
             quantity: product.quantity ?? "",
@@ -115,18 +115,12 @@ async function submitForm() {
         return;
     }
 
-    if (
-        form.value.price === "" ||
-        Number(form.value.price) < 0
-    ) {
+    if (form.value.price === "" || Number(form.value.price) < 0) {
         error.value = "Please enter a valid price.";
         return;
     }
 
-    if (
-        form.value.quantity === "" ||
-        Number(form.value.quantity) < 0
-    ) {
+    if (form.value.quantity === "" || Number(form.value.quantity) < 0) {
         error.value = "Please enter a valid quantity.";
         return;
     }
@@ -136,48 +130,27 @@ async function submitForm() {
     try {
         const data = new FormData();
 
-        data.append(
-            "name",
-            form.value.name.trim(),
-        );
+        data.append("name", form.value.name.trim());
 
-        data.append(
-            "description",
-            form.value.description?.trim() || "",
-        );
+        data.append("category", form.value.category);
 
-        data.append(
-            "price",
-            String(Number(form.value.price)),
-        );
+        data.append("description", form.value.description?.trim() || "");
 
-        data.append(
-            "quantity",
-            String(Number(form.value.quantity)),
-        );
+        data.append("price", String(Number(form.value.price)));
 
-        data.append(
-            "remove_image",
-            removeImage.value ? "1" : "0",
-        );
+        data.append("quantity", String(Number(form.value.quantity)));
+
+        data.append("remove_image", removeImage.value ? "1" : "0");
 
         if (form.value.image instanceof File) {
-            data.append(
-                "image",
-                form.value.image,
-            );
+            data.append("image", form.value.image);
         }
 
         data.append("_method", "PUT");
 
-        await productStore.updateProduct(
-            route.params.id,
-            data,
-        );
+        await productStore.updateProduct(route.params.id, data);
 
-        toastStore.success(
-            "Product updated successfully.",
-        );
+        toastStore.success("Product updated successfully.");
 
         await router.push({
             name: "products.view",
@@ -197,19 +170,13 @@ async function submitForm() {
         }
 
         if (err.response?.status === 422) {
-            const validationErrors =
-                err.response.data?.errors;
+            const validationErrors = err.response.data?.errors;
 
             if (validationErrors) {
-                error.value = Object.values(
-                    validationErrors,
-                )
-                    .flat()
-                    .join(" ");
+                error.value = Object.values(validationErrors).flat().join(" ");
             } else {
                 error.value =
-                    err.response.data?.message ||
-                    "Validation failed.";
+                    err.response.data?.message || "Validation failed.";
             }
 
             return;
@@ -245,20 +212,13 @@ onMounted(fetchProduct);
     <div class="mx-auto w-full max-w-3xl">
         <!-- Loading -->
 
-        <BaseCard
-            v-if="loading"
-            class="py-16"
-        >
-            <div
-                class="flex flex-col items-center justify-center"
-            >
+        <BaseCard v-if="loading" class="py-16">
+            <div class="flex flex-col items-center justify-center">
                 <div
                     class="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-gray-900 dark:border-gray-700 dark:border-t-white"
                 ></div>
 
-                <p
-                    class="mt-4 text-sm text-gray-500 dark:text-gray-400"
-                >
+                <p class="mt-4 text-sm text-gray-500 dark:text-gray-400">
                     Loading product...
                 </p>
             </div>
@@ -274,9 +234,7 @@ onMounted(fetchProduct);
                     Edit Product
                 </h1>
 
-                <p
-                    class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                >
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                     Update the product information below.
                 </p>
             </div>
@@ -290,9 +248,7 @@ onMounted(fetchProduct);
                 <div
                     class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <div
-                        class="flex items-start gap-3"
-                    >
+                    <div class="flex items-start gap-3">
                         <div
                             class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-600 dark:bg-red-900/40 dark:text-red-400"
                         >
@@ -319,10 +275,7 @@ onMounted(fetchProduct);
             <!-- Form -->
 
             <BaseCard v-else>
-                <form
-                    class="space-y-6"
-                    @submit.prevent="submitForm"
-                >
+                <form class="space-y-6" @submit.prevent="submitForm">
                     <!-- Product name -->
 
                     <div>
@@ -341,6 +294,47 @@ onMounted(fetchProduct);
                             :disabled="saving"
                             class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
                         />
+                    </div>
+                    <!-- Category -->
+
+                    <div>
+                        <label
+                            for="category"
+                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            Category
+                        </label>
+
+                        <select
+                            id="category"
+                            v-model="form.category"
+                            :disabled="saving"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
+                        >
+                            <option value="">Select a category</option>
+
+                            <option value="Electronics">Electronics</option>
+
+                            <option value="Clothing">Clothing</option>
+
+                            <option value="Food & Beverage">
+                                Food & Beverage
+                            </option>
+
+                            <option value="Home & Kitchen">
+                                Home & Kitchen
+                            </option>
+
+                            <option value="Beauty & Personal Care">
+                                Beauty & Personal Care
+                            </option>
+
+                            <option value="Sports">Sports</option>
+
+                            <option value="Books">Books</option>
+
+                            <option value="Other">Other</option>
+                        </select>
                     </div>
 
                     <!-- Description -->
@@ -432,10 +426,7 @@ onMounted(fetchProduct);
                             Cancel
                         </BaseButton>
 
-                        <BaseButton
-                            type="submit"
-                            :loading="saving"
-                        >
+                        <BaseButton type="submit" :loading="saving">
                             Update Product
                         </BaseButton>
                     </div>

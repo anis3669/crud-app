@@ -22,8 +22,6 @@ const error = ref("");
 const showDeleteModal = ref(false);
 const deleting = ref(false);
 
-// Image URL
-
 const imageUrl = computed(() => {
     const image = product.value?.image;
 
@@ -41,8 +39,6 @@ const imageUrl = computed(() => {
 
     return `/storage/${image}`;
 });
-
-// Stock status
 
 const stockStatus = computed(() => {
     if (!product.value) {
@@ -77,7 +73,25 @@ const stockStatus = computed(() => {
     };
 });
 
-// Format price
+const categoryName = computed(() => {
+    if (!product.value) {
+        return "Uncategorized";
+    }
+
+    if (typeof product.value.category === "string") {
+        return product.value.category || "Uncategorized";
+    }
+
+    if (product.value.category?.name) {
+        return product.value.category.name;
+    }
+
+    if (product.value.category_name) {
+        return product.value.category_name;
+    }
+
+    return "Uncategorized";
+});
 
 function formatPrice(price) {
     const amount = Number(price);
@@ -91,8 +105,6 @@ function formatPrice(price) {
         maximumFractionDigits: 2,
     });
 }
-
-// Load product
 
 async function fetchProduct() {
     loading.value = true;
@@ -117,17 +129,15 @@ async function fetchProduct() {
 
         if (err.response?.status === 404) {
             error.value = "Product not found.";
-
             return;
         }
 
-        error.value = err.response?.data?.message || "Failed to load product.";
+        error.value =
+            err.response?.data?.message || "Failed to load product.";
     } finally {
         loading.value = false;
     }
 }
-
-// Navigation
 
 function backToProducts() {
     router.push({
@@ -147,8 +157,6 @@ function editProduct() {
         },
     });
 }
-
-// Delete
 
 function openDeleteModal() {
     if (!product.value) {
@@ -203,16 +211,11 @@ async function confirmDelete() {
     }
 }
 
-// Load
-
 onMounted(fetchProduct);
 </script>
 
 <template>
-    ```
     <div class="mx-auto w-full max-w-4xl">
-        <!-- Loading -->
-
         <BaseCard v-if="loading" class="py-16">
             <div class="flex flex-col items-center justify-center">
                 <div
@@ -224,8 +227,6 @@ onMounted(fetchProduct);
                 </p>
             </div>
         </BaseCard>
-
-        <!-- Error -->
 
         <BaseCard
             v-else-if="error"
@@ -276,11 +277,7 @@ onMounted(fetchProduct);
             </div>
         </BaseCard>
 
-        <!-- Product -->
-
         <template v-else-if="product">
-            <!-- Back -->
-
             <div class="mb-6">
                 <button
                     type="button"
@@ -304,8 +301,6 @@ onMounted(fetchProduct);
                     Back to Products
                 </button>
             </div>
-
-            <!-- Header -->
 
             <div
                 class="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"
@@ -348,6 +343,16 @@ onMounted(fetchProduct);
                             </span>
 
                             <span
+                                class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                                {{ categoryName }}
+                            </span>
+
+                            <span class="text-gray-300 dark:text-gray-700">
+                                •
+                            </span>
+
+                            <span
                                 v-if="stockStatus"
                                 :class="stockStatus.wrapper"
                                 class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold"
@@ -362,8 +367,6 @@ onMounted(fetchProduct);
                         </div>
                     </div>
                 </div>
-
-                <!-- Actions -->
 
                 <div class="flex shrink-0 items-center gap-3">
                     <BaseButton
@@ -384,11 +387,7 @@ onMounted(fetchProduct);
                 </div>
             </div>
 
-            <!-- Product Information -->
-
             <BaseCard class="overflow-hidden p-0">
-                <!-- Image -->
-
                 <div
                     class="flex min-h-[350px] items-center justify-center border-b border-gray-100 bg-gray-50 p-6 dark:border-gray-800 dark:bg-gray-950"
                 >
@@ -407,8 +406,6 @@ onMounted(fetchProduct);
                     </div>
                 </div>
 
-                <!-- Description -->
-
                 <div
                     class="border-b border-gray-100 px-6 py-6 dark:border-gray-800"
                 >
@@ -425,12 +422,22 @@ onMounted(fetchProduct);
                     </p>
                 </div>
 
-                <!-- Information -->
-
                 <div
-                    class="grid gap-px bg-gray-100 dark:bg-gray-800 sm:grid-cols-2"
+                    class="grid gap-px bg-gray-100 dark:bg-gray-700 sm:grid-cols-2"
                 >
-                    <!-- Price -->
+                    <div class="bg-white px-6 py-6 dark:bg-gray-900">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                        >
+                            Category
+                        </p>
+
+                        <p
+                            class="mt-2 text-base font-semibold text-gray-900 dark:text-white"
+                        >
+                            {{ categoryName }}
+                        </p>
+                    </div>
 
                     <div class="bg-white px-6 py-6 dark:bg-gray-900">
                         <p
@@ -442,12 +449,9 @@ onMounted(fetchProduct);
                         <p
                             class="mt-2 text-2xl font-bold text-gray-900 dark:text-white"
                         >
-                            Rs.
-                            {{ formatPrice(product.price) }}
+                            Rs. {{ formatPrice(product.price) }}
                         </p>
                     </div>
-
-                    <!-- Quantity -->
 
                     <div class="bg-white px-6 py-6 dark:bg-gray-900">
                         <p
@@ -462,8 +466,6 @@ onMounted(fetchProduct);
                             {{ product.quantity }}
                         </p>
                     </div>
-
-                    <!-- Stock Status -->
 
                     <div
                         class="bg-white px-6 py-6 dark:bg-gray-900 sm:col-span-2"
@@ -490,8 +492,6 @@ onMounted(fetchProduct);
                 </div>
             </BaseCard>
         </template>
-
-        <!-- Delete Modal -->
 
         <BaseModal
             :show="showDeleteModal"
@@ -563,5 +563,4 @@ onMounted(fetchProduct);
             </template>
         </BaseModal>
     </div>
-    ```
 </template>

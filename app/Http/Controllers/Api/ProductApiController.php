@@ -159,6 +159,7 @@ class ProductApiController extends Controller
                 'string',
                 'max:255',
             ],
+            'category' => 'nullable|string|max:100',
 
             'description' => [
                 'nullable',
@@ -217,6 +218,11 @@ class ProductApiController extends Controller
                 'string',
                 'max:255',
             ],
+            'category' => [
+                'nullable',
+                'string',
+                'max:100',
+            ],
 
             'description' => [
                 'nullable',
@@ -248,6 +254,7 @@ class ProductApiController extends Controller
         ]);
 
         $product->name = $validated['name'];
+        $product->category = $validated['category'] ?? null;
 
         $product->description =
             $validated['description'] ?? null;
@@ -355,7 +362,7 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' =>
-                'Selected products deleted successfully.',
+            'Selected products deleted successfully.',
 
             'deleted_count' => $deletedCount,
         ]);
@@ -483,11 +490,10 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' =>
-                'Selected products updated successfully.',
+            'Selected products updated successfully.',
 
             'products' =>
-                $updatedProducts,
+            $updatedProducts,
         ]);
     }
 }
-
