@@ -311,16 +311,10 @@ class ProductApiController extends Controller
 
     public function destroy(Product $product)
     {
-        $image = $product->image;
-
         $product->delete();
 
-        if ($image) {
-            Storage::disk('public')->delete($image);
-        }
-
         return response()->json([
-            'message' => 'Product deleted successfully.',
+            'message' => 'Product moved to trash successfully.',
         ]);
     }
 
@@ -342,32 +336,16 @@ class ProductApiController extends Controller
             ],
         ]);
 
-        $products = Product::whereIn(
-            'id',
-            $validated['ids']
-        )->get();
-
         $deletedCount = Product::whereIn(
             'id',
             $validated['ids']
         )->delete();
 
-        foreach ($products as $product) {
-            if ($product->image) {
-                Storage::disk('public')->delete(
-                    $product->image
-                );
-            }
-        }
-
         return response()->json([
-            'message' =>
-            'Selected products deleted successfully.',
-
+            'message' => 'Selected products moved to trash successfully.',
             'deleted_count' => $deletedCount,
         ]);
     }
-
     // Bulk update
 
     public function bulkUpdate(Request $request)
@@ -495,5 +473,45 @@ class ProductApiController extends Controller
             'products' =>
             $updatedProducts,
         ]);
+    }
+
+    // restore product from trash
+    public function restore($id)
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+
+        $product->restore();
+
+        return response()->json([
+            'message' => 'Product restored successfully.',
+            'product' => $product,
+        ]);
+    }
+
+    // permanent delete
+    public function forceDelete($id)
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+
+        if ($product->image) {
+            Storage::disk('public')->delete($product->image);
+        }
+
+        $product->forceDelete();
+
+        return response()->json([
+            'message' => 'Product permanently deleted.',
+        ]);
+    }
+    // trash products
+    public function trash(Request $request)
+    {
+        $perPage = $request->input('per_page', 10);
+
+        $products = Product::onlyTrashed()
+            ->latest('deleted_at')
+            ->paginate($perPage);
+
+        return response()->json($products);
     }
 }

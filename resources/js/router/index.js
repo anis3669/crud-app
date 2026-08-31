@@ -16,6 +16,7 @@ import ProductEdit from "../components/products/ProductEdit.vue";
 import BulkEdit from "../components/products/BulkEdit.vue";
 import Profile from "../components/profile/Profile.vue";
 import Dashboard from "../components/dashboard/Dashboard.vue";
+import Trash from "../components/products/Trash.vue";
 
 const routes = [
     // ==============================
@@ -105,6 +106,15 @@ const routes = [
                 path: "dashboard",
                 name: "dashboard",
                 component: Dashboard,
+            },
+            // trash
+            {
+                path: "/trash",
+                name: "trash",
+                component: Trash,
+                meta: {
+                    requiresAuth: true,
+                },
             },
         ],
     },

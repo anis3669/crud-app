@@ -367,9 +367,7 @@ onMounted(() => {
     <div
         class="min-h-[calc(100vh-4rem)] bg-gray-50 transition-colors duration-300 dark:bg-gray-950"
     >
-        <div
-            class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
-        >
+        <div class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
             <div class="mb-6">
                 <div
                     class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900 sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between"
@@ -458,6 +456,28 @@ onMounted(() => {
                             </svg>
 
                             <span>Add Product</span>
+                        </BaseButton>
+                        <!-- trash button -->
+                        <BaseButton
+                            type="button"
+                            variant="secondary"
+                            @click="router.push({ name: 'trash' })"
+                        >
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-9 0h12"
+                                />
+                            </svg>
+
+                            <span>Trash</span>
                         </BaseButton>
                     </div>
                 </div>
@@ -731,25 +751,15 @@ onMounted(() => {
                                     class="h-10 min-w-[150px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:border-gray-500 dark:focus:ring-gray-700/50"
                                     @change="changeFilter"
                                 >
-                                    <option value="all">
-                                        All Products
-                                    </option>
+                                    <option value="all">All Products</option>
 
-                                    <option value="latest">
-                                        Latest Added
-                                    </option>
+                                    <option value="latest">Latest Added</option>
 
-                                    <option value="oldest">
-                                        Oldest Added
-                                    </option>
+                                    <option value="oldest">Oldest Added</option>
 
-                                    <option value="in_stock">
-                                        In Stock
-                                    </option>
+                                    <option value="in_stock">In Stock</option>
 
-                                    <option value="low_stock">
-                                        Low Stock
-                                    </option>
+                                    <option value="low_stock">Low Stock</option>
 
                                     <option value="out_of_stock">
                                         Out of Stock
@@ -931,10 +941,7 @@ onMounted(() => {
                 </div>
             </BaseCard>
 
-            <BaseCard
-                v-if="loading && products.length === 0"
-                class="py-20"
-            >
+            <BaseCard v-if="loading && products.length === 0" class="py-20">
                 <div class="flex flex-col items-center justify-center">
                     <div
                         class="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"
