@@ -19,14 +19,23 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'auth.custom' => \App\Http\Middleware\AuthMiddleware::class,
         ]);
+
+        // Prevent Laravel from redirecting API guests
+        // to a named login route.
+        $middleware->redirectGuestsTo(function ($request) {
+            if ($request->is('api/*')) {
+                return null;
+            }
+
+            return '/login';
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
 
-        // Do not redirect unauthenticated API requests
-        // to a Laravel "login" route.
+        // Always return JSON for API requests
         $exceptions->shouldRenderJsonWhen(function ($request, $input) {
-            return $request->is('api/*') || $request->expectsJson();
+            return $request->is('api/*') ||
+                $request->expectsJson();
         });
-
     })
     ->create();
