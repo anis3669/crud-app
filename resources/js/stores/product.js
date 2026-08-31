@@ -38,6 +38,59 @@ export const useProductStore = defineStore("product", {
     }),
 
     actions: {
+        // Get normal error message
+        getErrorMessage(error, fallback = "Something went wrong.") {
+            const status = error.response?.status;
+            const responseMessage =
+                error.response?.data?.message;
+
+            if (!error.response) {
+                return "Unable to connect to the server. Please check your connection.";
+            }
+
+            switch (status) {
+                case 401:
+                    return "Your session has expired. Please login again.";
+
+                case 403:
+                    return "You are not authorized to perform this action.";
+
+                case 404:
+                    return "The requested resource was not found.";
+
+                case 409:
+                    return (
+                        responseMessage ||
+                        "This action could not be completed because of a conflict."
+                    );
+
+                case 422:
+                    return (
+                        responseMessage ||
+                        "Please check the entered information."
+                    );
+
+                case 429:
+                    return "Too many requests. Please try again later.";
+
+                case 500:
+                    return "A server error occurred. Please try again.";
+
+                case 502:
+                case 503:
+                case 504:
+                    return "The server is temporarily unavailable. Please try again later.";
+
+                default:
+                    return responseMessage || fallback;
+            }
+        },
+
+        // Get validation errors
+        getValidationErrors(error) {
+            return error.response?.data?.errors || {};
+        },
+
         // Fetch products
         async fetchProducts(
             page = 1,
@@ -50,22 +103,23 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const params = {
-                    page,
-                    search,
-                    filter,
-                    min_price: minPrice,
-                    max_price: maxPrice,
-                    per_page: this.perPage,
-                };
-
-                const response = await axios.get("/api/products", {
-                    params,
-                });
+                const response = await axios.get(
+                    "/api/products",
+                    {
+                        params: {
+                            page,
+                            search,
+                            filter,
+                            min_price: minPrice,
+                            max_price: maxPrice,
+                            per_page: this.perPage,
+                        },
+                    },
+                );
 
                 const data = response.data;
 
-                // Laravel controller returns products.data
+                // Read Laravel paginator
                 if (
                     data?.products &&
                     Array.isArray(data.products.data)
@@ -79,55 +133,19 @@ export const useProductStore = defineStore("product", {
                         data.products.last_page || 1;
 
                     this.total =
-                        data.products.total ||
-                        this.products.length;
+                        data.products.total || 0;
 
                     this.perPage =
                         data.products.per_page ||
                         this.perPage;
-                }
-
-                // Support direct paginated response
-                else if (
-                    data &&
-                    Array.isArray(data.data)
-                ) {
-                    this.products = data.data;
-
-                    this.currentPage =
-                        data.current_page || 1;
-
-                    this.lastPage =
-                        data.last_page || 1;
-
-                    this.total =
-                        data.total ||
-                        this.products.length;
-
-                    this.perPage =
-                        data.per_page ||
-                        this.perPage;
-                }
-
-                // Support normal array response
-                else if (Array.isArray(data)) {
-                    this.products = data;
-
-                    this.currentPage = 1;
-                    this.lastPage = 1;
-                    this.total = data.length;
-                }
-
-                // Empty response
-                else {
+                } else {
                     this.products = [];
-
                     this.currentPage = 1;
                     this.lastPage = 1;
                     this.total = 0;
                 }
 
-                // Update statistics
+                // Update inventory statistics
                 if (data?.stats) {
                     this.stats = {
                         total_products:
@@ -155,14 +173,10 @@ export const useProductStore = defineStore("product", {
 
                 return data;
             } catch (error) {
-                if (error.response?.status === 401) {
-                    this.error =
-                        "Unauthorized. Please login again.";
-                } else {
-                    this.error =
-                        error.response?.data?.message ||
-                        "Failed to load products.";
-                }
+                this.error = this.getErrorMessage(
+                    error,
+                    "Failed to load products.",
+                );
 
                 throw error;
             } finally {
@@ -187,9 +201,14 @@ export const useProductStore = defineStore("product", {
 
                 return this.product;
             } catch (error) {
-                this.error =
-                    error.response?.data?.message ||
-                    "Failed to load product.";
+                if (error.response?.status === 404) {
+                    this.error = "Product not found.";
+                } else {
+                    this.error = this.getErrorMessage(
+                        error,
+                        "Failed to load product.",
+                    );
+                }
 
                 throw error;
             } finally {
@@ -219,9 +238,10 @@ export const useProductStore = defineStore("product", {
 
                 return response.data;
             } catch (error) {
-                this.error =
-                    error.response?.data?.message ||
-                    "Failed to create product.";
+                this.error = this.getErrorMessage(
+                    error,
+                    "Failed to create product.",
+                );
 
                 throw error;
             } finally {
@@ -249,8 +269,12 @@ export const useProductStore = defineStore("product", {
                         product.id === productId,
                 );
 
-                if (index !== -1 && updatedProduct) {
-                    this.products[index] = updatedProduct;
+                if (
+                    index !== -1 &&
+                    updatedProduct
+                ) {
+                    this.products[index] =
+                        updatedProduct;
                 }
 
                 if (
@@ -263,9 +287,14 @@ export const useProductStore = defineStore("product", {
 
                 return response.data;
             } catch (error) {
-                this.error =
-                    error.response?.data?.message ||
-                    "Failed to update product.";
+                if (error.response?.status === 404) {
+                    this.error = "Product not found.";
+                } else {
+                    this.error = this.getErrorMessage(
+                        error,
+                        "Failed to update product.",
+                    );
+                }
 
                 throw error;
             } finally {
@@ -283,10 +312,11 @@ export const useProductStore = defineStore("product", {
                     `/api/products/${productId}`,
                 );
 
-                this.products = this.products.filter(
-                    (product) =>
-                        product.id !== productId,
-                );
+                this.products =
+                    this.products.filter(
+                        (product) =>
+                            product.id !== productId,
+                    );
 
                 this.total = Math.max(
                     0,
@@ -295,9 +325,14 @@ export const useProductStore = defineStore("product", {
 
                 return response.data;
             } catch (error) {
-                this.error =
-                    error.response?.data?.message ||
-                    "Failed to delete product.";
+                if (error.response?.status === 404) {
+                    this.error = "Product not found.";
+                } else {
+                    this.error = this.getErrorMessage(
+                        error,
+                        "Failed to delete product.",
+                    );
+                }
 
                 throw error;
             } finally {
@@ -318,6 +353,13 @@ export const useProductStore = defineStore("product", {
                             : product,
                 );
 
+                if (!ids.length) {
+                    this.error =
+                        "Please select at least one product.";
+
+                    return;
+                }
+
                 const response = await axios.delete(
                     "/api/products/bulk-delete",
                     {
@@ -327,10 +369,11 @@ export const useProductStore = defineStore("product", {
                     },
                 );
 
-                this.products = this.products.filter(
-                    (product) =>
-                        !ids.includes(product.id),
-                );
+                this.products =
+                    this.products.filter(
+                        (product) =>
+                            !ids.includes(product.id),
+                    );
 
                 this.total = Math.max(
                     0,
@@ -339,9 +382,10 @@ export const useProductStore = defineStore("product", {
 
                 return response.data;
             } catch (error) {
-                this.error =
-                    error.response?.data?.message ||
-                    "Failed to delete products.";
+                this.error = this.getErrorMessage(
+                    error,
+                    "Failed to delete products.",
+                );
 
                 throw error;
             } finally {
@@ -370,9 +414,10 @@ export const useProductStore = defineStore("product", {
 
                 return response.data;
             } catch (error) {
-                this.error =
-                    error.response?.data?.message ||
-                    "Failed to update products.";
+                this.error = this.getErrorMessage(
+                    error,
+                    "Failed to update products.",
+                );
 
                 throw error;
             } finally {
@@ -445,7 +490,7 @@ export const useProductStore = defineStore("product", {
 
                 const data = response.data;
 
-                // Laravel paginator response
+                // Read Laravel paginator
                 if (
                     data &&
                     Array.isArray(data.data)
@@ -459,27 +504,13 @@ export const useProductStore = defineStore("product", {
                         data.last_page || 1;
 
                     this.trashTotal =
-                        data.total ||
-                        this.trash.length;
+                        data.total || 0;
 
                     this.trashPerPage =
                         data.per_page ||
                         this.trashPerPage;
-                }
-
-                // Normal array response
-                else if (Array.isArray(data)) {
-                    this.trash = data;
-
-                    this.trashCurrentPage = 1;
-                    this.trashLastPage = 1;
-                    this.trashTotal = data.length;
-                }
-
-                // Empty response
-                else {
+                } else {
                     this.trash = [];
-
                     this.trashCurrentPage = 1;
                     this.trashLastPage = 1;
                     this.trashTotal = 0;
@@ -487,9 +518,10 @@ export const useProductStore = defineStore("product", {
 
                 return data;
             } catch (error) {
-                this.trashError =
-                    error.response?.data?.message ||
-                    "Failed to load trash.";
+                this.trashError = this.getErrorMessage(
+                    error,
+                    "Failed to load trash.",
+                );
 
                 throw error;
             } finally {
@@ -507,10 +539,11 @@ export const useProductStore = defineStore("product", {
                     `/api/trash/${productId}/restore`,
                 );
 
-                this.trash = this.trash.filter(
-                    (product) =>
-                        product.id !== productId,
-                );
+                this.trash =
+                    this.trash.filter(
+                        (product) =>
+                            product.id !== productId,
+                    );
 
                 this.trashTotal = Math.max(
                     0,
@@ -519,9 +552,16 @@ export const useProductStore = defineStore("product", {
 
                 return response.data;
             } catch (error) {
-                this.trashError =
-                    error.response?.data?.message ||
-                    "Failed to restore product.";
+                if (error.response?.status === 404) {
+                    this.trashError =
+                        "Deleted product not found.";
+                } else {
+                    this.trashError =
+                        this.getErrorMessage(
+                            error,
+                            "Failed to restore product.",
+                        );
+                }
 
                 throw error;
             } finally {
@@ -541,10 +581,11 @@ export const useProductStore = defineStore("product", {
                     `/api/trash/${productId}`,
                 );
 
-                this.trash = this.trash.filter(
-                    (product) =>
-                        product.id !== productId,
-                );
+                this.trash =
+                    this.trash.filter(
+                        (product) =>
+                            product.id !== productId,
+                    );
 
                 this.trashTotal = Math.max(
                     0,
@@ -553,9 +594,16 @@ export const useProductStore = defineStore("product", {
 
                 return response.data;
             } catch (error) {
-                this.trashError =
-                    error.response?.data?.message ||
-                    "Failed to permanently delete product.";
+                if (error.response?.status === 404) {
+                    this.trashError =
+                        "Deleted product not found.";
+                } else {
+                    this.trashError =
+                        this.getErrorMessage(
+                            error,
+                            "Failed to permanently delete product.",
+                        );
+                }
 
                 throw error;
             } finally {
@@ -576,16 +624,24 @@ export const useProductStore = defineStore("product", {
                             : product,
                 );
 
+                if (!ids.length) {
+                    this.trashError =
+                        "Please select at least one product.";
+
+                    return;
+                }
+
                 for (const id of ids) {
                     await axios.post(
                         `/api/trash/${id}/restore`,
                     );
                 }
 
-                this.trash = this.trash.filter(
-                    (product) =>
-                        !ids.includes(product.id),
-                );
+                this.trash =
+                    this.trash.filter(
+                        (product) =>
+                            !ids.includes(product.id),
+                    );
 
                 this.trashTotal = Math.max(
                     0,
@@ -594,9 +650,10 @@ export const useProductStore = defineStore("product", {
 
                 return true;
             } catch (error) {
-                this.trashError =
-                    error.response?.data?.message ||
-                    "Failed to restore products.";
+                this.trashError = this.getErrorMessage(
+                    error,
+                    "Failed to restore products.",
+                );
 
                 throw error;
             } finally {
@@ -619,16 +676,24 @@ export const useProductStore = defineStore("product", {
                             : product,
                 );
 
+                if (!ids.length) {
+                    this.trashError =
+                        "Please select at least one product.";
+
+                    return;
+                }
+
                 for (const id of ids) {
                     await axios.delete(
                         `/api/trash/${id}`,
                     );
                 }
 
-                this.trash = this.trash.filter(
-                    (product) =>
-                        !ids.includes(product.id),
-                );
+                this.trash =
+                    this.trash.filter(
+                        (product) =>
+                            !ids.includes(product.id),
+                    );
 
                 this.trashTotal = Math.max(
                     0,
@@ -638,8 +703,10 @@ export const useProductStore = defineStore("product", {
                 return true;
             } catch (error) {
                 this.trashError =
-                    error.response?.data?.message ||
-                    "Failed to permanently delete products.";
+                    this.getErrorMessage(
+                        error,
+                        "Failed to permanently delete products.",
+                    );
 
                 throw error;
             } finally {

@@ -63,7 +63,10 @@ function toggleProfileMenu() {
 }
 
 function closeProfileMenu(event) {
-    if (profileMenuRef.value && !profileMenuRef.value.contains(event.target)) {
+    if (
+        profileMenuRef.value &&
+        !profileMenuRef.value.contains(event.target)
+    ) {
         showProfileMenu.value = false;
     }
 }
@@ -201,12 +204,17 @@ onBeforeUnmount(() => {
                     Products
                 </button>
 
-                <!-- Theme -->
+                <!-- Desktop Theme -->
 
                 <button
                     type="button"
                     class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
                     :aria-label="
+                        themeStore.dark
+                            ? 'Switch to light mode'
+                            : 'Switch to dark mode'
+                    "
+                    :title="
                         themeStore.dark
                             ? 'Switch to light mode'
                             : 'Switch to dark mode'
@@ -272,6 +280,54 @@ onBeforeUnmount(() => {
                     </svg>
                 </button>
 
+                <!-- Mobile Theme -->
+
+                <button
+                    type="button"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white md:hidden"
+                    :aria-label="
+                        themeStore.dark
+                            ? 'Switch to light mode'
+                            : 'Switch to dark mode'
+                    "
+                    :title="
+                        themeStore.dark
+                            ? 'Switch to light mode'
+                            : 'Switch to dark mode'
+                    "
+                    @click="themeStore.toggleTheme"
+                >
+                    <svg
+                        v-if="themeStore.dark"
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M12 3v1.5M12 19.5V21M4.22 4.22l1.06 1.06M18.72 18.72l1.06 1.06M3 12h1.5M19.5 12H21M4.22 19.78l1.06-1.06M18.72 5.28l1.06-1.06M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
+                        />
+                    </svg>
+
+                    <svg
+                        v-else
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z"
+                        />
+                    </svg>
+                </button>
+
                 <!-- Divider -->
 
                 <div
@@ -291,9 +347,15 @@ onBeforeUnmount(() => {
                             class="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-900 ring-2 ring-white shadow-sm dark:bg-white dark:ring-gray-950"
                         >
                             <img
-                                v-if="authStore.user?.profile_picture_url"
-                                :src="authStore.user.profile_picture_url"
-                                :alt="authStore.user?.name || 'User'"
+                                v-if="
+                                    authStore.user?.profile_picture_url
+                                "
+                                :src="
+                                    authStore.user.profile_picture_url
+                                "
+                                :alt="
+                                    authStore.user?.name || 'User'
+                                "
                                 class="h-full w-full object-cover"
                             />
 
@@ -309,7 +371,9 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <div class="hidden max-w-[150px] text-left lg:block">
+                        <div
+                            class="hidden max-w-[150px] text-left lg:block"
+                        >
                             <p
                                 class="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-white"
                             >
@@ -374,7 +438,8 @@ onBeforeUnmount(() => {
                                                     .profile_picture_url
                                             "
                                             :alt="
-                                                authStore.user?.name || 'User'
+                                                authStore.user?.name ||
+                                                'User'
                                             "
                                             class="h-full w-full object-cover"
                                         />
@@ -395,13 +460,19 @@ onBeforeUnmount(() => {
                                         <p
                                             class="truncate text-sm font-semibold text-gray-900 dark:text-white"
                                         >
-                                            {{ authStore.user?.name || "User" }}
+                                            {{
+                                                authStore.user?.name ||
+                                                "User"
+                                            }}
                                         </p>
 
                                         <p
                                             class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
                                         >
-                                            {{ authStore.user?.email || "" }}
+                                            {{
+                                                authStore.user?.email ||
+                                                ""
+                                            }}
                                         </p>
                                     </div>
                                 </div>
@@ -410,6 +481,8 @@ onBeforeUnmount(() => {
                             <!-- Dropdown Actions -->
 
                             <div class="p-2">
+                                <!-- Dashboard -->
+
                                 <button
                                     type="button"
                                     @click="goToDashboard"
@@ -443,7 +516,9 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">Dashboard</span>
+                                    <span class="flex-1">
+                                        Dashboard
+                                    </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -459,6 +534,8 @@ onBeforeUnmount(() => {
                                         />
                                     </svg>
                                 </button>
+
+                                <!-- Products -->
 
                                 <button
                                     type="button"
@@ -488,7 +565,9 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">Products</span>
+                                    <span class="flex-1">
+                                        Products
+                                    </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -504,6 +583,8 @@ onBeforeUnmount(() => {
                                         />
                                     </svg>
                                 </button>
+
+                                <!-- Profile -->
 
                                 <button
                                     type="button"
@@ -528,7 +609,9 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">Profile</span>
+                                    <span class="flex-1">
+                                        Profile
+                                    </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -545,7 +628,13 @@ onBeforeUnmount(() => {
                                     </svg>
                                 </button>
 
-                                <div class="my-2 h-px bg-gray-100 dark:bg-gray-800"></div>
+                                <!-- Divider -->
+
+                                <div
+                                    class="my-2 h-px bg-gray-100 dark:bg-gray-800"
+                                ></div>
+
+                                <!-- Logout -->
 
                                 <button
                                     type="button"
@@ -570,7 +659,9 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">Logout</span>
+                                    <span class="flex-1">
+                                        Logout
+                                    </span>
                                 </button>
                             </div>
                         </div>
