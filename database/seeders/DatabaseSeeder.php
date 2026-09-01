@@ -12,17 +12,22 @@ class DatabaseSeeder extends Seeder
     {
         // Create login user
         User::updateOrCreate(
-    [
-        'email' => 'anisbastola@gmail.com',
-    ],
-    [
-        'name' => 'Test User',
-        'password' => Hash::make('password'),
-    ]
-);
+            [
+                'email' => 'anisbastola@gmail.com',
+            ],
+            [
+                'name' => 'Test User',
+                'password' => Hash::make('password'),
+            ]
+        );
         // Create random products
         $this->call([
             ProductSeeder::class,
+        ]);
+
+        $this->call([
+            PermissionSeeder::class,
+            RolePermissionSeeder::class,
         ]);
     }
 }
