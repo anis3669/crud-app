@@ -5,23 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Supplier extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         'name',
-        'contact_person',
+        'company_name',
         'email',
         'phone',
         'address',
-        'tax_number',
     ];
 
     /**
-     * A supplier can provide many products.
+     * A supplier can have many products.
      */
     public function products(): HasMany
     {
