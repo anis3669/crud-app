@@ -5,6 +5,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\ProductApiController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Api\CategoryApiController;
+use App\Http\Controllers\Api\SupplierApiController;
 
 // Authentication
 Route::post('/login', [AuthController::class, 'apiLogin']);
@@ -53,4 +55,36 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:products.update');
     Route::delete('/trash/{id}', [ProductApiController::class, 'forceDelete'])
         ->middleware('permission:products.delete');
+
+    // Categories
+    Route::get('/categories', [CategoryApiController::class, 'index'])
+        ->middleware('permission:categories.view');
+
+    Route::post('/categories', [CategoryApiController::class, 'store'])
+        ->middleware('permission:categories.create');
+
+    Route::get('/categories/{category}', [CategoryApiController::class, 'show'])
+        ->middleware('permission:categories.view');
+
+    Route::put('/categories/{category}', [CategoryApiController::class, 'update'])
+        ->middleware('permission:categories.update');
+
+    Route::delete('/categories/{category}', [CategoryApiController::class, 'destroy'])
+        ->middleware('permission:categories.delete');
+
+    // Suppliers
+    Route::get('/suppliers', [SupplierApiController::class, 'index'])
+        ->middleware('permission:suppliers.view');
+
+    Route::post('/suppliers', [SupplierApiController::class, 'store'])
+        ->middleware('permission:suppliers.create');
+
+    Route::get('/suppliers/{supplier}', [SupplierApiController::class, 'show'])
+        ->middleware('permission:suppliers.view');
+
+    Route::put('/suppliers/{supplier}', [SupplierApiController::class, 'update'])
+        ->middleware('permission:suppliers.update');
+
+    Route::delete('/suppliers/{supplier}', [SupplierApiController::class, 'destroy'])
+        ->middleware('permission:suppliers.delete');
 });
