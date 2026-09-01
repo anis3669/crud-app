@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class User extends Authenticatable
 {
@@ -19,6 +20,7 @@ class User extends Authenticatable
         'email',
         'password',
         'profile_picture',
+        'role_id',
     ];
 
     protected $hidden = [
@@ -50,5 +52,53 @@ class User extends Authenticatable
         return Storage::disk('public')->url(
             $this->profile_picture
         );
+    }
+
+    /**
+     * User belongs to a role.
+     */
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+    /**
+     * Check if the user's role has a specific permission.
+     */
+    public function hasPermission(string $permission): bool
+    {
+        return $this->role
+            ? $this->role->permissions()
+            ->where('slug', $permission)
+            ->where('is_active', true)
+            ->exists()
+            : false;
+    }
+
+    /**
+     * Check if the user has at least one of the given permissions.
+     */
+    public function hasAnyPermission(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if ($this->hasPermission($permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if the user has all of the given permissions.
+     */
+    public function hasAllPermissions(array $permissions): bool
+    {
+        foreach ($permissions as $permission) {
+            if (!$this->hasPermission($permission)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

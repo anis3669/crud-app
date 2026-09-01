@@ -29,20 +29,28 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete(
         '/products/bulk-delete',
         [ProductApiController::class, 'bulkDelete']
-    );
+    )->middleware('permission:products.delete');
 
     Route::post(
         '/products/bulk-update',
         [ProductApiController::class, 'bulkUpdate']
-    );
+    )->middleware('permission:products.update');
 
     // Products
-    Route::get('/products', [ProductApiController::class, 'index']);
-    Route::post('/products', [ProductApiController::class, 'store']);
-    Route::get('/products/{product}', [ProductApiController::class, 'show']);
-    Route::put('/products/{product}', [ProductApiController::class, 'update']);
-    Route::delete('/products/{product}', [ProductApiController::class, 'destroy']);
-    Route::get('/trash', [ProductApiController::class, 'trash']);
-    Route::post('/trash/{id}/restore', [ProductApiController::class, 'restore']);
-    Route::delete('/trash/{id}', [ProductApiController::class, 'forceDelete']);
+    Route::get('/products', [ProductApiController::class, 'index'])
+        ->middleware('permission:products.view');
+    Route::post('/products', [ProductApiController::class, 'store'])
+        ->middleware('permission:products.create');
+    Route::get('/products/{product}', [ProductApiController::class, 'show'])
+        ->middleware('permission:products.view');
+    Route::put('/products/{product}', [ProductApiController::class, 'update'])
+        ->middleware('permission:products.update');
+    Route::delete('/products/{product}', [ProductApiController::class, 'destroy'])
+        ->middleware('permission:products.delete');
+    Route::get('/trash', [ProductApiController::class, 'trash'])
+        ->middleware('permission:products.delete');
+    Route::post('/trash/{id}/restore', [ProductApiController::class, 'restore'])
+        ->middleware('permission:products.update');
+    Route::delete('/trash/{id}', [ProductApiController::class, 'forceDelete'])
+        ->middleware('permission:products.delete');
 });
