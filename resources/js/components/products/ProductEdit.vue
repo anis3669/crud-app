@@ -1,8 +1,11 @@
 <script setup>
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { storeToRefs } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 
 import { useProductStore } from "../../stores/product";
+import { useCategoryStore } from "../../stores/category";
+import { useSupplierStore } from "../../stores/supplier";
 import { useToastStore } from "../../stores/toast";
 
 import BaseButton from "../common/BaseButton.vue";
@@ -13,27 +16,39 @@ const route = useRoute();
 const router = useRouter();
 
 const productStore = useProductStore();
+const categoryStore = useCategoryStore();
+const supplierStore = useSupplierStore();
 const toastStore = useToastStore();
 
-const loading = ref(true);
-const saving = ref(false);
-const error = ref("");
+const { categories } = storeToRefs(categoryStore);
+const { suppliers } = storeToRefs(supplierStore);
+
+// Form
 
 const form = ref({
     name: "",
-    category: "",
+    sku: "",
+    category_id: "",
+    supplier_id: "",
     description: "",
     price: "",
     quantity: "",
     image: null,
 });
 
-const existingImage = ref(null);
+// State
+
+const loading = ref(true);
+const saving = ref(false);
+const loadingFormData = ref(false);
+const error = ref("");
 const removeImage = ref(false);
 
-// Image URL
+const productId = computed(() => route.params.id);
 
-function getImageUrl(image) {
+const imageUrl = computed(() => {
+    const image = productStore.product?.image;
+
     if (!image) {
         return null;
     }
@@ -47,16 +62,21 @@ function getImageUrl(image) {
     }
 
     return `/storage/${image}`;
-}
+});
 
-// Load product
+// Load product, categories and suppliers
 
-async function fetchProduct() {
+async function loadData() {
     loading.value = true;
+    loadingFormData.value = true;
     error.value = "";
 
     try {
-        const product = await productStore.fetchProduct(route.params.id);
+        const [product] = await Promise.all([
+            productStore.fetchProduct(productId.value),
+            categoryStore.fetchCategories(),
+            supplierStore.fetchSuppliers(),
+        ]);
 
         if (!product) {
             error.value = "Product not found.";
@@ -65,20 +85,19 @@ async function fetchProduct() {
 
         form.value = {
             name: product.name ?? "",
-            category: product.category ?? "",
+            sku: product.sku ?? "",
+            category_id: product.category_id ?? product.category?.id ?? "",
+            supplier_id: product.supplier_id ?? product.supplier?.id ?? "",
             description: product.description ?? "",
             price: product.price ?? "",
             quantity: product.quantity ?? "",
             image: null,
         };
-
-        existingImage.value = getImageUrl(product.image);
-        removeImage.value = false;
     } catch (err) {
         console.error("Failed to load product:", err);
 
         if (err.response?.status === 401) {
-            router.push({
+            await router.push({
                 name: "login",
             });
 
@@ -90,82 +109,106 @@ async function fetchProduct() {
             return;
         }
 
-        error.value =
-            err.response?.data?.message ||
-            err.message ||
-            "Failed to load product.";
+        error.value = err.response?.data?.message || "Failed to load product.";
     } finally {
         loading.value = false;
+        loadingFormData.value = false;
     }
 }
 
-// Remove existing image
+// Validation
 
-function handleRemoveExistingImage() {
-    removeImage.value = true;
-}
-
-// Submit form
-
-async function submitForm() {
-    error.value = "";
-
+function validateForm() {
     if (!form.value.name.trim()) {
         error.value = "Please enter a product name.";
-        return;
+        return false;
+    }
+
+    if (!form.value.sku.trim()) {
+        error.value = "Please enter a SKU.";
+        return false;
+    }
+
+    if (!form.value.category_id) {
+        error.value = "Please select a category.";
+        return false;
+    }
+
+    if (!form.value.supplier_id) {
+        error.value = "Please select a supplier.";
+        return false;
     }
 
     if (form.value.price === "" || Number(form.value.price) < 0) {
         error.value = "Please enter a valid price.";
-        return;
+        return false;
     }
 
-    if (form.value.quantity === "" || Number(form.value.quantity) < 0) {
-        error.value = "Please enter a valid quantity.";
+    if (
+        form.value.quantity === "" ||
+        Number(form.value.quantity) < 0 ||
+        !Number.isInteger(Number(form.value.quantity))
+    ) {
+        error.value = "Please enter a valid whole-number quantity.";
+        return false;
+    }
+
+    return true;
+}
+
+// Update product
+
+async function submitForm() {
+    error.value = "";
+
+    if (!validateForm()) {
         return;
     }
 
     saving.value = true;
 
     try {
-        const data = new FormData();
+        const productData = new FormData();
 
-        data.append("name", form.value.name.trim());
+        productData.append("name", form.value.name.trim());
+        productData.append("sku", form.value.sku.trim());
+        productData.append("category_id", String(form.value.category_id));
+        productData.append("supplier_id", String(form.value.supplier_id));
+        productData.append("description", form.value.description?.trim() || "");
+        productData.append("price", String(Number(form.value.price)));
+        productData.append("quantity", String(Number(form.value.quantity)));
 
-        data.append("category", form.value.category);
-
-        data.append("description", form.value.description?.trim() || "");
-
-        data.append("price", String(Number(form.value.price)));
-
-        data.append("quantity", String(Number(form.value.quantity)));
-
-        data.append("remove_image", removeImage.value ? "1" : "0");
+        productData.append("remove_image", removeImage.value ? "1" : "0");
 
         if (form.value.image instanceof File) {
-            data.append("image", form.value.image);
+            productData.append("image", form.value.image);
         }
 
-        data.append("_method", "PUT");
+        productData.append("_method", "PUT");
 
-        await productStore.updateProduct(route.params.id, data);
+        await productStore.updateProduct(productId.value, productData);
 
         toastStore.success("Product updated successfully.");
 
         await router.push({
             name: "products.view",
             params: {
-                id: route.params.id,
+                id: productId.value,
             },
         });
     } catch (err) {
-        console.error("Failed to update product:", err);
+        console.error("Update product error:", err);
 
         if (err.response?.status === 401) {
-            router.push({
+            await router.push({
                 name: "login",
             });
 
+            return;
+        }
+
+        if (err.response?.status === 404) {
+            error.value = "Product not found.";
             return;
         }
 
@@ -179,6 +222,7 @@ async function submitForm() {
                     err.response.data?.message || "Validation failed.";
             }
 
+            toastStore.error("Failed to update product.");
             return;
         }
 
@@ -187,9 +231,18 @@ async function submitForm() {
             err.message ||
             productStore.error ||
             "Failed to update product.";
+
+        toastStore.error("Failed to update product.");
     } finally {
         saving.value = false;
     }
+}
+
+// Remove current image
+
+function markImageForRemoval() {
+    removeImage.value = true;
+    form.value.image = null;
 }
 
 // Cancel
@@ -198,14 +251,12 @@ function cancel() {
     router.push({
         name: "products.view",
         params: {
-            id: route.params.id,
+            id: productId.value,
         },
     });
 }
 
-// Load
-
-onMounted(fetchProduct);
+onMounted(loadData);
 </script>
 
 <template>
@@ -224,10 +275,68 @@ onMounted(fetchProduct);
             </div>
         </BaseCard>
 
+        <!-- Error -->
+
+        <template v-else-if="error">
+            <BaseCard
+                class="border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
+            >
+                <div class="py-6 text-center">
+                    <h2
+                        class="text-lg font-semibold text-red-800 dark:text-red-300"
+                    >
+                        Unable to load product
+                    </h2>
+
+                    <p class="mt-2 text-sm text-red-700 dark:text-red-400">
+                        {{ error }}
+                    </p>
+
+                    <div class="mt-5 flex justify-center gap-3">
+                        <BaseButton
+                            type="button"
+                            variant="secondary"
+                            @click="cancel"
+                        >
+                            Back
+                        </BaseButton>
+
+                        <BaseButton type="button" @click="loadData">
+                            Try Again
+                        </BaseButton>
+                    </div>
+                </div>
+            </BaseCard>
+        </template>
+
+        <!-- Form -->
+
         <template v-else>
             <!-- Header -->
 
             <div class="mb-8">
+                <button
+                    type="button"
+                    class="mb-4 inline-flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm font-medium text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                    @click="cancel"
+                >
+                    <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M15 19l-7-7 7-7"
+                        />
+                    </svg>
+
+                    Back
+                </button>
+
                 <h1
                     class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
                 >
@@ -235,7 +344,7 @@ onMounted(fetchProduct);
                 </h1>
 
                 <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Update the product information below.
+                    Update the product information.
                 </p>
             </div>
 
@@ -243,40 +352,16 @@ onMounted(fetchProduct);
 
             <BaseCard
                 v-if="error"
-                class="mb-6 border-red-200 bg-red-50 dark:border-red-900/60 dark:bg-red-950/30"
+                class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
             >
-                <div
-                    class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                    <div class="flex items-start gap-3">
-                        <div
-                            class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-600 dark:bg-red-900/40 dark:text-red-400"
-                        >
-                            !
-                        </div>
-
-                        <p
-                            class="text-sm font-medium text-red-700 dark:text-red-400"
-                        >
-                            {{ error }}
-                        </p>
-                    </div>
-
-                    <BaseButton
-                        type="button"
-                        variant="secondary"
-                        @click="fetchProduct"
-                    >
-                        Try Again
-                    </BaseButton>
-                </div>
+                <p class="text-sm font-medium text-red-700 dark:text-red-400">
+                    {{ error }}
+                </p>
             </BaseCard>
 
-            <!-- Form -->
-
-            <BaseCard v-else>
+            <BaseCard>
                 <form class="space-y-6" @submit.prevent="submitForm">
-                    <!-- Product name -->
+                    <!-- Product Name -->
 
                     <div>
                         <label
@@ -290,11 +375,34 @@ onMounted(fetchProduct);
                             id="name"
                             v-model="form.name"
                             type="text"
+                            maxlength="255"
                             placeholder="Enter product name"
                             :disabled="saving"
-                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                         />
                     </div>
+
+                    <!-- SKU -->
+
+                    <div>
+                        <label
+                            for="sku"
+                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            SKU
+                        </label>
+
+                        <input
+                            id="sku"
+                            v-model="form.sku"
+                            type="text"
+                            maxlength="100"
+                            placeholder="e.g. PROD-001"
+                            :disabled="saving"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm uppercase text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                        />
+                    </div>
+
                     <!-- Category -->
 
                     <div>
@@ -307,33 +415,59 @@ onMounted(fetchProduct);
 
                         <select
                             id="category"
-                            v-model="form.category"
-                            :disabled="saving"
+                            v-model="form.category_id"
+                            :disabled="saving || loadingFormData"
                             class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
                         >
-                            <option value="">Select a category</option>
-
-                            <option value="Electronics">Electronics</option>
-
-                            <option value="Clothing">Clothing</option>
-
-                            <option value="Food & Beverage">
-                                Food & Beverage
+                            <option value="">
+                                {{
+                                    categoryStore.loading
+                                        ? "Loading categories..."
+                                        : "Select a category"
+                                }}
                             </option>
 
-                            <option value="Home & Kitchen">
-                                Home & Kitchen
+                            <option
+                                v-for="category in categories"
+                                :key="category.id"
+                                :value="category.id"
+                            >
+                                {{ category.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Supplier -->
+
+                    <div>
+                        <label
+                            for="supplier"
+                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            Supplier
+                        </label>
+
+                        <select
+                            id="supplier"
+                            v-model="form.supplier_id"
+                            :disabled="saving || loadingFormData"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
+                        >
+                            <option value="">
+                                {{
+                                    supplierStore.loading
+                                        ? "Loading suppliers..."
+                                        : "Select a supplier"
+                                }}
                             </option>
 
-                            <option value="Beauty & Personal Care">
-                                Beauty & Personal Care
+                            <option
+                                v-for="supplier in suppliers"
+                                :key="supplier.id"
+                                :value="supplier.id"
+                            >
+                                {{ supplier.name }}
                             </option>
-
-                            <option value="Sports">Sports</option>
-
-                            <option value="Books">Books</option>
-
-                            <option value="Other">Other</option>
                         </select>
                     </div>
 
@@ -351,71 +485,105 @@ onMounted(fetchProduct);
                             id="description"
                             v-model="form.description"
                             rows="4"
+                            maxlength="1000"
                             placeholder="Enter product description"
                             :disabled="saving"
-                            class="mt-2 block w-full resize-none rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
+                            class="mt-2 block w-full resize-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                         ></textarea>
                     </div>
 
-                    <!-- Price -->
+                    <!-- Price and Quantity -->
 
-                    <div>
-                        <label
-                            for="price"
-                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
-                        >
-                            Price
-                        </label>
+                    <div class="grid gap-6 sm:grid-cols-2">
+                        <div>
+                            <label
+                                for="price"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                            >
+                                Price
+                            </label>
 
-                        <input
-                            id="price"
-                            v-model="form.price"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            :disabled="saving"
-                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
-                        />
+                            <input
+                                id="price"
+                                v-model="form.price"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                placeholder="0.00"
+                                :disabled="saving"
+                                class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                            />
+                        </div>
+
+                        <div>
+                            <label
+                                for="quantity"
+                                class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                            >
+                                Quantity
+                            </label>
+
+                            <input
+                                id="quantity"
+                                v-model="form.quantity"
+                                type="number"
+                                min="0"
+                                step="1"
+                                placeholder="0"
+                                :disabled="saving"
+                                class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                            />
+                        </div>
                     </div>
 
-                    <!-- Quantity -->
+                    <!-- Current Image -->
 
-                    <div>
+                    <div v-if="imageUrl && !removeImage">
                         <label
-                            for="quantity"
                             class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
                         >
-                            Quantity
+                            Current Image
                         </label>
 
-                        <input
-                            id="quantity"
-                            v-model="form.quantity"
-                            type="number"
-                            min="0"
-                            step="1"
-                            placeholder="0"
-                            :disabled="saving"
-                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
-                        />
+                        <div class="mt-3 flex items-center gap-4">
+                            <img
+                                :src="imageUrl"
+                                :alt="form.name"
+                                class="h-24 w-24 rounded-xl border border-gray-200 object-cover dark:border-gray-700"
+                            />
+
+                            <BaseButton
+                                type="button"
+                                variant="danger"
+                                :disabled="saving"
+                                @click="markImageForRemoval"
+                            >
+                                Remove Image
+                            </BaseButton>
+                        </div>
                     </div>
 
-                    <!-- Image -->
+                    <!-- New Image -->
 
                     <div>
                         <ImageUpload
                             v-model="form.image"
-                            :existing-image="existingImage"
                             label="Product Image"
-                            @remove-existing="handleRemoveExistingImage"
                         />
+
+                        <p
+                            v-if="removeImage"
+                            class="mt-2 text-xs text-amber-600 dark:text-amber-400"
+                        >
+                            The current image will be removed when you save the
+                            product.
+                        </p>
                     </div>
 
                     <!-- Actions -->
 
                     <div
-                        class="flex flex-col-reverse gap-3 border-t border-gray-100 pt-6 dark:border-gray-700 sm:flex-row sm:justify-end"
+                        class="flex justify-end gap-3 border-t border-gray-100 pt-6 dark:border-gray-700"
                     >
                         <BaseButton
                             type="button"
@@ -427,7 +595,7 @@ onMounted(fetchProduct);
                         </BaseButton>
 
                         <BaseButton type="submit" :loading="saving">
-                            Update Product
+                            Save Changes
                         </BaseButton>
                     </div>
                 </form>

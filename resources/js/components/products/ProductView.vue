@@ -22,6 +22,8 @@ const error = ref("");
 const showDeleteModal = ref(false);
 const deleting = ref(false);
 
+// Image URL
+
 const imageUrl = computed(() => {
     const image = product.value?.image;
 
@@ -39,6 +41,52 @@ const imageUrl = computed(() => {
 
     return `/storage/${image}`;
 });
+
+// Category name
+
+const categoryName = computed(() => {
+    if (!product.value) {
+        return "Uncategorized";
+    }
+
+    if (product.value.category?.name) {
+        return product.value.category.name;
+    }
+
+    if (product.value.category_name) {
+        return product.value.category_name;
+    }
+
+    if (typeof product.value.category === "string") {
+        return product.value.category || "Uncategorized";
+    }
+
+    return "Uncategorized";
+});
+
+// Supplier name
+
+const supplierName = computed(() => {
+    if (!product.value) {
+        return "No supplier";
+    }
+
+    if (product.value.supplier?.name) {
+        return product.value.supplier.name;
+    }
+
+    if (product.value.supplier_name) {
+        return product.value.supplier_name;
+    }
+
+    if (typeof product.value.supplier === "string") {
+        return product.value.supplier || "No supplier";
+    }
+
+    return "No supplier";
+});
+
+// Stock status
 
 const stockStatus = computed(() => {
     if (!product.value) {
@@ -73,25 +121,7 @@ const stockStatus = computed(() => {
     };
 });
 
-const categoryName = computed(() => {
-    if (!product.value) {
-        return "Uncategorized";
-    }
-
-    if (typeof product.value.category === "string") {
-        return product.value.category || "Uncategorized";
-    }
-
-    if (product.value.category?.name) {
-        return product.value.category.name;
-    }
-
-    if (product.value.category_name) {
-        return product.value.category_name;
-    }
-
-    return "Uncategorized";
-});
+// Format price
 
 function formatPrice(price) {
     const amount = Number(price);
@@ -105,6 +135,8 @@ function formatPrice(price) {
         maximumFractionDigits: 2,
     });
 }
+
+// Load product
 
 async function fetchProduct() {
     loading.value = true;
@@ -120,7 +152,7 @@ async function fetchProduct() {
         console.error("Failed to load product:", err);
 
         if (err.response?.status === 401) {
-            router.push({
+            await router.push({
                 name: "login",
             });
 
@@ -132,12 +164,13 @@ async function fetchProduct() {
             return;
         }
 
-        error.value =
-            err.response?.data?.message || "Failed to load product.";
+        error.value = err.response?.data?.message || "Failed to load product.";
     } finally {
         loading.value = false;
     }
 }
+
+// Navigation
 
 function backToProducts() {
     router.push({
@@ -157,6 +190,8 @@ function editProduct() {
         },
     });
 }
+
+// Delete
 
 function openDeleteModal() {
     if (!product.value) {
@@ -195,7 +230,7 @@ async function confirmDelete() {
         console.error("Delete product error:", err);
 
         if (err.response?.status === 401) {
-            router.push({
+            await router.push({
                 name: "login",
             });
 
@@ -206,6 +241,8 @@ async function confirmDelete() {
             err.response?.data?.message || "Failed to delete product.";
 
         showDeleteModal.value = false;
+
+        toastStore.error("Failed to delete product.");
     } finally {
         deleting.value = false;
     }
@@ -216,6 +253,8 @@ onMounted(fetchProduct);
 
 <template>
     <div class="mx-auto w-full max-w-4xl">
+        <!-- Loading -->
+
         <BaseCard v-if="loading" class="py-16">
             <div class="flex flex-col items-center justify-center">
                 <div
@@ -227,6 +266,8 @@ onMounted(fetchProduct);
                 </p>
             </div>
         </BaseCard>
+
+        <!-- Error -->
 
         <BaseCard
             v-else-if="error"
@@ -277,7 +318,11 @@ onMounted(fetchProduct);
             </div>
         </BaseCard>
 
+        <!-- Product -->
+
         <template v-else-if="product">
+            <!-- Back -->
+
             <div class="mb-6">
                 <button
                     type="button"
@@ -302,10 +347,14 @@ onMounted(fetchProduct);
                 </button>
             </div>
 
+            <!-- Header -->
+
             <div
                 class="mb-8 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"
             >
                 <div class="flex min-w-0 items-center gap-4">
+                    <!-- Thumbnail -->
+
                     <div
                         class="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-gray-200 bg-gray-100 dark:border-gray-700 dark:bg-gray-800"
                     >
@@ -343,13 +392,19 @@ onMounted(fetchProduct);
                             </span>
 
                             <span
-                                class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                                class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                             >
-                                {{ categoryName }}
+                                SKU: {{ product.sku || "N/A" }}
                             </span>
 
                             <span class="text-gray-300 dark:text-gray-700">
                                 •
+                            </span>
+
+                            <span
+                                class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300"
+                            >
+                                {{ categoryName }}
                             </span>
 
                             <span
@@ -367,6 +422,8 @@ onMounted(fetchProduct);
                         </div>
                     </div>
                 </div>
+
+                <!-- Actions -->
 
                 <div class="flex shrink-0 items-center gap-3">
                     <BaseButton
@@ -387,7 +444,11 @@ onMounted(fetchProduct);
                 </div>
             </div>
 
+            <!-- Main Card -->
+
             <BaseCard class="overflow-hidden p-0">
+                <!-- Product Image -->
+
                 <div
                     class="flex min-h-[350px] items-center justify-center border-b border-gray-100 bg-gray-50 p-6 dark:border-gray-800 dark:bg-gray-950"
                 >
@@ -406,6 +467,8 @@ onMounted(fetchProduct);
                     </div>
                 </div>
 
+                <!-- Description -->
+
                 <div
                     class="border-b border-gray-100 px-6 py-6 dark:border-gray-800"
                 >
@@ -422,9 +485,29 @@ onMounted(fetchProduct);
                     </p>
                 </div>
 
+                <!-- Product Details -->
+
                 <div
                     class="grid gap-px bg-gray-100 dark:bg-gray-700 sm:grid-cols-2"
                 >
+                    <!-- SKU -->
+
+                    <div class="bg-white px-6 py-6 dark:bg-gray-900">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                        >
+                            SKU
+                        </p>
+
+                        <p
+                            class="mt-2 text-base font-semibold text-gray-900 dark:text-white"
+                        >
+                            {{ product.sku || "N/A" }}
+                        </p>
+                    </div>
+
+                    <!-- Category -->
+
                     <div class="bg-white px-6 py-6 dark:bg-gray-900">
                         <p
                             class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
@@ -438,6 +521,24 @@ onMounted(fetchProduct);
                             {{ categoryName }}
                         </p>
                     </div>
+
+                    <!-- Supplier -->
+
+                    <div class="bg-white px-6 py-6 dark:bg-gray-900">
+                        <p
+                            class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                        >
+                            Supplier
+                        </p>
+
+                        <p
+                            class="mt-2 text-base font-semibold text-gray-900 dark:text-white"
+                        >
+                            {{ supplierName }}
+                        </p>
+                    </div>
+
+                    <!-- Price -->
 
                     <div class="bg-white px-6 py-6 dark:bg-gray-900">
                         <p
@@ -453,6 +554,8 @@ onMounted(fetchProduct);
                         </p>
                     </div>
 
+                    <!-- Quantity -->
+
                     <div class="bg-white px-6 py-6 dark:bg-gray-900">
                         <p
                             class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
@@ -467,9 +570,9 @@ onMounted(fetchProduct);
                         </p>
                     </div>
 
-                    <div
-                        class="bg-white px-6 py-6 dark:bg-gray-900 sm:col-span-2"
-                    >
+                    <!-- Stock Status -->
+
+                    <div class="bg-white px-6 py-6 dark:bg-gray-900">
                         <p
                             class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
                         >
@@ -492,6 +595,8 @@ onMounted(fetchProduct);
                 </div>
             </BaseCard>
         </template>
+
+        <!-- Delete Modal -->
 
         <BaseModal
             :show="showDeleteModal"
@@ -535,7 +640,7 @@ onMounted(fetchProduct);
                         {{ product?.name }}
                     </span>
 
-                    ? This action cannot be undone.
+                    ? The product will be moved to the trash.
                 </p>
             </div>
 

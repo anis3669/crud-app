@@ -76,6 +76,87 @@ const lastProductNumber = computed(() => {
     );
 });
 
+// Get category name safely
+
+function categoryName(product) {
+    if (product.category?.name) {
+        return product.category.name;
+    }
+
+    if (typeof product.category === "string") {
+        return product.category;
+    }
+
+    return "—";
+}
+
+// Get supplier name safely
+
+function supplierName(product) {
+    if (product.supplier?.name) {
+        return product.supplier.name;
+    }
+
+    if (typeof product.supplier === "string") {
+        return product.supplier;
+    }
+
+    return "—";
+}
+
+// Get image URL safely
+
+function imageUrl(image) {
+    if (!image) {
+        return null;
+    }
+
+    const value = String(image);
+
+    if (
+        value.startsWith("http://") ||
+        value.startsWith("https://") ||
+        value.startsWith("/storage/")
+    ) {
+        return value;
+    }
+
+    return `/storage/${value}`;
+}
+
+// Format price
+
+function formatPrice(price) {
+    const value = Number(price);
+
+    if (Number.isNaN(value)) {
+        return "0.00";
+    }
+
+    return value.toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+// Format deleted date
+
+function formatDeletedDate(date) {
+    if (!date) {
+        return "—";
+    }
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return "—";
+    }
+
+    return parsedDate.toLocaleDateString();
+}
+
+// Toggle one product
+
 function toggleProduct(productId) {
     if (selectedProducts.value.includes(productId)) {
         selectedProducts.value =
@@ -87,6 +168,8 @@ function toggleProduct(productId) {
     }
 }
 
+// Toggle all products on current page
+
 function toggleAll() {
     if (allSelected.value) {
         selectedProducts.value = [];
@@ -97,9 +180,13 @@ function toggleAll() {
     }
 }
 
+// Clear selection
+
 function clearSelection() {
     selectedProducts.value = [];
 }
+
+// Restore one product
 
 async function restoreProduct(product) {
     try {
@@ -114,9 +201,14 @@ async function restoreProduct(product) {
             "Product restored successfully.",
         );
     } catch (err) {
-        console.error("Restore product error:", err);
+        console.error(
+            "Restore product error:",
+            err,
+        );
     }
 }
+
+// Restore selected products
 
 async function bulkRestore() {
     if (selectedProducts.value.length === 0) {
@@ -134,14 +226,21 @@ async function bulkRestore() {
             "Products restored successfully.",
         );
     } catch (err) {
-        console.error("Bulk restore error:", err);
+        console.error(
+            "Bulk restore error:",
+            err,
+        );
     }
 }
+
+// Open permanent delete modal
 
 function openDeleteModal(product) {
     productToDelete.value = product;
     showDeleteModal.value = true;
 }
+
+// Close permanent delete modal
 
 function closeDeleteModal() {
     if (deleting.value) {
@@ -152,6 +251,8 @@ function closeDeleteModal() {
     productToDelete.value = null;
 }
 
+// Permanently delete one product
+
 async function confirmPermanentDelete() {
     if (!productToDelete.value) {
         return;
@@ -159,14 +260,16 @@ async function confirmPermanentDelete() {
 
     deleting.value = true;
 
+    const productId = productToDelete.value.id;
+
     try {
         await productStore.permanentlyDeleteProduct(
-            productToDelete.value.id,
+            productId,
         );
 
         selectedProducts.value =
             selectedProducts.value.filter(
-                (id) => id !== productToDelete.value.id,
+                (id) => id !== productId,
             );
 
         toastStore.success(
@@ -184,6 +287,8 @@ async function confirmPermanentDelete() {
         deleting.value = false;
     }
 }
+
+// Permanently delete selected products
 
 async function bulkPermanentDelete() {
     if (selectedProducts.value.length === 0) {
@@ -208,6 +313,8 @@ async function bulkPermanentDelete() {
     }
 }
 
+// Change trash page
+
 async function goToPage(page) {
     if (
         page < 1 ||
@@ -222,6 +329,8 @@ async function goToPage(page) {
     await productStore.fetchTrash(page);
 }
 
+// Refresh trash
+
 async function refreshTrash() {
     selectedProducts.value = [];
 
@@ -230,11 +339,15 @@ async function refreshTrash() {
     );
 }
 
+// Go back to products
+
 function goBack() {
     router.push({
         name: "products.index",
     });
 }
+
+// Initial load
 
 onMounted(async () => {
     await productStore.fetchTrash();
@@ -248,6 +361,8 @@ onMounted(async () => {
         <div
             class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
         >
+            <!-- Header -->
+
             <div class="mb-6">
                 <div
                     class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between"
@@ -286,9 +401,7 @@ onMounted(async () => {
                         </div>
                     </div>
 
-                    <div
-                        class="flex w-full gap-2 sm:w-auto"
-                    >
+                    <div class="flex w-full gap-2 sm:w-auto">
                         <BaseButton
                             type="button"
                             variant="secondary"
@@ -323,12 +436,18 @@ onMounted(async () => {
                             </svg>
 
                             <span>
-                                {{ loading ? "Refreshing..." : "Refresh" }}
+                                {{
+                                    loading
+                                        ? "Refreshing..."
+                                        : "Refresh"
+                                }}
                             </span>
                         </BaseButton>
                     </div>
                 </div>
             </div>
+
+            <!-- Error -->
 
             <BaseCard
                 v-if="error"
@@ -353,6 +472,8 @@ onMounted(async () => {
                 </div>
             </BaseCard>
 
+            <!-- Bulk Actions -->
+
             <div
                 v-if="someSelected"
                 class="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between"
@@ -367,7 +488,7 @@ onMounted(async () => {
                     selected
                 </p>
 
-                <div class="flex gap-2">
+                <div class="flex flex-wrap gap-2">
                     <BaseButton
                         type="button"
                         :disabled="loading"
@@ -399,9 +520,13 @@ onMounted(async () => {
                 </div>
             </div>
 
+            <!-- Table -->
+
             <div
                 class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900"
             >
+                <!-- Loading -->
+
                 <div
                     v-if="loading && products.length === 0"
                     class="flex flex-col items-center justify-center py-20"
@@ -432,6 +557,8 @@ onMounted(async () => {
                         Loading trash...
                     </p>
                 </div>
+
+                <!-- Empty -->
 
                 <div
                     v-else-if="products.length === 0"
@@ -468,6 +595,8 @@ onMounted(async () => {
                     </p>
                 </div>
 
+                <!-- Products -->
+
                 <div
                     v-else
                     class="overflow-x-auto"
@@ -497,7 +626,19 @@ onMounted(async () => {
                                 <th
                                     class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
                                 >
+                                    SKU
+                                </th>
+
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
                                     Category
+                                </th>
+
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                >
+                                    Supplier
                                 </th>
 
                                 <th
@@ -534,6 +675,8 @@ onMounted(async () => {
                                 :key="product.id"
                                 class="transition hover:bg-gray-50 dark:hover:bg-gray-800/40"
                             >
+                                <!-- Checkbox -->
+
                                 <td class="px-4 py-4">
                                     <input
                                         type="checkbox"
@@ -544,10 +687,14 @@ onMounted(async () => {
                                         "
                                         class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-400 dark:border-gray-600"
                                         @change="
-                                            toggleProduct(product.id)
+                                            toggleProduct(
+                                                product.id,
+                                            )
                                         "
                                     />
                                 </td>
+
+                                <!-- Product -->
 
                                 <td class="px-4 py-4">
                                     <div
@@ -557,9 +704,19 @@ onMounted(async () => {
                                             class="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
                                         >
                                             <img
-                                                v-if="product.image"
-                                                :src="product.image"
-                                                :alt="product.name"
+                                                v-if="
+                                                    imageUrl(
+                                                        product.image,
+                                                    )
+                                                "
+                                                :src="
+                                                    imageUrl(
+                                                        product.image,
+                                                    )
+                                                "
+                                                :alt="
+                                                    product.name
+                                                "
                                                 class="h-full w-full object-cover"
                                             />
 
@@ -589,26 +746,39 @@ onMounted(async () => {
                                     </div>
                                 </td>
 
+                                <!-- SKU -->
+
+                                <td
+                                    class="px-4 py-4 text-sm font-mono text-gray-600 dark:text-gray-300"
+                                >
+                                    {{ product.sku || "—" }}
+                                </td>
+
+                                <!-- Category -->
+
                                 <td
                                     class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300"
                                 >
-                                    {{
-                                        product.category || "—"
-                                    }}
+                                    {{ categoryName(product) }}
                                 </td>
 
+                                <!-- Supplier -->
+
                                 <td
-                                    class="px-4 py-4 text-sm font-medium text-gray-900 dark:text-white"
+                                    class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300"
                                 >
-                                    Rs.
-                                    {{
-                                        Number(
-                                            product.price,
-                                        ).toLocaleString(
-                                            "en-IN",
-                                        )
-                                    }}
+                                    {{ supplierName(product) }}
                                 </td>
+
+                                <!-- Price -->
+
+                                <td
+                                    class="whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-900 dark:text-white"
+                                >
+                                    Rs. {{ formatPrice(product.price) }}
+                                </td>
+
+                                <!-- Quantity -->
 
                                 <td
                                     class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300"
@@ -616,17 +786,19 @@ onMounted(async () => {
                                     {{ product.quantity }}
                                 </td>
 
+                                <!-- Deleted -->
+
                                 <td
-                                    class="px-4 py-4 text-sm text-gray-500 dark:text-gray-400"
+                                    class="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-400"
                                 >
                                     {{
-                                        product.deleted_at
-                                            ? new Date(
-                                                  product.deleted_at,
-                                              ).toLocaleDateString()
-                                            : "—"
+                                        formatDeletedDate(
+                                            product.deleted_at,
+                                        )
                                     }}
                                 </td>
+
+                                <!-- Actions -->
 
                                 <td class="px-4 py-4">
                                     <div
@@ -634,8 +806,8 @@ onMounted(async () => {
                                     >
                                         <BaseButton
                                             type="button"
-                                            class="justify-center"
                                             :disabled="loading"
+                                            class="justify-center"
                                             @click="
                                                 restoreProduct(
                                                     product,
@@ -648,7 +820,10 @@ onMounted(async () => {
                                         <BaseButton
                                             type="button"
                                             variant="danger"
-                                            :disabled="loading"
+                                            :disabled="
+                                                loading ||
+                                                deleting
+                                            "
                                             class="justify-center"
                                             @click="
                                                 openDeleteModal(
@@ -665,8 +840,13 @@ onMounted(async () => {
                     </table>
                 </div>
 
+                <!-- Loading overlay -->
+
                 <div
-                    v-if="loading && products.length > 0"
+                    v-if="
+                        loading &&
+                        products.length > 0
+                    "
                     class="border-t border-gray-200 bg-white/70 px-4 py-3 text-center dark:border-gray-800 dark:bg-gray-900/70"
                 >
                     <span
@@ -676,6 +856,8 @@ onMounted(async () => {
                     </span>
                 </div>
             </div>
+
+            <!-- Pagination -->
 
             <div
                 v-if="total > 0"
@@ -733,9 +915,13 @@ onMounted(async () => {
                             class="flex h-9 items-center rounded-lg bg-gray-900 px-3 text-sm font-semibold text-white dark:bg-white dark:text-gray-900"
                         >
                             {{ currentPage }}
+
                             <span
                                 class="mx-1 text-gray-400"
-                            >/</span>
+                            >
+                                /
+                            </span>
+
                             {{ lastPage }}
                         </div>
 
@@ -758,6 +944,8 @@ onMounted(async () => {
                     </div>
                 </div>
             </div>
+
+            <!-- Permanent Delete Modal -->
 
             <BaseModal
                 :show="showDeleteModal"

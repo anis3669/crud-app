@@ -169,6 +169,42 @@ function formatPrice(price) {
     });
 }
 
+// Category name
+
+function categoryName(product) {
+    if (!product) {
+        return "Uncategorized";
+    }
+
+    if (product.category && typeof product.category === "object") {
+        return product.category.name || "Uncategorized";
+    }
+
+    if (typeof product.category === "string") {
+        return product.category;
+    }
+
+    return product.category_name || "Uncategorized";
+}
+
+// Supplier name
+
+function supplierName(product) {
+    if (!product) {
+        return "No supplier";
+    }
+
+    if (product.supplier && typeof product.supplier === "object") {
+        return product.supplier.name || "No supplier";
+    }
+
+    if (typeof product.supplier === "string") {
+        return product.supplier;
+    }
+
+    return product.supplier_name || "No supplier";
+}
+
 // Stock status
 
 function stockStatus(quantity) {
@@ -207,15 +243,17 @@ function imageUrl(image) {
         return null;
     }
 
+    const value = String(image);
+
     if (
-        image.startsWith("http://") ||
-        image.startsWith("https://") ||
-        image.startsWith("/storage/")
+        value.startsWith("http://") ||
+        value.startsWith("https://") ||
+        value.startsWith("/storage/")
     ) {
-        return image;
+        return value;
     }
 
-    return `/storage/${image}`;
+    return `/storage/${value}`;
 }
 
 // Product number
@@ -341,14 +379,27 @@ function productNumber(index) {
                             >
                                 Product
                             </th>
+
                             <th
-                                class="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                                class="whitespace-nowrap px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 sm:px-5"
+                            >
+                                SKU
+                            </th>
+
+                            <th
+                                class="whitespace-nowrap px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 sm:px-5"
                             >
                                 Category
                             </th>
 
                             <th
                                 class="hidden px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 md:table-cell sm:px-5"
+                            >
+                                Supplier
+                            </th>
+
+                            <th
+                                class="hidden px-4 py-4 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 lg:table-cell sm:px-5"
                             >
                                 Description
                             </th>
@@ -383,6 +434,8 @@ function productNumber(index) {
                                     selectedProducts.includes(product.id),
                             }"
                         >
+                            <!-- Checkbox -->
+
                             <td class="px-4 py-4 sm:px-5">
                                 <input
                                     type="checkbox"
@@ -394,6 +447,8 @@ function productNumber(index) {
                                     :aria-label="`Select ${product.name}`"
                                 />
                             </td>
+
+                            <!-- Product -->
 
                             <td class="px-4 py-4 sm:px-5">
                                 <div
@@ -442,26 +497,42 @@ function productNumber(index) {
                                 </div>
                             </td>
 
+                            <!-- SKU -->
+
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
+                                <span
+                                    class="font-mono text-xs font-medium text-gray-600 dark:text-gray-300"
+                                >
+                                    {{ product.sku || "—" }}
+                                </span>
+                            </td>
+
                             <!-- Category -->
 
                             <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <span
-                                    v-if="product.category"
                                     class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                                 >
-                                    {{ product.category }}
+                                    {{ categoryName(product) }}
                                 </span>
+                            </td>
 
+                            <!-- Supplier -->
+
+                            <td
+                                class="hidden whitespace-nowrap px-4 py-4 md:table-cell sm:px-5"
+                            >
                                 <span
-                                    v-else
-                                    class="text-sm text-gray-400 dark:text-gray-500"
+                                    class="text-sm text-gray-600 dark:text-gray-300"
                                 >
-                                    Uncategorized
+                                    {{ supplierName(product) }}
                                 </span>
                             </td>
 
+                            <!-- Description -->
+
                             <td
-                                class="hidden max-w-xs px-4 py-4 md:table-cell sm:px-5"
+                                class="hidden max-w-xs px-4 py-4 lg:table-cell sm:px-5"
                             >
                                 <p
                                     class="truncate text-sm text-gray-500 dark:text-gray-400"
@@ -475,20 +546,7 @@ function productNumber(index) {
                                 </p>
                             </td>
 
-                            <td
-                                class="hidden max-w-xs px-4 py-4 md:table-cell sm:px-5"
-                            >
-                                <p
-                                    class="truncate text-sm text-gray-500 dark:text-gray-400"
-                                    :title="
-                                        product.description || 'No description'
-                                    "
-                                >
-                                    {{
-                                        product.description || "No description"
-                                    }}
-                                </p>
-                            </td>
+                            <!-- Price -->
 
                             <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <p
@@ -498,6 +556,8 @@ function productNumber(index) {
                                     {{ formatPrice(product.price) }}
                                 </p>
                             </td>
+
+                            <!-- Stock -->
 
                             <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <span
@@ -517,10 +577,14 @@ function productNumber(index) {
                                 </span>
                             </td>
 
+                            <!-- Actions -->
+
                             <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <div
                                     class="flex items-center justify-end gap-1"
                                 >
+                                    <!-- View -->
+
                                     <button
                                         type="button"
                                         title="View product"
@@ -550,6 +614,8 @@ function productNumber(index) {
                                         </svg>
                                     </button>
 
+                                    <!-- Edit -->
+
                                     <button
                                         type="button"
                                         title="Edit product"
@@ -571,6 +637,8 @@ function productNumber(index) {
                                             />
                                         </svg>
                                     </button>
+
+                                    <!-- Delete -->
 
                                     <button
                                         type="button"
@@ -597,8 +665,10 @@ function productNumber(index) {
                             </td>
                         </tr>
 
+                        <!-- Empty state -->
+
                         <tr v-if="productCount === 0">
-                            <td colspan="6" class="px-6 py-20 text-center">
+                            <td colspan="9" class="px-6 py-20 text-center">
                                 <div
                                     class="mx-auto flex max-w-sm flex-col items-center"
                                 >
