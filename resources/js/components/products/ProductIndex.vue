@@ -167,17 +167,13 @@ const priceFilterLabel = computed(() => {
 });
 
 async function loadProducts(page = productStore.currentPage) {
-    try {
-        await productStore.fetchProducts(
-            page,
-            productStore.search,
-            productStore.filter,
-            priceRange.value.min,
-            priceRange.value.max,
-        );
-    } catch (err) {
-        console.error("Failed to load products:", err);
-    }
+    await productStore.fetchProducts(
+        page,
+        productStore.search,
+        productStore.filter,
+        priceRange.value.min,
+        priceRange.value.max,
+    );
 }
 
 async function performSearch() {

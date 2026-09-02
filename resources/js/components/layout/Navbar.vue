@@ -28,6 +28,14 @@ function goToProducts() {
     });
 }
 
+function goToInventoryHistory() {
+    showProfileMenu.value = false;
+
+    router.push({
+        name: "inventory.history",
+    });
+}
+
 function goToProfile() {
     showProfileMenu.value = false;
 
@@ -202,6 +210,40 @@ onBeforeUnmount(() => {
                     </svg>
 
                     Products
+                </button>
+
+                <!-- Inventory history -->
+
+                <button
+                    type="button"
+                    @click="goToInventoryHistory"
+                    class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
+                    :class="
+                        isActive('inventory.history')
+                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white'
+                    "
+                >
+                    <svg
+                        class="h-4.5 w-4.5 transition"
+                        :class="
+                            isActive('inventory.history')
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-300'
+                        "
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                        />
+                    </svg>
+
+                    History
                 </button>
 
                 <!-- Desktop Theme -->

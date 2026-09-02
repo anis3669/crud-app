@@ -13,12 +13,11 @@ class InventoryHistory extends Model
     protected $fillable = [
         'product_id',
         'user_id',
-        'change_type',
+        'type',
         'quantity_before',
         'quantity_change',
         'quantity_after',
         'reason',
-        'notes',
     ];
 
     protected $casts = [

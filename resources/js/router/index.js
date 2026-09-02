@@ -18,6 +18,7 @@ import Profile from "../components/profile/Profile.vue";
 import Dashboard from "../components/dashboard/Dashboard.vue";
 import Trash from "../components/products/Trash.vue";
 import InventoryIndex from "../components/inventory/InventoryIndex.vue";
+import InventoryHistory from "../components/inventory/InventoryHistory.vue";
 
 const routes = [
 
@@ -121,6 +122,11 @@ const routes = [
                 path: "/inventory",
                 name: "inventory",
                 component: InventoryIndex,
+            },
+            {
+                path: "/inventory/history",
+                name: "inventory.history",
+                component: InventoryHistory,
             },
         ],
     },
