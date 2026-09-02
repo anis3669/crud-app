@@ -108,7 +108,7 @@ export const useInventoryStore = defineStore("inventory", {
             }
         },
 
-        async fetchHistory(productId, page = 1) {
+        async fetchHistory(productId = null, page = 1) {
             this.historyLoading = true;
             this.historyError = null;
 
@@ -116,7 +116,7 @@ export const useInventoryStore = defineStore("inventory", {
                 const response = await axios.get("/api/inventory/history", {
                     params: {
                         page,
-                        product_id: productId,
+                        product_id: productId || undefined,
                     },
                 });
 
