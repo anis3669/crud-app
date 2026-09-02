@@ -19,11 +19,12 @@ import Dashboard from "../components/dashboard/Dashboard.vue";
 import Trash from "../components/products/Trash.vue";
 import InventoryIndex from "../components/inventory/InventoryIndex.vue";
 import InventoryHistory from "../components/inventory/InventoryHistory.vue";
+import InvoiceIndex from "../components/invoices/InvoiceIndex.vue";
+import InvoiceCreate from "../components/invoices/InvoiceCreate.vue";
+import InvoiceView from "../components/invoices/InvoiceView.vue";
 
 const routes = [
-
     // Guest Routes
-
 
     {
         path: "/login",
@@ -43,9 +44,7 @@ const routes = [
         },
     },
 
-
     // Authenticated Routes
-
 
     {
         path: "/",
@@ -118,6 +117,7 @@ const routes = [
                     requiresAuth: true,
                 },
             },
+            // inventory
             {
                 path: "/inventory",
                 name: "inventory",
@@ -128,12 +128,28 @@ const routes = [
                 name: "inventory.history",
                 component: InventoryHistory,
             },
+            // invoices
+            {
+                path: "invoices",
+                name: "invoices.index",
+                component: InvoiceIndex,
+            },
+            // invoice create
+            {
+                path: "invoices/create",
+                name: "invoices.create",
+                component: InvoiceCreate,
+            },
+            // invoice view
+            {
+                path: "invoices/:invoice",
+                name: "invoices.show",
+                component: InvoiceView,
+            },
         ],
     },
 
-
     // Unknown Routes
-
 
     {
         path: "/:pathMatch(.*)*",

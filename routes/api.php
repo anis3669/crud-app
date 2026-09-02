@@ -8,6 +8,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\SupplierApiController;
 use App\Http\Controllers\Api\InventoryApiController;
+use App\Http\Controllers\Api\InvoiceApiController;
 
 // Authentication
 Route::post('/login', [AuthController::class, 'apiLogin']);
@@ -98,4 +99,17 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/inventory/history', [InventoryApiController::class, 'history'])
         ->middleware('permission:inventory.history');
+
+    // Invoices
+    Route::get('/invoices', [InvoiceApiController::class, 'index'])
+        ->middleware('permission:invoices.view');
+
+    Route::post('/invoices', [InvoiceApiController::class, 'store'])
+        ->middleware('permission:invoices.create');
+
+    Route::get('/invoices/{invoice}', [InvoiceApiController::class, 'show'])
+        ->middleware('permission:invoices.view');
+
+    Route::delete('/invoices/{invoice}', [InvoiceApiController::class, 'destroy'])
+        ->middleware('permission:invoices.delete');
 });
