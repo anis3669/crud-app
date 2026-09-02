@@ -41,8 +41,7 @@ export const useProductStore = defineStore("product", {
         // Get normal error message
         getErrorMessage(error, fallback = "Something went wrong.") {
             const status = error.response?.status;
-            const responseMessage =
-                error.response?.data?.message;
+            const responseMessage = error.response?.data?.message;
 
             if (!error.response) {
                 return "Unable to connect to the server. Please check your connection.";
@@ -103,41 +102,30 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const response = await axios.get(
-                    "/api/products",
-                    {
-                        params: {
-                            page,
-                            search,
-                            filter,
-                            min_price: minPrice,
-                            max_price: maxPrice,
-                            per_page: this.perPage,
-                        },
+                const response = await axios.get("/api/products", {
+                    params: {
+                        page,
+                        search,
+                        filter,
+                        min_price: minPrice,
+                        max_price: maxPrice,
+                        per_page: this.perPage,
                     },
-                );
+                });
 
                 const data = response.data;
 
                 // Read Laravel paginator
-                if (
-                    data?.products &&
-                    Array.isArray(data.products.data)
-                ) {
+                if (data?.products && Array.isArray(data.products.data)) {
                     this.products = data.products.data;
 
-                    this.currentPage =
-                        data.products.current_page || 1;
+                    this.currentPage = data.products.current_page || 1;
 
-                    this.lastPage =
-                        data.products.last_page || 1;
+                    this.lastPage = data.products.last_page || 1;
 
-                    this.total =
-                        data.products.total || 0;
+                    this.total = data.products.total || 0;
 
-                    this.perPage =
-                        data.products.per_page ||
-                        this.perPage;
+                    this.perPage = data.products.per_page || this.perPage;
                 } else {
                     this.products = [];
                     this.currentPage = 1;
@@ -148,20 +136,15 @@ export const useProductStore = defineStore("product", {
                 // Update inventory statistics
                 if (data?.stats) {
                     this.stats = {
-                        total_products:
-                            data.stats.total_products || 0,
+                        total_products: data.stats.total_products || 0,
 
-                        in_stock:
-                            data.stats.in_stock || 0,
+                        in_stock: data.stats.in_stock || 0,
 
-                        out_of_stock:
-                            data.stats.out_of_stock || 0,
+                        out_of_stock: data.stats.out_of_stock || 0,
 
-                        low_stock:
-                            data.stats.low_stock || 0,
+                        low_stock: data.stats.low_stock || 0,
 
-                        total_quantity:
-                            data.stats.total_quantity || 0,
+                        total_quantity: data.stats.total_quantity || 0,
 
                         total_inventory_value:
                             data.stats.total_inventory_value || 0,
@@ -190,9 +173,7 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const response = await axios.get(
-                    `/api/products/${productId}`,
-                );
+                const response = await axios.get(`/api/products/${productId}`);
 
                 this.product =
                     response.data.product ||
@@ -222,14 +203,9 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const response = await axios.post(
-                    "/api/products",
-                    productData,
-                );
+                const response = await axios.post("/api/products", productData);
 
-                const product =
-                    response.data.product ||
-                    response.data.data;
+                const product = response.data.product || response.data.data;
 
                 if (product) {
                     this.products.unshift(product);
@@ -255,31 +231,27 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const response = await axios.put(
+                const response = await axios.post(
                     `/api/products/${productId}`,
                     productData,
                 );
 
                 const updatedProduct =
-                    response.data.product ||
-                    response.data.data;
+                    response.data.product || response.data.data;
+
+                const numericId = Number(productId);
 
                 const index = this.products.findIndex(
-                    (product) =>
-                        product.id === productId,
+                    (product) => Number(product.id) === numericId,
                 );
 
-                if (
-                    index !== -1 &&
-                    updatedProduct
-                ) {
-                    this.products[index] =
-                        updatedProduct;
+                if (index !== -1 && updatedProduct) {
+                    this.products[index] = updatedProduct;
                 }
 
                 if (
                     this.product &&
-                    this.product.id === productId &&
+                    Number(this.product.id) === numericId &&
                     updatedProduct
                 ) {
                     this.product = updatedProduct;
@@ -312,16 +284,11 @@ export const useProductStore = defineStore("product", {
                     `/api/products/${productId}`,
                 );
 
-                this.products =
-                    this.products.filter(
-                        (product) =>
-                            product.id !== productId,
-                    );
-
-                this.total = Math.max(
-                    0,
-                    this.total - 1,
+                this.products = this.products.filter(
+                    (product) => product.id !== productId,
                 );
+
+                this.total = Math.max(0, this.total - 1);
 
                 return response.data;
             } catch (error) {
@@ -346,16 +313,12 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const ids = productsToDelete.map(
-                    (product) =>
-                        typeof product === "object"
-                            ? product.id
-                            : product,
+                const ids = productsToDelete.map((product) =>
+                    typeof product === "object" ? product.id : product,
                 );
 
                 if (!ids.length) {
-                    this.error =
-                        "Please select at least one product.";
+                    this.error = "Please select at least one product.";
 
                     return;
                 }
@@ -369,16 +332,11 @@ export const useProductStore = defineStore("product", {
                     },
                 );
 
-                this.products =
-                    this.products.filter(
-                        (product) =>
-                            !ids.includes(product.id),
-                    );
-
-                this.total = Math.max(
-                    0,
-                    this.total - ids.length,
+                this.products = this.products.filter(
+                    (product) => !ids.includes(product.id),
                 );
+
+                this.total = Math.max(0, this.total - ids.length);
 
                 return response.data;
             } catch (error) {
@@ -394,17 +352,47 @@ export const useProductStore = defineStore("product", {
         },
 
         // Bulk update
-        async bulkUpdate(products) {
+        async bulkUpdate(productsToUpdate) {
             this.loading = true;
             this.error = null;
 
             try {
-                const response = await axios.post(
-                    "/api/products/bulk-update",
-                    {
-                        products,
-                    },
-                );
+                if (
+                    !Array.isArray(productsToUpdate) ||
+                    productsToUpdate.length === 0
+                ) {
+                    this.error = "Please select at least one product.";
+                    return;
+                }
+
+                const products = productsToUpdate.map((product) => ({
+                    id: Number(product.id),
+                    name: String(product.name ?? "").trim(),
+                    sku: String(product.sku ?? "").trim(),
+                    category_id:
+                        product.category_id !== null &&
+                        product.category_id !== undefined &&
+                        product.category_id !== ""
+                            ? Number(product.category_id)
+                            : null,
+                    supplier_id:
+                        product.supplier_id !== null &&
+                        product.supplier_id !== undefined &&
+                        product.supplier_id !== ""
+                            ? Number(product.supplier_id)
+                            : null,
+                    description:
+                        product.description !== null &&
+                        product.description !== undefined
+                            ? String(product.description)
+                            : "",
+                    price: Number(product.price),
+                    quantity: Number(product.quantity),
+                }));
+
+                const response = await axios.post("/api/products/bulk-update", {
+                    products,
+                });
 
                 await this.fetchProducts(
                     this.currentPage,
@@ -429,40 +417,25 @@ export const useProductStore = defineStore("product", {
         async searchProducts(searchTerm) {
             this.search = searchTerm;
 
-            return await this.fetchProducts(
-                1,
-                searchTerm,
-                this.filter,
-            );
+            return await this.fetchProducts(1, searchTerm, this.filter);
         },
 
         // Clear search
         async clearSearch() {
             this.search = "";
 
-            return await this.fetchProducts(
-                1,
-                "",
-                this.filter,
-            );
+            return await this.fetchProducts(1, "", this.filter);
         },
 
         // Filter products
         async filterProducts(selectedFilter) {
             this.filter = selectedFilter;
 
-            return await this.fetchProducts(
-                1,
-                this.search,
-                selectedFilter,
-            );
+            return await this.fetchProducts(1, this.search, selectedFilter);
         },
 
         // Filter products by price
-        async priceFilterProducts(
-            minPrice,
-            maxPrice,
-        ) {
+        async priceFilterProducts(minPrice, maxPrice) {
             return await this.fetchProducts(
                 1,
                 this.search,
@@ -478,37 +451,26 @@ export const useProductStore = defineStore("product", {
             this.trashError = null;
 
             try {
-                const response = await axios.get(
-                    "/api/trash",
-                    {
-                        params: {
-                            page,
-                            per_page: this.trashPerPage,
-                        },
+                const response = await axios.get("/api/trash", {
+                    params: {
+                        page,
+                        per_page: this.trashPerPage,
                     },
-                );
+                });
 
                 const data = response.data;
 
                 // Read Laravel paginator
-                if (
-                    data &&
-                    Array.isArray(data.data)
-                ) {
+                if (data && Array.isArray(data.data)) {
                     this.trash = data.data;
 
-                    this.trashCurrentPage =
-                        data.current_page || 1;
+                    this.trashCurrentPage = data.current_page || 1;
 
-                    this.trashLastPage =
-                        data.last_page || 1;
+                    this.trashLastPage = data.last_page || 1;
 
-                    this.trashTotal =
-                        data.total || 0;
+                    this.trashTotal = data.total || 0;
 
-                    this.trashPerPage =
-                        data.per_page ||
-                        this.trashPerPage;
+                    this.trashPerPage = data.per_page || this.trashPerPage;
                 } else {
                     this.trash = [];
                     this.trashCurrentPage = 1;
@@ -539,28 +501,21 @@ export const useProductStore = defineStore("product", {
                     `/api/trash/${productId}/restore`,
                 );
 
-                this.trash =
-                    this.trash.filter(
-                        (product) =>
-                            product.id !== productId,
-                    );
-
-                this.trashTotal = Math.max(
-                    0,
-                    this.trashTotal - 1,
+                this.trash = this.trash.filter(
+                    (product) => product.id !== productId,
                 );
+
+                this.trashTotal = Math.max(0, this.trashTotal - 1);
 
                 return response.data;
             } catch (error) {
                 if (error.response?.status === 404) {
-                    this.trashError =
-                        "Deleted product not found.";
+                    this.trashError = "Deleted product not found.";
                 } else {
-                    this.trashError =
-                        this.getErrorMessage(
-                            error,
-                            "Failed to restore product.",
-                        );
+                    this.trashError = this.getErrorMessage(
+                        error,
+                        "Failed to restore product.",
+                    );
                 }
 
                 throw error;
@@ -570,39 +525,28 @@ export const useProductStore = defineStore("product", {
         },
 
         // Permanently delete product
-        async permanentlyDeleteProduct(
-            productId,
-        ) {
+        async permanentlyDeleteProduct(productId) {
             this.trashLoading = true;
             this.trashError = null;
 
             try {
-                const response = await axios.delete(
-                    `/api/trash/${productId}`,
+                const response = await axios.delete(`/api/trash/${productId}`);
+
+                this.trash = this.trash.filter(
+                    (product) => product.id !== productId,
                 );
 
-                this.trash =
-                    this.trash.filter(
-                        (product) =>
-                            product.id !== productId,
-                    );
-
-                this.trashTotal = Math.max(
-                    0,
-                    this.trashTotal - 1,
-                );
+                this.trashTotal = Math.max(0, this.trashTotal - 1);
 
                 return response.data;
             } catch (error) {
                 if (error.response?.status === 404) {
-                    this.trashError =
-                        "Deleted product not found.";
+                    this.trashError = "Deleted product not found.";
                 } else {
-                    this.trashError =
-                        this.getErrorMessage(
-                            error,
-                            "Failed to permanently delete product.",
-                        );
+                    this.trashError = this.getErrorMessage(
+                        error,
+                        "Failed to permanently delete product.",
+                    );
                 }
 
                 throw error;
@@ -617,36 +561,25 @@ export const useProductStore = defineStore("product", {
             this.trashError = null;
 
             try {
-                const ids = productsToRestore.map(
-                    (product) =>
-                        typeof product === "object"
-                            ? product.id
-                            : product,
+                const ids = productsToRestore.map((product) =>
+                    typeof product === "object" ? product.id : product,
                 );
 
                 if (!ids.length) {
-                    this.trashError =
-                        "Please select at least one product.";
+                    this.trashError = "Please select at least one product.";
 
                     return;
                 }
 
                 for (const id of ids) {
-                    await axios.post(
-                        `/api/trash/${id}/restore`,
-                    );
+                    await axios.post(`/api/trash/${id}/restore`);
                 }
 
-                this.trash =
-                    this.trash.filter(
-                        (product) =>
-                            !ids.includes(product.id),
-                    );
-
-                this.trashTotal = Math.max(
-                    0,
-                    this.trashTotal - ids.length,
+                this.trash = this.trash.filter(
+                    (product) => !ids.includes(product.id),
                 );
+
+                this.trashTotal = Math.max(0, this.trashTotal - ids.length);
 
                 return true;
             } catch (error) {
@@ -662,51 +595,37 @@ export const useProductStore = defineStore("product", {
         },
 
         // Bulk permanently delete
-        async bulkPermanentDelete(
-            productsToDelete,
-        ) {
+        async bulkPermanentDelete(productsToDelete) {
             this.trashLoading = true;
             this.trashError = null;
 
             try {
-                const ids = productsToDelete.map(
-                    (product) =>
-                        typeof product === "object"
-                            ? product.id
-                            : product,
+                const ids = productsToDelete.map((product) =>
+                    typeof product === "object" ? product.id : product,
                 );
 
                 if (!ids.length) {
-                    this.trashError =
-                        "Please select at least one product.";
+                    this.trashError = "Please select at least one product.";
 
                     return;
                 }
 
                 for (const id of ids) {
-                    await axios.delete(
-                        `/api/trash/${id}`,
-                    );
+                    await axios.delete(`/api/trash/${id}`);
                 }
 
-                this.trash =
-                    this.trash.filter(
-                        (product) =>
-                            !ids.includes(product.id),
-                    );
-
-                this.trashTotal = Math.max(
-                    0,
-                    this.trashTotal - ids.length,
+                this.trash = this.trash.filter(
+                    (product) => !ids.includes(product.id),
                 );
+
+                this.trashTotal = Math.max(0, this.trashTotal - ids.length);
 
                 return true;
             } catch (error) {
-                this.trashError =
-                    this.getErrorMessage(
-                        error,
-                        "Failed to permanently delete products.",
-                    );
+                this.trashError = this.getErrorMessage(
+                    error,
+                    "Failed to permanently delete products.",
+                );
 
                 throw error;
             } finally {

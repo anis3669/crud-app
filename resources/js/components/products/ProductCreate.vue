@@ -1,7 +1,11 @@
 <script setup>
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { storeToRefs } from "pinia";
 import { useRouter } from "vue-router";
+
 import { useProductStore } from "../../stores/product";
+import { useCategoryStore } from "../../stores/category";
+import { useSupplierStore } from "../../stores/supplier";
 import { useToastStore } from "../../stores/toast";
 
 import BaseButton from "../common/BaseButton.vue";
@@ -9,14 +13,22 @@ import BaseCard from "../common/BaseCard.vue";
 import ImageUpload from "../common/ImageUpload.vue";
 
 const router = useRouter();
+
 const productStore = useProductStore();
+const categoryStore = useCategoryStore();
+const supplierStore = useSupplierStore();
 const toastStore = useToastStore();
+
+const { categories } = storeToRefs(categoryStore);
+const { suppliers } = storeToRefs(supplierStore);
 
 // Form
 
 const form = ref({
     name: "",
-    category: "",
+    sku: "",
+    category_id: "",
+    supplier_id: "",
     description: "",
     price: "",
     quantity: "",
@@ -26,7 +38,44 @@ const form = ref({
 // State
 
 const loading = ref(false);
+const loadingFormData = ref(false);
 const error = ref("");
+
+// Form status
+
+const formDataLoading = computed(
+    () => categoryStore.loading || supplierStore.loading,
+);
+
+// Load categories and suppliers
+
+async function loadFormData() {
+    loadingFormData.value = true;
+    error.value = "";
+
+    try {
+        await Promise.all([
+            categoryStore.fetchCategories(),
+            supplierStore.fetchSuppliers(),
+        ]);
+    } catch (err) {
+        console.error("Failed to load product form data:", err);
+
+        if (err.response?.status === 401) {
+            await router.push({
+                name: "login",
+            });
+
+            return;
+        }
+
+        error.value =
+            err.response?.data?.message ||
+            "Failed to load categories and suppliers.";
+    } finally {
+        loadingFormData.value = false;
+    }
+}
 
 // Validation
 
@@ -36,20 +85,39 @@ function validateForm() {
         return false;
     }
 
+    if (!form.value.sku.trim()) {
+        error.value = "Please enter a SKU.";
+        return false;
+    }
+
+    if (!form.value.category_id) {
+        error.value = "Please select a category.";
+        return false;
+    }
+
+    if (!form.value.supplier_id) {
+        error.value = "Please select a supplier.";
+        return false;
+    }
+
     if (form.value.price === "" || Number(form.value.price) < 0) {
         error.value = "Please enter a valid price.";
         return false;
     }
 
-    if (form.value.quantity === "" || Number(form.value.quantity) < 0) {
-        error.value = "Please enter a valid quantity.";
+    if (
+        form.value.quantity === "" ||
+        Number(form.value.quantity) < 0 ||
+        !Number.isInteger(Number(form.value.quantity))
+    ) {
+        error.value = "Please enter a valid whole-number quantity.";
         return false;
     }
 
     return true;
 }
 
-// Create Product
+// Create product
 
 async function submitForm() {
     error.value = "";
@@ -64,13 +132,11 @@ async function submitForm() {
         const productData = new FormData();
 
         productData.append("name", form.value.name.trim());
-
-        productData.append("category", form.value.category);
-
+        productData.append("sku", form.value.sku.trim());
+        productData.append("category_id", String(form.value.category_id));
+        productData.append("supplier_id", String(form.value.supplier_id));
         productData.append("description", form.value.description?.trim() || "");
-
         productData.append("price", String(Number(form.value.price)));
-
         productData.append("quantity", String(Number(form.value.quantity)));
 
         if (form.value.image instanceof File) {
@@ -88,7 +154,7 @@ async function submitForm() {
         console.error("Create product error:", err);
 
         if (err.response?.status === 401) {
-            router.push({
+            await router.push({
                 name: "login",
             });
 
@@ -106,7 +172,6 @@ async function submitForm() {
             }
 
             toastStore.error("Failed to create product.");
-
             return;
         }
 
@@ -129,10 +194,12 @@ function cancel() {
         name: "products.index",
     });
 }
+
+onMounted(loadFormData);
 </script>
 
 <template>
-    <div class="mx-auto max-w-3xl">
+    <div class="mx-auto w-full max-w-3xl">
         <!-- Header -->
 
         <div class="mb-8">
@@ -176,11 +243,38 @@ function cancel() {
                         id="name"
                         v-model="form.name"
                         type="text"
+                        maxlength="255"
                         placeholder="Enter product name"
                         :disabled="loading"
                         class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                     />
                 </div>
+
+                <!-- SKU -->
+
+                <div>
+                    <label
+                        for="sku"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                    >
+                        SKU
+                    </label>
+
+                    <input
+                        id="sku"
+                        v-model="form.sku"
+                        type="text"
+                        maxlength="100"
+                        placeholder="e.g. PROD-001"
+                        :disabled="loading"
+                        class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm uppercase text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                    />
+
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        SKU must be unique.
+                    </p>
+                </div>
+
                 <!-- Category -->
 
                 <div>
@@ -193,29 +287,59 @@ function cancel() {
 
                     <select
                         id="category"
-                        v-model="form.category"
-                        :disabled="saving"
+                        v-model="form.category_id"
+                        :disabled="loading || formDataLoading"
                         class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
                     >
-                        <option value="">Select a category</option>
-
-                        <option value="Electronics">Electronics</option>
-
-                        <option value="Clothing">Clothing</option>
-
-                        <option value="Food & Beverage">Food & Beverage</option>
-
-                        <option value="Home & Kitchen">Home & Kitchen</option>
-
-                        <option value="Beauty & Personal Care">
-                            Beauty & Personal Care
+                        <option value="">
+                            {{
+                                categoryStore.loading
+                                    ? "Loading categories..."
+                                    : "Select a category"
+                            }}
                         </option>
 
-                        <option value="Sports">Sports</option>
+                        <option
+                            v-for="category in categories"
+                            :key="category.id"
+                            :value="category.id"
+                        >
+                            {{ category.name }}
+                        </option>
+                    </select>
+                </div>
 
-                        <option value="Books">Books</option>
+                <!-- Supplier -->
 
-                        <option value="Other">Other</option>
+                <div>
+                    <label
+                        for="supplier"
+                        class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                    >
+                        Supplier
+                    </label>
+
+                    <select
+                        id="supplier"
+                        v-model="form.supplier_id"
+                        :disabled="loading || formDataLoading"
+                        class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-900 focus:ring-2 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-white dark:focus:ring-white dark:disabled:bg-gray-700"
+                    >
+                        <option value="">
+                            {{
+                                supplierStore.loading
+                                    ? "Loading suppliers..."
+                                    : "Select a supplier"
+                            }}
+                        </option>
+
+                        <option
+                            v-for="supplier in suppliers"
+                            :key="supplier.id"
+                            :value="supplier.id"
+                        >
+                            {{ supplier.name }}
+                        </option>
                     </select>
                 </div>
 
@@ -233,54 +357,59 @@ function cancel() {
                         id="description"
                         v-model="form.description"
                         rows="4"
+                        maxlength="1000"
                         placeholder="Enter product description"
                         :disabled="loading"
                         class="mt-2 block w-full resize-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                     ></textarea>
                 </div>
 
-                <!-- Price -->
+                <!-- Price and Quantity -->
 
-                <div>
-                    <label
-                        for="price"
-                        class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
-                    >
-                        Price
-                    </label>
+                <div class="grid gap-6 sm:grid-cols-2">
+                    <!-- Price -->
 
-                    <input
-                        id="price"
-                        v-model="form.price"
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        :disabled="loading"
-                        class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
-                    />
-                </div>
+                    <div>
+                        <label
+                            for="price"
+                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            Price
+                        </label>
 
-                <!-- Quantity -->
+                        <input
+                            id="price"
+                            v-model="form.price"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            :disabled="loading"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                        />
+                    </div>
 
-                <div>
-                    <label
-                        for="quantity"
-                        class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
-                    >
-                        Quantity
-                    </label>
+                    <!-- Quantity -->
 
-                    <input
-                        id="quantity"
-                        v-model="form.quantity"
-                        type="number"
-                        min="0"
-                        step="1"
-                        placeholder="0"
-                        :disabled="loading"
-                        class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
-                    />
+                    <div>
+                        <label
+                            for="quantity"
+                            class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
+                        >
+                            Quantity
+                        </label>
+
+                        <input
+                            id="quantity"
+                            v-model="form.quantity"
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="0"
+                            :disabled="loading"
+                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                        />
+                    </div>
                 </div>
 
                 <!-- Product Image -->
@@ -303,7 +432,11 @@ function cancel() {
                         Cancel
                     </BaseButton>
 
-                    <BaseButton type="submit" :loading="loading">
+                    <BaseButton
+                        type="submit"
+                        :loading="loading"
+                        :disabled="formDataLoading"
+                    >
                         Create Product
                     </BaseButton>
                 </div>
