@@ -17,11 +17,12 @@ import BulkEdit from "../components/products/BulkEdit.vue";
 import Profile from "../components/profile/Profile.vue";
 import Dashboard from "../components/dashboard/Dashboard.vue";
 import Trash from "../components/products/Trash.vue";
+import InventoryIndex from "../components/inventory/InventoryIndex.vue";
 
 const routes = [
-    // ==============================
+
     // Guest Routes
-    // ==============================
+
 
     {
         path: "/login",
@@ -41,9 +42,9 @@ const routes = [
         },
     },
 
-    // ==============================
+
     // Authenticated Routes
-    // ==============================
+
 
     {
         path: "/",
@@ -116,12 +117,17 @@ const routes = [
                     requiresAuth: true,
                 },
             },
+            {
+                path: "/inventory",
+                name: "inventory",
+                component: InventoryIndex,
+            },
         ],
     },
 
-    // ==============================
+
     // Unknown Routes
-    // ==============================
+
 
     {
         path: "/:pathMatch(.*)*",
@@ -142,9 +148,7 @@ const router = createRouter({
     },
 });
 
-// ==============================
 // Authentication Guard
-// ==============================
 
 router.beforeEach(async (to) => {
     const authStore = useAuthStore();
