@@ -363,7 +363,6 @@ class ProductApiController extends Controller
             'products.*.id' => [
                 'required',
                 'integer',
-                'distinct',
                 'exists:products,id',
             ],
 
@@ -380,13 +379,13 @@ class ProductApiController extends Controller
             ],
 
             'products.*.category_id' => [
-                'nullable',
+                'required',
                 'integer',
                 'exists:categories,id',
             ],
 
             'products.*.supplier_id' => [
-                'nullable',
+                'required',
                 'integer',
                 'exists:suppliers,id',
             ],
@@ -408,8 +407,9 @@ class ProductApiController extends Controller
                 'min:0',
             ],
 
-            'products.*.remove_image' => [
+            'products.*.removeImage' => [
                 'nullable',
+                'in:0,1',
             ],
 
             'products.*.image' => [
@@ -420,100 +420,76 @@ class ProductApiController extends Controller
             ],
         ]);
 
-        $updatedProducts = [];
+        DB::beginTransaction();
 
-        DB::transaction(function () use (
-            $validated,
-            $request,
-            &$updatedProducts
-        ) {
-            foreach (
-                $validated['products']
-                as $index => $productData
-            ) {
-                $product = Product::findOrFail(
-                    $productData['id']
-                );
+        try {
+            foreach ($validated['products'] as $index => $data) {
+                $product = Product::findOrFail($data['id']);
 
-                // Make sure SKU is unique except for current product
-                $skuExists = Product::where('sku', $productData['sku'])
-                    ->where('id', '!=', $product->id)
-                    ->exists();
+                $product->name = $data['name'];
+                $product->sku = $data['sku'];
+                $product->category_id = $data['category_id'];
+                $product->supplier_id = $data['supplier_id'];
+                $product->description = $data['description'] ?? null;
+                $product->price = $data['price'];
+                $product->quantity = $data['quantity'];
 
-                if ($skuExists) {
-                    abort(response()->json([
-                        'message' => 'The SKU "' . $productData['sku'] . '" is already in use.',
-                        'errors' => [
-                            "products.$index.sku" => [
-                                'The SKU has already been taken.',
-                            ],
-                        ],
-                    ], 422));
-                }
-
-                $product->name = $productData['name'];
-                $product->sku = $productData['sku'];
-                $product->category_id =
-                    $productData['category_id'] ?? null;
-                $product->supplier_id =
-                    $productData['supplier_id'] ?? null;
-                $product->description =
-                    $productData['description'] ?? null;
-                $product->price =
-                    $productData['price'];
-                $product->quantity =
-                    $productData['quantity'];
-
-                // Remove image
+                // Check image removal directly from request
                 $removeImage = $request->input(
-                    "products.$index.remove_image"
+                    "products.$index.removeImage"
                 );
 
-                $removeImage =
+                if (
                     $removeImage === '1' ||
                     $removeImage === 1 ||
                     $removeImage === true ||
-                    $removeImage === 'true';
-
-                if (
-                    $removeImage &&
-                    !empty($product->image)
+                    $removeImage === 'true'
                 ) {
-                    Storage::disk('public')->delete(
-                        $product->image
-                    );
-
-                    $product->image = null;
-                }
-
-                // Upload new image
-                $imageKey = "products.$index.image";
-
-                if ($request->hasFile($imageKey)) {
                     if (!empty($product->image)) {
                         Storage::disk('public')->delete(
                             $product->image
                         );
                     }
 
-                    $product->image = $request
-                        ->file($imageKey)
-                        ->store('products', 'public');
+                    $product->image = null;
+                }
+
+                // Upload new image
+                if ($request->hasFile("products.$index.image")) {
+                    if (!empty($product->image)) {
+                        Storage::disk('public')->delete(
+                            $product->image
+                        );
+                    }
+
+                    $image = $request->file(
+                        "products.$index.image"
+                    );
+
+                    $product->image = $image->store(
+                        'products',
+                        'public'
+                    );
                 }
 
                 $product->save();
-
-                $updatedProducts[] = $product->load([
-                    'category:id,name',
-                    'supplier:id,name',
-                ]);
             }
-        });
 
-        return response()->json([
-            'message' => 'Selected products updated successfully.',
-            'products' => $updatedProducts,
-        ]);
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Products updated successfully.',
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'message' => 'Failed to update products.',
+                'error' => config('app.debug')
+                    ? $e->getMessage()
+                    : null,
+            ], 500);
+        }
     }
 
     // Restore product from trash

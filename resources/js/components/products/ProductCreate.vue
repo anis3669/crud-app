@@ -41,11 +41,13 @@ const loading = ref(false);
 const loadingFormData = ref(false);
 const error = ref("");
 
-// Form status
+// Form data loading
 
-const formDataLoading = computed(
-    () => categoryStore.loading || supplierStore.loading,
-);
+const formDataLoading = computed(() => {
+    return (
+        categoryStore.loading || supplierStore.loading || loadingFormData.value
+    );
+});
 
 // Load categories and suppliers
 
@@ -69,6 +71,14 @@ async function loadFormData() {
             return;
         }
 
+        if (err.response?.status === 403) {
+            error.value =
+                err.response?.data?.message ||
+                "You do not have permission to load product form data.";
+
+            return;
+        }
+
         error.value =
             err.response?.data?.message ||
             "Failed to load categories and suppliers.";
@@ -80,12 +90,17 @@ async function loadFormData() {
 // Validation
 
 function validateForm() {
-    if (!form.value.name.trim()) {
+    const name = form.value.name.trim();
+    const sku = form.value.sku.trim();
+    const price = Number(form.value.price);
+    const quantity = Number(form.value.quantity);
+
+    if (!name) {
         error.value = "Please enter a product name.";
         return false;
     }
 
-    if (!form.value.sku.trim()) {
+    if (!sku) {
         error.value = "Please enter a SKU.";
         return false;
     }
@@ -100,15 +115,16 @@ function validateForm() {
         return false;
     }
 
-    if (form.value.price === "" || Number(form.value.price) < 0) {
+    if (form.value.price === "" || !Number.isFinite(price) || price < 0) {
         error.value = "Please enter a valid price.";
         return false;
     }
 
     if (
         form.value.quantity === "" ||
-        Number(form.value.quantity) < 0 ||
-        !Number.isInteger(Number(form.value.quantity))
+        !Number.isFinite(quantity) ||
+        quantity < 0 ||
+        !Number.isInteger(quantity)
     ) {
         error.value = "Please enter a valid whole-number quantity.";
         return false;
@@ -136,7 +152,7 @@ async function submitForm() {
         productData.append("category_id", String(form.value.category_id));
         productData.append("supplier_id", String(form.value.supplier_id));
         productData.append("description", form.value.description?.trim() || "");
-        productData.append("price", String(Number(form.value.price)));
+        productData.append("price", Number(form.value.price).toFixed(2));
         productData.append("quantity", String(Number(form.value.quantity)));
 
         if (form.value.image instanceof File) {
@@ -153,7 +169,9 @@ async function submitForm() {
     } catch (err) {
         console.error("Create product error:", err);
 
-        if (err.response?.status === 401) {
+        const status = err.response?.status;
+
+        if (status === 401) {
             await router.push({
                 name: "login",
             });
@@ -161,24 +179,36 @@ async function submitForm() {
             return;
         }
 
-        if (err.response?.status === 422) {
-            const validationErrors = err.response.data?.errors;
+        if (status === 403) {
+            error.value =
+                err.response?.data?.message ||
+                "You do not have permission to create products.";
+
+            toastStore.error(error.value);
+
+            return;
+        }
+
+        if (status === 422) {
+            const validationErrors = err.response?.data?.errors;
 
             if (validationErrors) {
                 error.value = Object.values(validationErrors).flat().join(" ");
             } else {
                 error.value =
-                    err.response.data?.message || "Validation failed.";
+                    err.response?.data?.message ||
+                    "Please check the entered information.";
             }
 
             toastStore.error("Failed to create product.");
+
             return;
         }
 
         error.value =
             err.response?.data?.message ||
-            err.message ||
             productStore.error ||
+            err.message ||
             "Failed to create product.";
 
         toastStore.error("Failed to create product.");
@@ -220,9 +250,31 @@ onMounted(loadFormData);
             v-if="error"
             class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
         >
-            <p class="text-sm font-medium text-red-700 dark:text-red-400">
-                {{ error }}
-            </p>
+            <div class="flex items-start gap-3">
+                <div
+                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400"
+                >
+                    <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M12 9v3.5m0 3.5h.01M10.3 4.6l-7 12.1A1.5 1.5 0 004.6 19h14.8a1.5 1.5 0 001.3-2.3l-7-12.1a2 2 0 00-3.4 0z"
+                        />
+                    </svg>
+                </div>
+
+                <p
+                    class="pt-1 text-sm font-medium text-red-700 dark:text-red-400"
+                >
+                    {{ error }}
+                </p>
+            </div>
         </BaseCard>
 
         <!-- Form -->
@@ -244,8 +296,9 @@ onMounted(loadFormData);
                         v-model="form.name"
                         type="text"
                         maxlength="255"
+                        autocomplete="off"
                         placeholder="Enter product name"
-                        :disabled="loading"
+                        :disabled="loading || formDataLoading"
                         class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                     />
                 </div>
@@ -265,8 +318,9 @@ onMounted(loadFormData);
                         v-model="form.sku"
                         type="text"
                         maxlength="100"
+                        autocomplete="off"
                         placeholder="e.g. PROD-001"
-                        :disabled="loading"
+                        :disabled="loading || formDataLoading"
                         class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm uppercase text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                     />
 
@@ -359,7 +413,7 @@ onMounted(loadFormData);
                         rows="4"
                         maxlength="1000"
                         placeholder="Enter product description"
-                        :disabled="loading"
+                        :disabled="loading || formDataLoading"
                         class="mt-2 block w-full resize-none rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                     ></textarea>
                 </div>
@@ -383,8 +437,9 @@ onMounted(loadFormData);
                             type="number"
                             min="0"
                             step="0.01"
+                            inputmode="decimal"
                             placeholder="0.00"
-                            :disabled="loading"
+                            :disabled="loading || formDataLoading"
                             class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                         />
                     </div>
@@ -405,8 +460,9 @@ onMounted(loadFormData);
                             type="number"
                             min="0"
                             step="1"
+                            inputmode="numeric"
                             placeholder="0"
-                            :disabled="loading"
+                            :disabled="loading || formDataLoading"
                             class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                         />
                     </div>
@@ -435,7 +491,7 @@ onMounted(loadFormData);
                     <BaseButton
                         type="submit"
                         :loading="loading"
-                        :disabled="formDataLoading"
+                        :disabled="loading || formDataLoading"
                     >
                         Create Product
                     </BaseButton>
