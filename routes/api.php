@@ -57,6 +57,15 @@ Route::middleware('auth:sanctum')->group(function () {
         ->middleware('permission:products.update');
     Route::delete('/trash/{id}', [ProductApiController::class, 'forceDelete'])
         ->middleware('permission:products.delete');
+    Route::post(
+        '/trash/bulk-restore',
+        [ProductApiController::class, 'bulkRestore']
+    )->middleware('permission:products.update');
+
+    Route::delete(
+        '/trash/bulk-delete',
+        [ProductApiController::class, 'bulkForceDelete']
+    )->middleware('permission:products.delete');
 
     // Categories
     Route::get('/categories', [CategoryApiController::class, 'index'])

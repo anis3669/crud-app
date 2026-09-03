@@ -533,6 +533,45 @@ class ProductApiController extends Controller
         ]);
     }
 
+    // Bulk restore products from trash
+    public function bulkRestore(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+
+            'ids.*' => [
+                'required',
+                'integer',
+                'distinct',
+            ],
+        ]);
+
+        $restoredCount = 0;
+
+        DB::transaction(function () use (
+            $validated,
+            &$restoredCount
+        ) {
+            $products = Product::onlyTrashed()
+                ->whereIn('id', $validated['ids'])
+                ->get();
+
+            foreach ($products as $product) {
+                $product->restore();
+                $restoredCount++;
+            }
+        });
+
+        return response()->json([
+            'message' => 'Selected products restored successfully.',
+            'restored_count' => $restoredCount,
+        ]);
+    }
+
     // Permanent delete
     public function forceDelete($id)
     {
@@ -549,6 +588,51 @@ class ProductApiController extends Controller
 
         return response()->json([
             'message' => 'Product permanently deleted.',
+        ]);
+    }
+
+    // Bulk permanently delete products
+    public function bulkForceDelete(Request $request)
+    {
+        $validated = $request->validate([
+            'ids' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+
+            'ids.*' => [
+                'required',
+                'integer',
+                'distinct',
+            ],
+        ]);
+
+        $deletedCount = 0;
+
+        DB::transaction(function () use (
+            $validated,
+            &$deletedCount
+        ) {
+            $products = Product::onlyTrashed()
+                ->whereIn('id', $validated['ids'])
+                ->get();
+
+            foreach ($products as $product) {
+                if ($product->image) {
+                    Storage::disk('public')->delete(
+                        $product->image
+                    );
+                }
+
+                $product->forceDelete();
+                $deletedCount++;
+            }
+        });
+
+        return response()->json([
+            'message' => 'Selected products permanently deleted.',
+            'deleted_count' => $deletedCount,
         ]);
     }
 

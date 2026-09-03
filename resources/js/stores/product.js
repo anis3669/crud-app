@@ -567,13 +567,12 @@ export const useProductStore = defineStore("product", {
 
                 if (!ids.length) {
                     this.trashError = "Please select at least one product.";
-
                     return;
                 }
 
-                for (const id of ids) {
-                    await axios.post(`/api/trash/${id}/restore`);
-                }
+                const response = await axios.post("/api/trash/bulk-restore", {
+                    ids,
+                });
 
                 this.trash = this.trash.filter(
                     (product) => !ids.includes(product.id),
@@ -581,7 +580,7 @@ export const useProductStore = defineStore("product", {
 
                 this.trashTotal = Math.max(0, this.trashTotal - ids.length);
 
-                return true;
+                return response.data;
             } catch (error) {
                 this.trashError = this.getErrorMessage(
                     error,
@@ -606,13 +605,14 @@ export const useProductStore = defineStore("product", {
 
                 if (!ids.length) {
                     this.trashError = "Please select at least one product.";
-
                     return;
                 }
 
-                for (const id of ids) {
-                    await axios.delete(`/api/trash/${id}`);
-                }
+                const response = await axios.delete("/api/trash/bulk-delete", {
+                    data: {
+                        ids,
+                    },
+                });
 
                 this.trash = this.trash.filter(
                     (product) => !ids.includes(product.id),
@@ -620,7 +620,7 @@ export const useProductStore = defineStore("product", {
 
                 this.trashTotal = Math.max(0, this.trashTotal - ids.length);
 
-                return true;
+                return response.data;
             } catch (error) {
                 this.trashError = this.getErrorMessage(
                     error,
