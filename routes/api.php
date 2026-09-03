@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\SupplierApiController;
 use App\Http\Controllers\Api\InventoryApiController;
 use App\Http\Controllers\Api\InvoiceApiController;
 use App\Http\Controllers\Api\UserApiController;
+use App\Http\Controllers\Api\RoleApiController;
 
 // Authentication
 Route::post('/login', [AuthController::class, 'apiLogin']);
@@ -138,4 +139,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::delete('/users/{user}', [UserApiController::class, 'destroy'])
         ->middleware('permission:users.delete');
+
+    // Role management
+    Route::get('/roles', [RoleApiController::class, 'index'])
+        ->middleware('permission:roles.view');
+
+    Route::post('/roles', [RoleApiController::class, 'store'])
+        ->middleware('permission:roles.manage');
+
+    Route::get('/roles/{role}', [RoleApiController::class, 'show'])
+        ->middleware('permission:roles.view');
+
+    Route::put('/roles/{role}', [RoleApiController::class, 'update'])
+        ->middleware('permission:roles.manage');
+
+    Route::delete('/roles/{role}', [RoleApiController::class, 'destroy'])
+        ->middleware('permission:roles.manage');
+
+    Route::get('/permissions', [RoleApiController::class, 'permissions'])
+        ->middleware('permission:roles.view');
 });

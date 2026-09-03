@@ -17,7 +17,6 @@ const productStore = useProductStore();
 const toastStore = useToastStore();
 
 const products = ref([]);
-
 const categories = ref([]);
 const suppliers = ref([]);
 
@@ -27,7 +26,6 @@ const saving = ref(false);
 const error = ref("");
 
 // Extract collection from API response
-
 function extractCollection(data, key) {
     const payload = data?.[key] ?? data?.data ?? data;
 
@@ -42,8 +40,7 @@ function extractCollection(data, key) {
     return [];
 }
 
-// Image URL
-
+// Get image URL
 function imageUrl(image) {
     if (!image) {
         return null;
@@ -63,7 +60,6 @@ function imageUrl(image) {
 }
 
 // Load categories and suppliers
-
 async function fetchOptions() {
     optionsLoading.value = true;
 
@@ -91,17 +87,13 @@ async function fetchOptions() {
         console.error("Failed to load product options:", err);
 
         if (err.response?.status === 401) {
-            await router.push({
-                name: "login",
-            });
-
+            await router.push({ name: "login" });
             return;
         }
 
         if (err.response?.status === 403) {
             error.value =
                 "You do not have permission to load categories or suppliers.";
-
             return;
         }
 
@@ -115,7 +107,6 @@ async function fetchOptions() {
 }
 
 // Load selected products
-
 async function fetchProducts() {
     loading.value = true;
     error.value = "";
@@ -132,7 +123,7 @@ async function fetchProducts() {
             ids = String(ids).split(",");
         }
 
-        ids = ids.map((id) => Number(id)).filter((id) => !Number.isNaN(id));
+        ids = ids.map((id) => Number(id)).filter((id) => Number.isInteger(id));
 
         if (ids.length === 0) {
             error.value = "No valid products were selected.";
@@ -145,9 +136,7 @@ async function fetchProducts() {
             .filter((product) => ids.includes(Number(product.id)))
             .map((product) => ({
                 id: product.id,
-
                 name: product.name ?? "",
-
                 sku: product.sku ?? "",
 
                 category_id: product.category_id ?? product.category?.id ?? "",
@@ -155,15 +144,11 @@ async function fetchProducts() {
                 supplier_id: product.supplier_id ?? product.supplier?.id ?? "",
 
                 description: product.description ?? "",
-
                 price: product.price ?? "",
-
                 quantity: product.quantity ?? "",
 
                 existingImage: imageUrl(product.image),
-
                 image: null,
-
                 removeImage: false,
             }));
 
@@ -174,10 +159,7 @@ async function fetchProducts() {
         console.error("Failed to load products:", err);
 
         if (err.response?.status === 401) {
-            await router.push({
-                name: "login",
-            });
-
+            await router.push({ name: "login" });
             return;
         }
 
@@ -191,7 +173,6 @@ async function fetchProducts() {
 }
 
 // Validate product
-
 function validateProduct(product) {
     const productName = product.name?.trim() || `Product #${product.id}`;
 
@@ -244,7 +225,6 @@ function validateProduct(product) {
 }
 
 // Save changes
-
 async function saveChanges() {
     error.value = "";
 
@@ -266,20 +246,16 @@ async function saveChanges() {
 
     try {
         const updatedProducts = products.value.map((product) => ({
-            id: product.id,
-
+            id: Number(product.id),
             name: product.name.trim(),
-
             sku: product.sku.trim(),
 
             category_id: Number(product.category_id),
-
             supplier_id: Number(product.supplier_id),
 
             description: product.description?.trim() || "",
 
             price: Number(product.price),
-
             quantity: Number(product.quantity),
 
             image: product.image instanceof File ? product.image : null,
@@ -298,10 +274,7 @@ async function saveChanges() {
         console.error("Bulk update failed:", err);
 
         if (err.response?.status === 401) {
-            await router.push({
-                name: "login",
-            });
-
+            await router.push({ name: "login" });
             return;
         }
 
@@ -309,7 +282,6 @@ async function saveChanges() {
             error.value =
                 err.response?.data?.message ||
                 "You do not have permission to update products.";
-
             return;
         }
 
@@ -333,26 +305,30 @@ async function saveChanges() {
 }
 
 // Cancel
-
 function cancel() {
     router.push({
         name: "products.index",
     });
 }
 
-// Load
+// Retry
+async function retry() {
+    error.value = "";
 
+    await Promise.all([fetchOptions(), fetchProducts()]);
+}
+
+// Load
 onMounted(async () => {
     await Promise.all([fetchOptions(), fetchProducts()]);
 });
 </script>
 
 <template>
-    <div class="mx-auto max-w-5xl">
+    <div class="mx-auto w-full max-w-5xl">
         <!-- Header -->
-
         <div
-            class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+            class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
         >
             <div>
                 <h1
@@ -377,7 +353,6 @@ onMounted(async () => {
         </div>
 
         <!-- Loading -->
-
         <BaseCard v-if="loading || optionsLoading" class="py-16">
             <div class="flex flex-col items-center justify-center">
                 <div
@@ -395,7 +370,6 @@ onMounted(async () => {
         </BaseCard>
 
         <!-- Error -->
-
         <BaseCard
             v-else-if="error"
             class="border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
@@ -405,32 +379,30 @@ onMounted(async () => {
                     {{ error }}
                 </p>
 
-                <BaseButton type="button" class="mt-4" @click="fetchProducts">
+                <BaseButton type="button" class="mt-4" @click="retry">
                     Try Again
                 </BaseButton>
             </div>
         </BaseCard>
 
         <!-- Form -->
-
         <form v-else class="space-y-4" @submit.prevent="saveChanges">
             <BaseCard
                 v-for="(product, index) in products"
                 :key="product.id"
-                class="p-6"
+                class="p-5 sm:p-6"
             >
-                <!-- Product Header -->
-
+                <!-- Product header -->
                 <div
                     class="mb-6 flex items-center gap-3 border-b border-gray-100 pb-4 dark:border-gray-700"
                 >
                     <div
-                        class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-900 text-sm font-semibold text-white dark:bg-white dark:text-gray-900"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gray-900 text-sm font-semibold text-white dark:bg-white dark:text-gray-900"
                     >
                         {{ index + 1 }}
                     </div>
 
-                    <div>
+                    <div class="min-w-0">
                         <h2
                             class="text-sm font-semibold text-gray-900 dark:text-white"
                         >
@@ -444,7 +416,6 @@ onMounted(async () => {
                 </div>
 
                 <!-- Image -->
-
                 <div class="mb-6">
                     <ImageUpload
                         v-model="product.image"
@@ -455,7 +426,6 @@ onMounted(async () => {
                 </div>
 
                 <!-- Name and SKU -->
-
                 <div class="grid gap-5 sm:grid-cols-2">
                     <div>
                         <label
@@ -495,7 +465,6 @@ onMounted(async () => {
                 </div>
 
                 <!-- Category and Supplier -->
-
                 <div class="mt-5 grid gap-5 sm:grid-cols-2">
                     <div>
                         <label
@@ -551,7 +520,6 @@ onMounted(async () => {
                 </div>
 
                 <!-- Description -->
-
                 <div class="mt-5">
                     <label
                         :for="`description-${product.id}`"
@@ -570,7 +538,6 @@ onMounted(async () => {
                 </div>
 
                 <!-- Price and Quantity -->
-
                 <div class="mt-5 grid gap-5 sm:grid-cols-2">
                     <div>
                         <label
@@ -613,7 +580,6 @@ onMounted(async () => {
             </BaseCard>
 
             <!-- Actions -->
-
             <BaseCard
                 class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >

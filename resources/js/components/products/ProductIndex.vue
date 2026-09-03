@@ -178,7 +178,13 @@ async function loadProducts(page = productStore.currentPage) {
 
 async function performSearch() {
     try {
-        await productStore.searchProducts(searchInput.value.trim());
+        await productStore.fetchProducts(
+            1,
+            searchInput.value.trim(),
+            productStore.filter,
+            priceRange.value.min,
+            priceRange.value.max,
+        );
     } catch (err) {
         console.error("Search products error:", err);
     }
@@ -188,7 +194,13 @@ async function clearSearch() {
     searchInput.value = "";
 
     try {
-        await productStore.clearSearch();
+        await productStore.fetchProducts(
+            1,
+            "",
+            productStore.filter,
+            priceRange.value.min,
+            priceRange.value.max,
+        );
     } catch (err) {
         console.error("Clear search error:", err);
     }
@@ -209,7 +221,13 @@ async function changeFilter(event) {
     const selectedFilter = event.target.value;
 
     try {
-        await productStore.filterProducts(selectedFilter);
+        await productStore.fetchProducts(
+            1,
+            productStore.search,
+            selectedFilter,
+            priceRange.value.min,
+            priceRange.value.max,
+        );
     } catch (err) {
         console.error("Filter products error:", err);
     }

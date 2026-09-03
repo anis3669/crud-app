@@ -34,20 +34,17 @@ const emit = defineEmits([
 
 const selectedProducts = ref([]);
 
-const productCount = computed(() => {
-    return Array.isArray(props.products) ? props.products.length : 0;
-});
+const productCount = computed(() => props.products.length);
 
-const selectedCount = computed(() => {
-    return selectedProducts.value.length;
-});
+const selectedCount = computed(() => selectedProducts.value.length);
 
-const hasSelectedProducts = computed(() => {
-    return selectedCount.value > 0;
-});
+const hasSelectedProducts = computed(() => selectedCount.value > 0);
 
 const allSelected = computed(() => {
-    return productCount.value > 0 && selectedCount.value === productCount.value;
+    return (
+        productCount.value > 0 &&
+        selectedCount.value === productCount.value
+    );
 });
 
 // Keep selection in sync
@@ -55,14 +52,12 @@ const allSelected = computed(() => {
 watch(
     () => props.products,
     (products) => {
-        const ids = new Set(
-            Array.isArray(products)
-                ? products.map((product) => product.id)
-                : [],
+        const productIds = new Set(
+            products.map((product) => Number(product.id)),
         );
 
         selectedProducts.value = selectedProducts.value.filter((id) =>
-            ids.has(id),
+            productIds.has(Number(id)),
         );
     },
     {
@@ -78,19 +73,23 @@ function toggleSelectAll() {
         return;
     }
 
-    selectedProducts.value = props.products.map((product) => product.id);
+    selectedProducts.value = props.products.map((product) =>
+        Number(product.id),
+    );
 }
 
 function toggleProduct(productId) {
-    if (selectedProducts.value.includes(productId)) {
+    const id = Number(productId);
+
+    if (selectedProducts.value.includes(id)) {
         selectedProducts.value = selectedProducts.value.filter(
-            (id) => id !== productId,
+            (selectedId) => selectedId !== id,
         );
 
         return;
     }
 
-    selectedProducts.value.push(productId);
+    selectedProducts.value.push(id);
 }
 
 // Product actions
@@ -107,7 +106,7 @@ function deleteProduct(product) {
     emit("delete-product", product);
 
     selectedProducts.value = selectedProducts.value.filter(
-        (id) => id !== product.id,
+        (id) => Number(id) !== Number(product.id),
     );
 }
 
@@ -119,7 +118,7 @@ function bulkEdit() {
     }
 
     const productsToEdit = props.products.filter((product) =>
-        selectedProducts.value.includes(product.id),
+        selectedProducts.value.includes(Number(product.id)),
     );
 
     if (productsToEdit.length === 1) {
@@ -146,7 +145,7 @@ function bulkDelete() {
     }
 
     const productsToDelete = props.products.filter((product) =>
-        selectedProducts.value.includes(product.id),
+        selectedProducts.value.includes(Number(product.id)),
     );
 
     emit("bulk-delete", productsToDelete);
@@ -169,40 +168,24 @@ function formatPrice(price) {
     });
 }
 
-// Category name
+// Category
 
 function categoryName(product) {
-    if (!product) {
-        return "Uncategorized";
-    }
-
-    if (product.category && typeof product.category === "object") {
-        return product.category.name || "Uncategorized";
-    }
-
-    if (typeof product.category === "string") {
-        return product.category;
-    }
-
-    return product.category_name || "Uncategorized";
+    return product?.category?.name ||
+        product?.category_name ||
+        (typeof product?.category === "string"
+            ? product.category
+            : "Uncategorized");
 }
 
-// Supplier name
+// Supplier
 
 function supplierName(product) {
-    if (!product) {
-        return "No supplier";
-    }
-
-    if (product.supplier && typeof product.supplier === "object") {
-        return product.supplier.name || "No supplier";
-    }
-
-    if (typeof product.supplier === "string") {
-        return product.supplier;
-    }
-
-    return product.supplier_name || "No supplier";
+    return product?.supplier?.name ||
+        product?.supplier_name ||
+        (typeof product?.supplier === "string"
+            ? product.supplier
+            : "No supplier");
 }
 
 // Stock status
@@ -296,7 +279,9 @@ function productNumber(index) {
                                 Products selected
                             </p>
 
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <p
+                                class="text-xs text-gray-500 dark:text-gray-400"
+                            >
                                 Choose an action for the selected products.
                             </p>
                         </div>
@@ -431,7 +416,9 @@ function productNumber(index) {
                             class="group border-t border-gray-100 bg-white transition-colors hover:bg-gray-50/70 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700/60"
                             :class="{
                                 'bg-gray-50/40 dark:bg-gray-700/80':
-                                    selectedProducts.includes(product.id),
+                                    selectedProducts.includes(
+                                        Number(product.id),
+                                    ),
                             }"
                         >
                             <!-- Checkbox -->
@@ -440,7 +427,9 @@ function productNumber(index) {
                                 <input
                                     type="checkbox"
                                     :checked="
-                                        selectedProducts.includes(product.id)
+                                        selectedProducts.includes(
+                                            Number(product.id),
+                                        )
                                     "
                                     @change="toggleProduct(product.id)"
                                     class="h-4 w-4 cursor-pointer rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-0 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:ring-gray-500"
@@ -499,7 +488,9 @@ function productNumber(index) {
 
                             <!-- SKU -->
 
-                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
+                            <td
+                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                            >
                                 <span
                                     class="font-mono text-xs font-medium text-gray-600 dark:text-gray-300"
                                 >
@@ -509,7 +500,9 @@ function productNumber(index) {
 
                             <!-- Category -->
 
-                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
+                            <td
+                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                            >
                                 <span
                                     class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                                 >
@@ -541,25 +534,29 @@ function productNumber(index) {
                                     "
                                 >
                                     {{
-                                        product.description || "No description"
+                                        product.description ||
+                                        "No description"
                                     }}
                                 </p>
                             </td>
 
                             <!-- Price -->
 
-                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
+                            <td
+                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                            >
                                 <p
                                     class="text-sm font-semibold text-gray-900 dark:text-white"
                                 >
-                                    Rs.
-                                    {{ formatPrice(product.price) }}
+                                    Rs. {{ formatPrice(product.price) }}
                                 </p>
                             </td>
 
                             <!-- Stock -->
 
-                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
+                            <td
+                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                            >
                                 <span
                                     class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold"
                                     :class="
@@ -579,7 +576,9 @@ function productNumber(index) {
 
                             <!-- Actions -->
 
-                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
+                            <td
+                                class="whitespace-nowrap px-4 py-4 sm:px-5"
+                            >
                                 <div
                                     class="flex items-center justify-end gap-1"
                                 >
@@ -668,7 +667,10 @@ function productNumber(index) {
                         <!-- Empty state -->
 
                         <tr v-if="productCount === 0">
-                            <td colspan="9" class="px-6 py-20 text-center">
+                            <td
+                                colspan="9"
+                                class="px-6 py-20 text-center"
+                            >
                                 <div
                                     class="mx-auto flex max-w-sm flex-col items-center"
                                 >

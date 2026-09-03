@@ -231,13 +231,32 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
+                if (!(productData instanceof FormData)) {
+                    const formData = new FormData();
+
+                    Object.entries(productData || {}).forEach(
+                        ([key, value]) => {
+                            if (value !== null && value !== undefined) {
+                                formData.append(key, value);
+                            }
+                        },
+                    );
+
+                    productData = formData;
+                }
+
+                // Laravel method spoofing for multipart/form-data
+                if (!productData.has("_method")) {
+                    productData.append("_method", "PUT");
+                }
+
                 const response = await axios.post(
                     `/api/products/${productId}`,
                     productData,
                 );
 
                 const updatedProduct =
-                    response.data.product || response.data.data;
+                    response.data.product || response.data.data || null;
 
                 const numericId = Number(productId);
 
@@ -365,34 +384,71 @@ export const useProductStore = defineStore("product", {
                     return;
                 }
 
-                const products = productsToUpdate.map((product) => ({
-                    id: Number(product.id),
-                    name: String(product.name ?? "").trim(),
-                    sku: String(product.sku ?? "").trim(),
-                    category_id:
-                        product.category_id !== null &&
-                        product.category_id !== undefined &&
-                        product.category_id !== ""
-                            ? Number(product.category_id)
-                            : null,
-                    supplier_id:
-                        product.supplier_id !== null &&
-                        product.supplier_id !== undefined &&
-                        product.supplier_id !== ""
-                            ? Number(product.supplier_id)
-                            : null,
-                    description:
-                        product.description !== null &&
-                        product.description !== undefined
-                            ? String(product.description)
-                            : "",
-                    price: Number(product.price),
-                    quantity: Number(product.quantity),
-                }));
+                const formData = new FormData();
 
-                const response = await axios.post("/api/products/bulk-update", {
-                    products,
+                productsToUpdate.forEach((product, index) => {
+                    formData.append(
+                        `products[${index}][id]`,
+                        Number(product.id),
+                    );
+
+                    formData.append(
+                        `products[${index}][name]`,
+                        String(product.name ?? "").trim(),
+                    );
+
+                    formData.append(
+                        `products[${index}][sku]`,
+                        String(product.sku ?? "").trim(),
+                    );
+
+                    formData.append(
+                        `products[${index}][category_id]`,
+                        Number(product.category_id),
+                    );
+
+                    formData.append(
+                        `products[${index}][supplier_id]`,
+                        Number(product.supplier_id),
+                    );
+
+                    formData.append(
+                        `products[${index}][description]`,
+                        String(product.description ?? ""),
+                    );
+
+                    formData.append(
+                        `products[${index}][price]`,
+                        Number(product.price),
+                    );
+
+                    formData.append(
+                        `products[${index}][quantity]`,
+                        Number(product.quantity),
+                    );
+
+                    formData.append(
+                        `products[${index}][removeImage]`,
+                        product.removeImage === true ? "1" : "0",
+                    );
+
+                    if (product.image instanceof File) {
+                        formData.append(
+                            `products[${index}][image]`,
+                            product.image,
+                        );
+                    }
                 });
+
+                const response = await axios.post(
+                    "/api/products/bulk-update",
+                    formData,
+                    {
+                        headers: {
+                            "Content-Type": "multipart/form-data",
+                        },
+                    },
+                );
 
                 await this.fetchProducts(
                     this.currentPage,
