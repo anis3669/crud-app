@@ -14,11 +14,17 @@ import ProductCreate from "../components/products/ProductCreate.vue";
 import ProductView from "../components/products/ProductView.vue";
 import ProductEdit from "../components/products/ProductEdit.vue";
 import BulkEdit from "../components/products/BulkEdit.vue";
+import Trash from "../components/products/Trash.vue";
+
+// Profile & Dashboard
 import Profile from "../components/profile/Profile.vue";
 import Dashboard from "../components/dashboard/Dashboard.vue";
-import Trash from "../components/products/Trash.vue";
+
+// Inventory
 import InventoryIndex from "../components/inventory/InventoryIndex.vue";
 import InventoryHistory from "../components/inventory/InventoryHistory.vue";
+
+// Invoices
 import InvoiceIndex from "../components/invoices/InvoiceIndex.vue";
 import InvoiceCreate from "../components/invoices/InvoiceCreate.vue";
 import InvoiceView from "../components/invoices/InvoiceView.vue";
@@ -54,7 +60,16 @@ const routes = [
         },
 
         children: [
-            // / → /products
+            // Dashboard
+
+            {
+                path: "dashboard",
+                name: "dashboard",
+                component: Dashboard,
+            },
+
+            // Default
+
             {
                 path: "",
                 redirect: {
@@ -62,89 +77,119 @@ const routes = [
                 },
             },
 
-            // /products
+            // Products
+
             {
                 path: "products",
                 name: "products.index",
                 component: ProductIndex,
+                meta: {
+                    permission: "products.view",
+                },
             },
 
-            // /products/create
             {
                 path: "products/create",
                 name: "products.create",
                 component: ProductCreate,
+                meta: {
+                    permission: "products.create",
+                },
             },
 
-            // /products/bulk-edit
             {
                 path: "products/bulk-edit",
                 name: "products.bulk-edit",
                 component: BulkEdit,
+                meta: {
+                    permission: "products.update",
+                },
             },
 
-            // /products/:id/edit
             {
                 path: "products/:id/edit",
                 name: "products.edit",
                 component: ProductEdit,
+                meta: {
+                    permission: "products.update",
+                },
             },
 
-            // /products/:id
             {
                 path: "products/:id",
                 name: "products.view",
                 component: ProductView,
+                meta: {
+                    permission: "products.view",
+                },
             },
-            // /profile
+
+            // Trash
+
             {
-                path: "profile",
-                name: "profile",
-                component: Profile,
-            },
-            // dashboard
-            {
-                path: "dashboard",
-                name: "dashboard",
-                component: Dashboard,
-            },
-            // trash
-            {
-                path: "/trash",
+                path: "trash",
                 name: "trash",
                 component: Trash,
                 meta: {
-                    requiresAuth: true,
+                    permission: "products.delete",
                 },
             },
-            // inventory
+
+            // Inventory
+
             {
-                path: "/inventory",
+                path: "inventory",
                 name: "inventory",
                 component: InventoryIndex,
+                meta: {
+                    permission: "inventory.view",
+                },
             },
+
             {
-                path: "/inventory/history",
+                path: "inventory/history",
                 name: "inventory.history",
                 component: InventoryHistory,
+                meta: {
+                    permission: "inventory.history",
+                },
             },
-            // invoices
+
+            // Invoices
+
             {
                 path: "invoices",
                 name: "invoices.index",
                 component: InvoiceIndex,
+                meta: {
+                    permission: "invoices.view",
+                },
             },
-            // invoice create
+
             {
                 path: "invoices/create",
                 name: "invoices.create",
                 component: InvoiceCreate,
+                meta: {
+                    permission: "invoices.create",
+                },
             },
-            // invoice view
+
             {
                 path: "invoices/:invoice",
                 name: "invoices.show",
                 component: InvoiceView,
+                meta: {
+                    permission: "invoices.view",
+                },
+            },
+
+            // Profile
+
+            {
+                path: "profile",
+                name: "profile",
+                component: Profile,
             },
         ],
     },
@@ -170,7 +215,7 @@ const router = createRouter({
     },
 });
 
-// Authentication Guard
+// Authentication + Permission Guard
 
 router.beforeEach(async (to) => {
     const authStore = useAuthStore();
@@ -190,7 +235,16 @@ router.beforeEach(async (to) => {
     // Guest route while already logged in
     if (to.meta.guest && authStore.authenticated) {
         return {
-            name: "products.index",
+            name: "dashboard",
+        };
+    }
+
+    // Permission protected route
+    const permission = to.meta.permission;
+
+    if (permission && !authStore.can(permission)) {
+        return {
+            name: "dashboard",
         };
     }
 

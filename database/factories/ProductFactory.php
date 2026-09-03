@@ -2,8 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\Supplier;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 class ProductFactory extends Factory
 {
@@ -32,15 +35,9 @@ class ProductFactory extends Factory
             ],
             [
                 'name' => 'Smart Watch Series 5',
-                'description' => 'Modern smartwatch with fitness tracking, notifications, and health features.',
+                'description' => 'Modern smartwatch with fitness tracking and notifications.',
                 'category' => 'Electronics',
                 'image' => 'https://images.unsplash.com/photo-1523275335684-37898b6baf30',
-            ],
-            [
-                'name' => 'Portable Bluetooth Speaker',
-                'description' => 'Compact Bluetooth speaker with powerful audio and portable design.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1',
             ],
             [
                 'name' => 'Laptop Backpack',
@@ -55,136 +52,10 @@ class ProductFactory extends Factory
                 'image' => 'https://images.unsplash.com/photo-1602143407151-7111542de6e8',
             ],
             [
-                'name' => 'USB-C Fast Charger',
-                'description' => 'Compact fast charger compatible with modern smartphones, tablets, and laptops.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0',
-            ],
-            [
-                'name' => 'Wireless Charging Pad',
-                'description' => 'Slim wireless charging pad designed for convenient everyday charging.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1586953208448-b95a79798f07',
-            ],
-            [
                 'name' => 'Smart LED Desk Lamp',
                 'description' => 'Adjustable LED desk lamp with multiple brightness levels for work and study.',
                 'category' => 'Home & Kitchen',
                 'image' => 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c',
-            ],
-            [
-                'name' => 'Portable SSD 1TB',
-                'description' => 'Fast and compact external SSD for storing and transferring large files.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b',
-            ],
-            [
-                'name' => 'USB-C Hub Adapter',
-                'description' => 'Multi-port USB-C hub with HDMI, USB, and memory card connectivity.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1625842268584-8f3296236761',
-            ],
-            [
-                'name' => '1080p Web Camera',
-                'description' => 'Full HD webcam suitable for video meetings, streaming, and online classes.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04',
-            ],
-            [
-                'name' => 'Wireless Office Keyboard',
-                'description' => 'Comfortable wireless keyboard designed for productivity and office work.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1587829741301-dc798b83add3',
-            ],
-            [
-                'name' => 'Ergonomic Office Chair',
-                'description' => 'Adjustable ergonomic chair designed for comfortable long working sessions.',
-                'category' => 'Home & Kitchen',
-                'image' => 'https://images.unsplash.com/photo-1580480055273-228ff5388ef8',
-            ],
-            [
-                'name' => 'Adjustable Laptop Stand',
-                'description' => 'Aluminum laptop stand with adjustable height and viewing angles.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1611186871348-b1ce696e52c9',
-            ],
-            [
-                'name' => 'Noise Cancelling Earbuds',
-                'description' => 'Compact wireless earbuds with active noise cancellation and clear audio.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1606220945770-b5b6c2c55bf1',
-            ],
-            [
-                'name' => 'Smartphone Tripod Stand',
-                'description' => 'Adjustable tripod stand for smartphones, photography, and video recording.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32',
-            ],
-            [
-                'name' => 'Digital Camera',
-                'description' => 'Compact digital camera designed for everyday photography and travel.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32',
-            ],
-            [
-                'name' => 'Gaming Monitor 27 Inch',
-                'description' => '27-inch gaming monitor with high refresh rate and sharp image quality.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1527443224154-c4a3942d3acf',
-            ],
-            [
-                'name' => 'Full HD Monitor 24 Inch',
-                'description' => '24-inch Full HD monitor suitable for office work, study, and entertainment.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1527443192006-8d7b6f5f6c1a',
-            ],
-            [
-                'name' => 'Gaming Mouse Pad',
-                'description' => 'Large gaming mouse pad with a smooth surface and anti-slip base.',
-                'category' => 'Sports',
-                'image' => 'https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7',
-            ],
-            [
-                'name' => 'Smart Home Camera',
-                'description' => 'Indoor smart camera with high-definition video and motion detection.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1558008258-3256797b43f3',
-            ],
-            [
-                'name' => 'WiFi 6 Router',
-                'description' => 'High-speed WiFi router designed for reliable home and office connectivity.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1606904825846-647eb07f5be2',
-            ],
-            [
-                'name' => 'Power Bank 20000mAh',
-                'description' => 'High-capacity portable power bank for charging devices while travelling.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1609592424526-8a4a1f8c2a1f',
-            ],
-            [
-                'name' => 'Smartphone Screen Protector',
-                'description' => 'Tempered glass screen protector designed to protect smartphones from scratches.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9',
-            ],
-            [
-                'name' => 'Premium Phone Case',
-                'description' => 'Durable protective phone case with a slim design and reinforced edges.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1601593346740-925612772716',
-            ],
-            [
-                'name' => 'Desk Organizer',
-                'description' => 'Compact desk organizer for keeping stationery and accessories neatly arranged.',
-                'category' => 'Home & Kitchen',
-                'image' => 'https://images.unsplash.com/photo-1494438639946-1ebd1d20bf85',
-            ],
-            [
-                'name' => 'Portable Projector',
-                'description' => 'Compact portable projector suitable for presentations, movies, and entertainment.',
-                'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1535016120720-40c646be5580',
             ],
             [
                 'name' => 'Electric Coffee Maker',
@@ -193,43 +64,30 @@ class ProductFactory extends Factory
                 'image' => 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085',
             ],
             [
-                'name' => 'Stainless Steel Travel Mug',
-                'description' => 'Insulated travel mug designed to keep beverages hot or cold for longer.',
-                'category' => 'Food & Beverage',
-                'image' => 'https://images.unsplash.com/photo-1514228742587-6b1558fcf93a',
-            ],
-            [
-                'name' => 'LED Gaming Desk Light',
-                'description' => 'Modern LED desk light with adjustable brightness for gaming and workspaces.',
-                'category' => 'Home & Kitchen',
-                'image' => 'https://images.unsplash.com/photo-1550745165-9bc0b252726f',
-            ],
-            [
-                'name' => 'External DVD Drive',
-                'description' => 'Slim USB external DVD drive for reading and writing discs.',
+                'name' => 'Portable SSD 1TB',
+                'description' => 'Fast and compact external SSD for storing and transferring large files.',
                 'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1591488320449-011701bb6704',
+                'image' => 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b',
             ],
             [
-                'name' => 'Wireless Presentation Remote',
-                'description' => 'Compact presentation remote with navigation controls and laser pointer.',
+                'name' => 'Portable Projector',
+                'description' => 'Compact portable projector suitable for presentations and entertainment.',
                 'category' => 'Electronics',
-                'image' => 'https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04',
-            ],
-            [
-                'name' => 'Portable Air Purifier',
-                'description' => 'Compact air purifier designed to improve air quality in small rooms and workspaces.',
-                'category' => 'Home & Kitchen',
-                'image' => 'https://images.unsplash.com/photo-1585771724684-38269d6639fd',
+                'image' => 'https://images.unsplash.com/photo-1535016120720-40c646be5580',
             ],
         ];
 
-        $product = fake()->unique()->randomElement($products);
+        $product = fake()->randomElement($products);
+        $category = Category::where('name', $product['category'])->first();
+
+        $supplier = Supplier::inRandomOrder()->first();
 
         return [
             'name' => $product['name'],
+            'sku' => 'SKU-' . strtoupper(Str::random(8)),
+            'category_id' => $category->id,
+            'supplier_id' => $supplier->id,
             'description' => $product['description'],
-            'category' => $product['category'],
             'price' => fake()->randomFloat(2, 500, 50000),
             'quantity' => fake()->numberBetween(1, 100),
             'image' => $product['image'],
