@@ -551,20 +551,32 @@ class ProductApiController extends Controller
     // Permanent delete
     public function forceDelete($id)
     {
-        $product = Product::withTrashed()
-            ->findOrFail($id);
+        try {
+            $product = Product::onlyTrashed()->findOrFail($id);
 
-        if ($product->image) {
-            Storage::disk('public')->delete(
-                $product->image
-            );
+            if ($product->invoiceItems()->exists()) {
+                return response()->json([
+                    'message' => 'This product cannot be permanently deleted because it is used in one or more invoices.',
+                ], 422);
+            }
+
+            $image = $product->image;
+
+            $product->forceDelete();
+
+            if ($image && !filter_var($image, FILTER_VALIDATE_URL)) {
+                Storage::disk('public')->delete($image);
+            }
+
+            return response()->json([
+                'message' => 'Product permanently deleted.',
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Permanent delete failed.',
+                'error' => $e->getMessage(),
+            ], 500);
         }
-
-        $product->forceDelete();
-
-        return response()->json([
-            'message' => 'Product permanently deleted.',
-        ]);
     }
 
     // Bulk permanently delete products
@@ -576,7 +588,6 @@ class ProductApiController extends Controller
                 'array',
                 'min:1',
             ],
-
             'ids.*' => [
                 'required',
                 'integer',
@@ -585,30 +596,40 @@ class ProductApiController extends Controller
         ]);
 
         $deletedCount = 0;
+        $skippedCount = 0;
 
         DB::transaction(function () use (
             $validated,
-            &$deletedCount
+            &$deletedCount,
+            &$skippedCount
         ) {
             $products = Product::onlyTrashed()
                 ->whereIn('id', $validated['ids'])
                 ->get();
 
             foreach ($products as $product) {
-                if ($product->image) {
-                    Storage::disk('public')->delete(
-                        $product->image
-                    );
+
+                if ($product->invoiceItems()->exists()) {
+                    $skippedCount++;
+                    continue;
                 }
 
+                $image = $product->image;
+
                 $product->forceDelete();
+
+                if ($image && !filter_var($image, FILTER_VALIDATE_URL)) {
+                    Storage::disk('public')->delete($image);
+                }
+
                 $deletedCount++;
             }
         });
 
         return response()->json([
-            'message' => 'Selected products permanently deleted.',
+            'message' => 'Bulk permanent delete completed.',
             'deleted_count' => $deletedCount,
+            'skipped_count' => $skippedCount,
         ]);
     }
 

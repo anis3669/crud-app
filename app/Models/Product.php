@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\InvoiceItem;
 
 class Product extends Model
 {
@@ -44,5 +45,10 @@ class Product extends Model
     public function inventoryHistories(): HasMany
     {
         return $this->hasMany(InventoryHistory::class);
+    }
+    // Invoice items
+    public function invoiceItems(): HasMany
+    {
+        return $this->hasMany(InvoiceItem::class);
     }
 }
