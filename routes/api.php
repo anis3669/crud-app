@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CategoryApiController;
 use App\Http\Controllers\Api\SupplierApiController;
 use App\Http\Controllers\Api\InventoryApiController;
 use App\Http\Controllers\Api\InvoiceApiController;
+use App\Http\Controllers\Api\UserApiController;
 
 // Authentication
 Route::post('/login', [AuthController::class, 'apiLogin']);
@@ -121,4 +122,20 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::delete('/invoices/{invoice}', [InvoiceApiController::class, 'destroy'])
         ->middleware('permission:invoices.delete');
+
+    // User management
+    Route::get('/users', [UserApiController::class, 'index'])
+        ->middleware('permission:users.view');
+
+    Route::post('/users', [UserApiController::class, 'store'])
+        ->middleware('permission:users.create');
+
+    Route::get('/users/{user}', [UserApiController::class, 'show'])
+        ->middleware('permission:users.view');
+
+    Route::put('/users/{user}', [UserApiController::class, 'update'])
+        ->middleware('permission:users.update');
+
+    Route::delete('/users/{user}', [UserApiController::class, 'destroy'])
+        ->middleware('permission:users.delete');
 });
