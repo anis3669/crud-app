@@ -26,29 +26,17 @@ const products = computed(() => {
         : [];
 });
 
-const loading = computed(() => {
-    return productStore.trashLoading;
-});
+const loading = computed(() => productStore.trashLoading);
 
-const error = computed(() => {
-    return productStore.trashError;
-});
+const error = computed(() => productStore.trashError);
 
-const currentPage = computed(() => {
-    return productStore.trashCurrentPage;
-});
+const currentPage = computed(() => productStore.trashCurrentPage);
 
-const lastPage = computed(() => {
-    return productStore.trashLastPage;
-});
+const lastPage = computed(() => productStore.trashLastPage);
 
-const total = computed(() => {
-    return productStore.trashTotal;
-});
+const total = computed(() => productStore.trashTotal);
 
-const perPage = computed(() => {
-    return productStore.trashPerPage;
-});
+const perPage = computed(() => productStore.trashPerPage);
 
 const allSelected = computed(() => {
     return (
@@ -152,19 +140,32 @@ function formatDeletedDate(date) {
         return "—";
     }
 
-    return parsedDate.toLocaleDateString();
+    return parsedDate.toLocaleDateString("en-IN", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
+}
+
+// Check whether a product is selected
+
+function isSelected(productId) {
+    return selectedProducts.value.some(
+        (id) => Number(id) === Number(productId),
+    );
 }
 
 // Toggle one product
 
 function toggleProduct(productId) {
-    if (selectedProducts.value.includes(productId)) {
-        selectedProducts.value =
-            selectedProducts.value.filter(
-                (id) => id !== productId,
-            );
+    const numericId = Number(productId);
+
+    if (isSelected(numericId)) {
+        selectedProducts.value = selectedProducts.value.filter(
+            (id) => Number(id) !== numericId,
+        );
     } else {
-        selectedProducts.value.push(productId);
+        selectedProducts.value.push(numericId);
     }
 }
 
@@ -173,11 +174,12 @@ function toggleProduct(productId) {
 function toggleAll() {
     if (allSelected.value) {
         selectedProducts.value = [];
-    } else {
-        selectedProducts.value = products.value.map(
-            (product) => product.id,
-        );
+        return;
     }
+
+    selectedProducts.value = products.value.map(
+        (product) => Number(product.id),
+    );
 }
 
 // Clear selection
@@ -192,19 +194,24 @@ async function restoreProduct(product) {
     try {
         await productStore.restoreProduct(product.id);
 
-        selectedProducts.value =
-            selectedProducts.value.filter(
-                (id) => id !== product.id,
-            );
+        selectedProducts.value = selectedProducts.value.filter(
+            (id) => Number(id) !== Number(product.id),
+        );
 
         toastStore.success(
             "Product restored successfully.",
         );
+
+        if (
+            products.value.length === 0 &&
+            currentPage.value > 1
+        ) {
+            await productStore.fetchTrash(
+                currentPage.value - 1,
+            );
+        }
     } catch (err) {
-        console.error(
-            "Restore product error:",
-            err,
-        );
+        console.error("Restore product error:", err);
     }
 }
 
@@ -225,11 +232,17 @@ async function bulkRestore() {
         toastStore.success(
             "Products restored successfully.",
         );
+
+        if (
+            products.value.length === 0 &&
+            currentPage.value > 1
+        ) {
+            await productStore.fetchTrash(
+                currentPage.value - 1,
+            );
+        }
     } catch (err) {
-        console.error(
-            "Bulk restore error:",
-            err,
-        );
+        console.error("Bulk restore error:", err);
     }
 }
 
@@ -267,10 +280,9 @@ async function confirmPermanentDelete() {
             productId,
         );
 
-        selectedProducts.value =
-            selectedProducts.value.filter(
-                (id) => id !== productId,
-            );
+        selectedProducts.value = selectedProducts.value.filter(
+            (id) => Number(id) !== Number(productId),
+        );
 
         toastStore.success(
             "Product permanently deleted.",
@@ -278,6 +290,15 @@ async function confirmPermanentDelete() {
 
         showDeleteModal.value = false;
         productToDelete.value = null;
+
+        if (
+            products.value.length === 0 &&
+            currentPage.value > 1
+        ) {
+            await productStore.fetchTrash(
+                currentPage.value - 1,
+            );
+        }
     } catch (err) {
         console.error(
             "Permanent delete error:",
@@ -305,6 +326,15 @@ async function bulkPermanentDelete() {
         toastStore.success(
             "Products permanently deleted.",
         );
+
+        if (
+            products.value.length === 0 &&
+            currentPage.value > 1
+        ) {
+            await productStore.fetchTrash(
+                currentPage.value - 1,
+            );
+        }
     } catch (err) {
         console.error(
             "Bulk permanent delete error:",
@@ -484,7 +514,9 @@ onMounted(async () => {
                     {{ selectedProducts.length }}
                     product<span
                         v-if="selectedProducts.length !== 1"
-                    >s</span>
+                    >
+                        s</span
+                    >
                     selected
                 </p>
 
@@ -608,7 +640,9 @@ onMounted(async () => {
                             class="bg-gray-50 dark:bg-gray-800/50"
                         >
                             <tr>
-                                <th class="w-12 px-4 py-3">
+                                <th
+                                    class="w-12 px-4 py-3"
+                                >
                                     <input
                                         type="checkbox"
                                         :checked="allSelected"
@@ -681,7 +715,7 @@ onMounted(async () => {
                                     <input
                                         type="checkbox"
                                         :checked="
-                                            selectedProducts.includes(
+                                            isSelected(
                                                 product.id,
                                             )
                                         "
@@ -734,7 +768,9 @@ onMounted(async () => {
                                             <p
                                                 class="truncate text-sm font-semibold text-gray-900 dark:text-white"
                                             >
-                                                {{ product.name }}
+                                                {{
+                                                    product.name
+                                                }}
                                             </p>
 
                                             <p
@@ -751,7 +787,10 @@ onMounted(async () => {
                                 <td
                                     class="px-4 py-4 text-sm font-mono text-gray-600 dark:text-gray-300"
                                 >
-                                    {{ product.sku || "—" }}
+                                    {{
+                                        product.sku ||
+                                        "—"
+                                    }}
                                 </td>
 
                                 <!-- Category -->
@@ -759,7 +798,11 @@ onMounted(async () => {
                                 <td
                                     class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300"
                                 >
-                                    {{ categoryName(product) }}
+                                    {{
+                                        categoryName(
+                                            product,
+                                        )
+                                    }}
                                 </td>
 
                                 <!-- Supplier -->
@@ -767,7 +810,11 @@ onMounted(async () => {
                                 <td
                                     class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300"
                                 >
-                                    {{ supplierName(product) }}
+                                    {{
+                                        supplierName(
+                                            product,
+                                        )
+                                    }}
                                 </td>
 
                                 <!-- Price -->
@@ -775,7 +822,12 @@ onMounted(async () => {
                                 <td
                                     class="whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-900 dark:text-white"
                                 >
-                                    Rs. {{ formatPrice(product.price) }}
+                                    Rs.
+                                    {{
+                                        formatPrice(
+                                            product.price,
+                                        )
+                                    }}
                                 </td>
 
                                 <!-- Quantity -->
@@ -806,7 +858,9 @@ onMounted(async () => {
                                     >
                                         <BaseButton
                                             type="button"
-                                            :disabled="loading"
+                                            :disabled="
+                                                loading
+                                            "
                                             class="justify-center"
                                             @click="
                                                 restoreProduct(
