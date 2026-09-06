@@ -16,7 +16,7 @@ export const useInventoryStore = defineStore("inventory", {
         search: "",
         currentPage: 1,
         lastPage: 1,
-        perPage: 10,
+        perPage: 20,
         total: 0,
         stats: emptyStats(),
         history: [],
