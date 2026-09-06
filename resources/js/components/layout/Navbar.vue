@@ -12,6 +12,8 @@ const themeStore = useThemeStore();
 const showProfileMenu = ref(false);
 const profileMenuRef = ref(null);
 
+// Navigation
+
 function goToDashboard() {
     showProfileMenu.value = false;
 
@@ -28,11 +30,35 @@ function goToProducts() {
     });
 }
 
+function goToCategories() {
+    showProfileMenu.value = false;
+
+    router.push({
+        name: "categories.index",
+    });
+}
+
+function goToInventory() {
+    showProfileMenu.value = false;
+
+    router.push({
+        name: "inventory",
+    });
+}
+
 function goToInventoryHistory() {
     showProfileMenu.value = false;
 
     router.push({
         name: "inventory.history",
+    });
+}
+
+function goToInvoices() {
+    showProfileMenu.value = false;
+
+    router.push({
+        name: "invoices.index",
     });
 }
 
@@ -44,9 +70,49 @@ function goToProfile() {
     });
 }
 
+// Active navigation
+
 function isActive(name) {
     return route.name === name;
 }
+
+function isProductsActive() {
+    return [
+        "products.index",
+        "products.create",
+        "products.edit",
+        "products.view",
+        "products.bulk-edit",
+        "trash",
+    ].includes(route.name);
+}
+
+function isCategoriesActive() {
+    return route.name === "categories.index";
+}
+
+function isInventoryActive() {
+    return [
+        "inventory",
+        "inventory.history",
+    ].includes(route.name);
+}
+
+function isInvoicesActive() {
+    return [
+        "invoices.index",
+        "invoices.create",
+        "invoices.show",
+    ].includes(route.name);
+}
+
+// Permissions
+
+function can(permission) {
+    return authStore.can(permission);
+}
+
+// Logout
 
 async function logout() {
     showProfileMenu.value = false;
@@ -65,6 +131,8 @@ async function logout() {
         });
     }
 }
+
+// Profile menu
 
 function toggleProfileMenu() {
     showProfileMenu.value = !showProfileMenu.value;
@@ -141,6 +209,7 @@ onBeforeUnmount(() => {
                 <!-- Dashboard -->
 
                 <button
+                    v-if="authStore.authenticated"
                     type="button"
                     @click="goToDashboard"
                     class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
@@ -175,14 +244,12 @@ onBeforeUnmount(() => {
                 <!-- Products -->
 
                 <button
+                    v-if="can('products.view')"
                     type="button"
                     @click="goToProducts"
                     class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
                     :class="
-                        isActive('products.index') ||
-                        isActive('products.create') ||
-                        isActive('products.edit') ||
-                        isActive('products.view')
+                        isProductsActive()
                             ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
                             : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white'
                     "
@@ -190,10 +257,7 @@ onBeforeUnmount(() => {
                     <svg
                         class="h-4.5 w-4.5 transition"
                         :class="
-                            isActive('products.index') ||
-                            isActive('products.create') ||
-                            isActive('products.edit') ||
-                            isActive('products.view')
+                            isProductsActive()
                                 ? 'text-gray-900 dark:text-white'
                                 : 'text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-300'
                         "
@@ -212,9 +276,80 @@ onBeforeUnmount(() => {
                     Products
                 </button>
 
-                <!-- Inventory history -->
+                <!-- Categories -->
 
                 <button
+                    v-if="can('categories.view')"
+                    type="button"
+                    @click="goToCategories"
+                    class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
+                    :class="
+                        isCategoriesActive()
+                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white'
+                    "
+                >
+                    <svg
+                        class="h-4.5 w-4.5 transition"
+                        :class="
+                            isCategoriesActive()
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-300'
+                        "
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M4 6h16M4 12h16M4 18h16M8 6v12"
+                        />
+                    </svg>
+
+                    Categories
+                </button>
+
+                <!-- Stock -->
+
+                <button
+                    v-if="can('inventory.view')"
+                    type="button"
+                    @click="goToInventory"
+                    class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
+                    :class="
+                        isInventoryActive()
+                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white'
+                    "
+                >
+                    <svg
+                        class="h-4.5 w-4.5 transition"
+                        :class="
+                            isInventoryActive()
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-300'
+                        "
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M4 7h16M4 12h16M4 17h16M7 4v16"
+                        />
+                    </svg>
+
+                    Stock
+                </button>
+
+                <!-- Stock History -->
+
+                <button
+                    v-if="can('inventory.history')"
                     type="button"
                     @click="goToInventoryHistory"
                     class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
@@ -246,11 +381,46 @@ onBeforeUnmount(() => {
                     History
                 </button>
 
+                <!-- Invoices -->
+
+                <button
+                    v-if="can('invoices.view')"
+                    type="button"
+                    @click="goToInvoices"
+                    class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
+                    :class="
+                        isInvoicesActive()
+                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white'
+                    "
+                >
+                    <svg
+                        class="h-4.5 w-4.5 transition"
+                        :class="
+                            isInvoicesActive()
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-400 group-hover:text-gray-700 dark:text-gray-500 dark:group-hover:text-gray-300'
+                        "
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M6 3h12a1 1 0 0 1 1 1v16l-7-3-7 3V4a1 1 0 0 1 1-1Zm3 5h6M9 12h6"
+                        />
+                    </svg>
+
+                    Invoices
+                </button>
+
                 <!-- Desktop Theme -->
 
                 <button
                     type="button"
-                    class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+                    class="ml-1 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
                     :aria-label="
                         themeStore.dark
                             ? 'Switch to light mode'
@@ -301,6 +471,7 @@ onBeforeUnmount(() => {
                 <!-- Mobile Products -->
 
                 <button
+                    v-if="can('products.view')"
                     type="button"
                     @click="goToProducts"
                     class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white md:hidden"
@@ -318,6 +489,81 @@ onBeforeUnmount(() => {
                             stroke-linejoin="round"
                             stroke-width="1.8"
                             d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9ZM12 12l9-4.5M12 12 3 7.5M12 12v9"
+                        />
+                    </svg>
+                </button>
+
+                <!-- Mobile Categories -->
+
+                <button
+                    v-if="can('categories.view')"
+                    type="button"
+                    @click="goToCategories"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white md:hidden"
+                    title="Categories"
+                    aria-label="Categories"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M4 6h16M4 12h16M4 18h16M8 6v12"
+                        />
+                    </svg>
+                </button>
+
+                <!-- Mobile Stock -->
+
+                <button
+                    v-if="can('inventory.view')"
+                    type="button"
+                    @click="goToInventory"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white md:hidden"
+                    title="Stock"
+                    aria-label="Stock"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M4 7h16M4 12h16M4 17h16M7 4v16"
+                        />
+                    </svg>
+                </button>
+
+                <!-- Mobile Invoices -->
+
+                <button
+                    v-if="can('invoices.view')"
+                    type="button"
+                    @click="goToInvoices"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white md:hidden"
+                    title="Invoices"
+                    aria-label="Invoices"
+                >
+                    <svg
+                        class="h-5 w-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M6 3h12a1 1 0 0 1 1 1v16l-7-3-7 3V4a1 1 0 0 1 1-1Zm3 5h6M9 12h6"
                         />
                     </svg>
                 </button>
@@ -389,15 +635,9 @@ onBeforeUnmount(() => {
                             class="relative h-9 w-9 shrink-0 overflow-hidden rounded-full bg-gray-900 ring-2 ring-white shadow-sm dark:bg-white dark:ring-gray-950"
                         >
                             <img
-                                v-if="
-                                    authStore.user?.profile_picture_url
-                                "
-                                :src="
-                                    authStore.user.profile_picture_url
-                                "
-                                :alt="
-                                    authStore.user?.name || 'User'
-                                "
+                                v-if="authStore.user?.profile_picture_url"
+                                :src="authStore.user.profile_picture_url"
+                                :alt="authStore.user?.name || 'User'"
                                 class="h-full w-full object-cover"
                             />
 
@@ -516,6 +756,13 @@ onBeforeUnmount(() => {
                                                 ""
                                             }}
                                         </p>
+
+                                        <p
+                                            v-if="authStore.role?.name"
+                                            class="mt-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+                                        >
+                                            {{ authStore.role.name }}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -580,11 +827,12 @@ onBeforeUnmount(() => {
                                 <!-- Products -->
 
                                 <button
+                                    v-if="can('products.view')"
                                     type="button"
                                     @click="goToProducts"
                                     class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition"
                                     :class="
-                                        isActive('products.index')
+                                        isProductsActive()
                                             ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
                                             : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
                                     "
@@ -609,6 +857,206 @@ onBeforeUnmount(() => {
 
                                     <span class="flex-1">
                                         Products
+                                    </span>
+
+                                    <svg
+                                        class="h-4 w-4 text-gray-300 dark:text-gray-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.8"
+                                            d="m9 5 7 7-7 7"
+                                        />
+                                    </svg>
+                                </button>
+
+                                <!-- Categories -->
+
+                                <button
+                                    v-if="can('categories.view')"
+                                    type="button"
+                                    @click="goToCategories"
+                                    class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition"
+                                    :class="
+                                        isCategoriesActive()
+                                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                                            : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
+                                    "
+                                >
+                                    <span
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                                    >
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M4 6h16M4 12h16M4 18h16M8 6v12"
+                                            />
+                                        </svg>
+                                    </span>
+
+                                    <span class="flex-1">
+                                        Categories
+                                    </span>
+
+                                    <svg
+                                        class="h-4 w-4 text-gray-300 dark:text-gray-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.8"
+                                            d="m9 5 7 7-7 7"
+                                        />
+                                    </svg>
+                                </button>
+
+                                <!-- Stock -->
+
+                                <button
+                                    v-if="can('inventory.view')"
+                                    type="button"
+                                    @click="goToInventory"
+                                    class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition"
+                                    :class="
+                                        isInventoryActive()
+                                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                                            : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
+                                    "
+                                >
+                                    <span
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                                    >
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M4 7h16M4 12h16M4 17h16M7 4v16"
+                                            />
+                                        </svg>
+                                    </span>
+
+                                    <span class="flex-1">
+                                        Stock
+                                    </span>
+
+                                    <svg
+                                        class="h-4 w-4 text-gray-300 dark:text-gray-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.8"
+                                            d="m9 5 7 7-7 7"
+                                        />
+                                    </svg>
+                                </button>
+
+                                <!-- History -->
+
+                                <button
+                                    v-if="can('inventory.history')"
+                                    type="button"
+                                    @click="goToInventoryHistory"
+                                    class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition"
+                                    :class="
+                                        isActive('inventory.history')
+                                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                                            : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
+                                    "
+                                >
+                                    <span
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                                    >
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                                            />
+                                        </svg>
+                                    </span>
+
+                                    <span class="flex-1">
+                                        Stock History
+                                    </span>
+
+                                    <svg
+                                        class="h-4 w-4 text-gray-300 dark:text-gray-600"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.8"
+                                            d="m9 5 7 7-7 7"
+                                        />
+                                    </svg>
+                                </button>
+
+                                <!-- Invoices -->
+
+                                <button
+                                    v-if="can('invoices.view')"
+                                    type="button"
+                                    @click="goToInvoices"
+                                    class="mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium transition"
+                                    :class="
+                                        isInvoicesActive()
+                                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                                            : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-800'
+                                    "
+                                >
+                                    <span
+                                        class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                                    >
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M6 3h12a1 1 0 0 1 1 1v16l-7-3-7 3V4a1 1 0 0 1 1-1Zm3 5h6M9 12h6"
+                                            />
+                                        </svg>
+                                    </span>
+
+                                    <span class="flex-1">
+                                        Invoices
                                     </span>
 
                                     <svg

@@ -20,6 +20,9 @@ import Trash from "../components/products/Trash.vue";
 import Profile from "../components/profile/Profile.vue";
 import Dashboard from "../components/dashboard/Dashboard.vue";
 
+// categories
+import CategoryIndex from "../components/categories/CategoryIndex.vue";
+
 // Inventory
 import InventoryIndex from "../components/inventory/InventoryIndex.vue";
 import InventoryHistory from "../components/inventory/InventoryHistory.vue";
@@ -133,6 +136,13 @@ const routes = [
                 meta: {
                     permission: "products.delete",
                 },
+            },
+            // Categories
+            {
+                path: "categories",
+                name: "categories.index",
+                component: CategoryIndex,
+                meta: { permission: "categories.view" },
             },
 
             // Inventory
