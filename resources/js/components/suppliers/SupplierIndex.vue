@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 
-import { useCategoryStore } from "../../stores/category";
+import { useSupplierStore } from "../../stores/supplier";
 import { useAuthStore } from "../../stores/auth";
 import { useToastStore } from "../../stores/toast";
 
@@ -9,43 +9,42 @@ import BaseButton from "../common/BaseButton.vue";
 import BaseModal from "../common/BaseModal.vue";
 import BaseCard from "../common/BaseCard.vue";
 
-const categoryStore = useCategoryStore();
+const supplierStore = useSupplierStore();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
 
 // Stores
-const categories = computed(() => categoryStore.categories);
-const loading = computed(() => categoryStore.loading);
-const error = computed(() => categoryStore.error);
+const suppliers = computed(() => supplierStore.suppliers);
+const loading = computed(() => supplierStore.loading);
+const error = computed(() => supplierStore.error);
 
-const currentPage = computed(() => categoryStore.currentPage);
-const lastPage = computed(() => categoryStore.lastPage);
-const total = computed(() => categoryStore.total);
-const perPage = computed(() => categoryStore.perPage);
+const currentPage = computed(() => supplierStore.currentPage);
+const lastPage = computed(() => supplierStore.lastPage);
+const total = computed(() => supplierStore.total);
+const perPage = computed(() => supplierStore.perPage);
 
-const search = computed(() => categoryStore.search);
-const status = computed(() => categoryStore.status);
+const search = computed(() => supplierStore.search);
 
 // Permissions
 const canCreate = computed(() =>
-    authStore.can("categories.create")
+    authStore.can("suppliers.create")
 );
 
 const canUpdate = computed(() =>
-    authStore.can("categories.update")
+    authStore.can("suppliers.update")
 );
 
 const canDelete = computed(() =>
-    authStore.can("categories.delete")
+    authStore.can("suppliers.delete")
 );
 
 // UI state
 const searchInput = ref("");
-const showCategoryModal = ref(false);
+const showSupplierModal = ref(false);
 const showDeleteModal = ref(false);
 
-const editingCategory = ref(null);
-const categoryToDelete = ref(null);
+const editingSupplier = ref(null);
+const supplierToDelete = ref(null);
 
 const saving = ref(false);
 const deleting = ref(false);
@@ -57,29 +56,33 @@ let searchTimeout = null;
 // Form
 const form = ref({
     name: "",
-    description: "",
-    is_active: true,
+    company_name: "",
+    email: "",
+    phone: "",
+    address: "",
 });
 
 // Stats
-const totalCategories = computed(() => total.value);
+const totalSuppliers = computed(() => total.value);
 
-const activeCategories = computed(() =>
-    categories.value.filter(
-        (category) => Boolean(category.is_active)
+const suppliersWithProducts = computed(() =>
+    suppliers.value.filter(
+        (supplier) =>
+            Number(supplier.products_count || 0) > 0
     ).length
 );
 
-const inactiveCategories = computed(() =>
-    categories.value.filter(
-        (category) => !Boolean(category.is_active)
+const suppliersWithoutProducts = computed(() =>
+    suppliers.value.filter(
+        (supplier) =>
+            Number(supplier.products_count || 0) === 0
     ).length
 );
 
 const totalProducts = computed(() =>
-    categories.value.reduce(
-        (sum, category) =>
-            sum + Number(category.products_count || 0),
+    suppliers.value.reduce(
+        (sum, supplier) =>
+            sum + Number(supplier.products_count || 0),
         0
     )
 );
@@ -89,25 +92,9 @@ const hasSearch = computed(() =>
     Boolean(search.value?.trim())
 );
 
-const hasStatusFilter = computed(
-    () => status.value !== "all"
+const hasActiveFilters = computed(() =>
+    hasSearch.value
 );
-
-const hasActiveFilters = computed(
-    () => hasSearch.value || hasStatusFilter.value
-);
-
-const statusFilterLabel = computed(() => {
-    if (status.value === "active") {
-        return "Active";
-    }
-
-    if (status.value === "inactive") {
-        return "Inactive";
-    }
-
-    return "All statuses";
-});
 
 // Pagination
 const hasPreviousPage = computed(
@@ -118,8 +105,8 @@ const hasNextPage = computed(
     () => currentPage.value < lastPage.value
 );
 
-const firstCategoryNumber = computed(() => {
-    if (!total.value || !categories.value.length) {
+const firstSupplierNumber = computed(() => {
+    if (!total.value || !suppliers.value.length) {
         return 0;
     }
 
@@ -128,8 +115,8 @@ const firstCategoryNumber = computed(() => {
     );
 });
 
-const lastCategoryNumber = computed(() => {
-    if (!total.value || !categories.value.length) {
+const lastSupplierNumber = computed(() => {
+    if (!total.value || !suppliers.value.length) {
         return 0;
     }
 
@@ -176,13 +163,12 @@ function getFieldError(field) {
         : errors;
 }
 
-// Load categories
-async function loadCategories(page = 1) {
+// Load suppliers
+async function loadSuppliers(page = 1) {
     try {
-        await categoryStore.fetchCategories(
+        await supplierStore.fetchSuppliers(
             page,
-            searchInput.value,
-            categoryStore.status
+            searchInput.value
         );
 
         return true;
@@ -190,7 +176,7 @@ async function loadCategories(page = 1) {
         toastStore.error(
             getErrorMessage(
                 error,
-                "Unable to load categories."
+                "Unable to load suppliers."
             )
         );
 
@@ -202,7 +188,7 @@ async function loadCategories(page = 1) {
 function performSearch() {
     clearTimeout(searchTimeout);
 
-    loadCategories(1);
+    loadSuppliers(1);
 }
 
 function clearSearch() {
@@ -210,24 +196,15 @@ function clearSearch() {
 
     searchInput.value = "";
 
-    loadCategories(1);
+    loadSuppliers(1);
 }
 
-// Status
-function changeStatusFilter(value) {
-    categoryStore.status = value;
-
-    loadCategories(1);
-}
-
-// Clear filters
 function clearAllFilters() {
     clearTimeout(searchTimeout);
 
     searchInput.value = "";
-    categoryStore.status = "all";
 
-    loadCategories(1);
+    loadSuppliers(1);
 }
 
 // Pagination
@@ -241,7 +218,7 @@ function goToPage(page) {
         return;
     }
 
-    loadCategories(page);
+    loadSuppliers(page);
 }
 
 function previousPage() {
@@ -260,8 +237,10 @@ function nextPage() {
 function resetForm() {
     form.value = {
         name: "",
-        description: "",
-        is_active: true,
+        company_name: "",
+        email: "",
+        phone: "",
+        address: "",
     };
 
     clearValidationErrors();
@@ -273,46 +252,48 @@ function openCreateModal() {
         return;
     }
 
-    editingCategory.value = null;
+    editingSupplier.value = null;
 
     resetForm();
 
-    showCategoryModal.value = true;
+    showSupplierModal.value = true;
 }
 
 // Edit
-function openEditModal(category) {
+function openEditModal(supplier) {
     if (!canUpdate.value || saving.value) {
         return;
     }
 
-    editingCategory.value = category;
+    editingSupplier.value = supplier;
 
     form.value = {
-        name: category.name || "",
-        description: category.description || "",
-        is_active: Boolean(category.is_active),
+        name: supplier.name || "",
+        company_name: supplier.company_name || "",
+        email: supplier.email || "",
+        phone: supplier.phone || "",
+        address: supplier.address || "",
     };
 
     clearValidationErrors();
 
-    showCategoryModal.value = true;
+    showSupplierModal.value = true;
 }
 
 // Close modal
-function closeCategoryModal() {
+function closeSupplierModal() {
     if (saving.value) {
         return;
     }
 
-    showCategoryModal.value = false;
-    editingCategory.value = null;
+    showSupplierModal.value = false;
+    editingSupplier.value = null;
 
     resetForm();
 }
 
 // Save
-async function saveCategory() {
+async function saveSupplier() {
     if (saving.value) {
         return;
     }
@@ -320,11 +301,14 @@ async function saveCategory() {
     clearValidationErrors();
 
     const name = form.value.name.trim();
-    const description = form.value.description.trim();
+    const companyName = form.value.company_name.trim();
+    const email = form.value.email.trim();
+    const phone = form.value.phone.trim();
+    const address = form.value.address.trim();
 
     if (!name) {
         validationErrors.value = {
-            name: ["Category name is required."],
+            name: ["Supplier name is required."],
         };
 
         return;
@@ -332,30 +316,32 @@ async function saveCategory() {
 
     saving.value = true;
 
-    const isEditing = Boolean(editingCategory.value);
-    const categoryId = editingCategory.value?.id;
+    const isEditing = Boolean(editingSupplier.value);
+    const supplierId = editingSupplier.value?.id;
 
     const payload = {
         name,
-        description: description || null,
-        is_active: Boolean(form.value.is_active),
+        company_name: companyName || null,
+        email: email || null,
+        phone: phone || null,
+        address: address || null,
     };
 
     try {
         if (isEditing) {
-            await categoryStore.updateCategory(
-                categoryId,
+            await supplierStore.updateSupplier(
+                supplierId,
                 payload
             );
 
             toastStore.success(
-                "Category updated successfully."
+                "Supplier updated successfully."
             );
         } else {
-            await categoryStore.createCategory(payload);
+            await supplierStore.createSupplier(payload);
 
             toastStore.success(
-                "Category created successfully."
+                "Supplier created successfully."
             );
         }
 
@@ -363,11 +349,11 @@ async function saveCategory() {
             ? currentPage.value
             : 1;
 
-        showCategoryModal.value = false;
-        editingCategory.value = null;
+        showSupplierModal.value = false;
+        editingSupplier.value = null;
         resetForm();
 
-        await loadCategories(pageToLoad);
+        await loadSuppliers(pageToLoad);
     } catch (error) {
         if (setValidationErrors(error)) {
             return;
@@ -381,13 +367,13 @@ async function saveCategory() {
             );
         } else if (statusCode === 404) {
             toastStore.error(
-                "Category could not be found."
+                "Supplier could not be found."
             );
         } else if (statusCode === 409) {
             toastStore.error(
                 getErrorMessage(
                     error,
-                    "This category already exists."
+                    "This supplier already exists."
                 )
             );
         } else {
@@ -395,8 +381,8 @@ async function saveCategory() {
                 getErrorMessage(
                     error,
                     isEditing
-                        ? "Failed to update category."
-                        : "Failed to create category."
+                        ? "Failed to update supplier."
+                        : "Failed to create supplier."
                 )
             );
         }
@@ -406,12 +392,12 @@ async function saveCategory() {
 }
 
 // Delete
-function openDeleteModal(category) {
+function openDeleteModal(supplier) {
     if (!canDelete.value || deleting.value) {
         return;
     }
 
-    categoryToDelete.value = category;
+    supplierToDelete.value = supplier;
     showDeleteModal.value = true;
 }
 
@@ -421,13 +407,13 @@ function closeDeleteModal() {
     }
 
     showDeleteModal.value = false;
-    categoryToDelete.value = null;
+    supplierToDelete.value = null;
 }
 
 async function confirmDelete() {
     if (
         deleting.value ||
-        !categoryToDelete.value
+        !supplierToDelete.value
     ) {
         return;
     }
@@ -435,16 +421,16 @@ async function confirmDelete() {
     deleting.value = true;
 
     try {
-        await categoryStore.deleteCategory(
-            categoryToDelete.value.id
+        await supplierStore.deleteSupplier(
+            supplierToDelete.value.id
         );
 
         toastStore.success(
-            "Category deleted successfully."
+            "Supplier deleted successfully."
         );
 
         const shouldGoBack =
-            categories.value.length === 1 &&
+            suppliers.value.length === 1 &&
             currentPage.value > 1;
 
         const pageToLoad = shouldGoBack
@@ -452,19 +438,19 @@ async function confirmDelete() {
             : currentPage.value;
 
         showDeleteModal.value = false;
-        categoryToDelete.value = null;
+        supplierToDelete.value = null;
 
-        await loadCategories(pageToLoad);
+        await loadSuppliers(pageToLoad);
     } catch (error) {
         const statusCode = error?.response?.status;
 
         if (statusCode === 403) {
             toastStore.error(
-                "You do not have permission to delete categories."
+                "You do not have permission to delete suppliers."
             );
         } else if (statusCode === 404) {
             toastStore.error(
-                "Category could not be found."
+                "Supplier could not be found."
             );
         } else if (
             statusCode === 409 ||
@@ -473,14 +459,14 @@ async function confirmDelete() {
             toastStore.error(
                 getErrorMessage(
                     error,
-                    "This category cannot be deleted."
+                    "This supplier cannot be deleted because it has products assigned."
                 )
             );
         } else {
             toastStore.error(
                 getErrorMessage(
                     error,
-                    "Failed to delete category."
+                    "Failed to delete supplier."
                 )
             );
         }
@@ -490,14 +476,14 @@ async function confirmDelete() {
 }
 
 // Refresh
-async function refreshCategories() {
-    const success = await loadCategories(
+async function refreshSuppliers() {
+    const success = await loadSuppliers(
         currentPage.value
     );
 
     if (success) {
         toastStore.success(
-            "Categories refreshed successfully."
+            "Suppliers refreshed successfully."
         );
     }
 }
@@ -514,16 +500,16 @@ watch(searchInput, (value) => {
     }
 
     searchTimeout = setTimeout(() => {
-        loadCategories(1);
+        loadSuppliers(1);
     }, 350);
 });
 
 // Initial load
 onMounted(() => {
-    searchInput.value = categoryStore.search || "";
+    searchInput.value = supplierStore.search || "";
 
-    loadCategories(
-        categoryStore.currentPage || 1
+    loadSuppliers(
+        supplierStore.currentPage || 1
     );
 });
 
@@ -546,13 +532,13 @@ onUnmounted(() => {
                     <h1
                         class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl"
                     >
-                        Categories
+                        Suppliers
                     </h1>
 
                     <p
                         class="mt-1 text-sm text-gray-500 dark:text-gray-400"
                     >
-                        Organize your products into categories.
+                        Manage your suppliers and their product relationships.
                     </p>
                 </div>
 
@@ -563,7 +549,7 @@ onUnmounted(() => {
                         variant="secondary"
                         :loading="loading"
                         :disabled="loading"
-                        @click="refreshCategories"
+                        @click="refreshSuppliers"
                     >
                         Refresh
                     </BaseButton>
@@ -573,7 +559,7 @@ onUnmounted(() => {
                         variant="primary"
                         @click="openCreateModal"
                     >
-                        Add Category
+                        Add Supplier
                     </BaseButton>
                 </div>
             </div>
@@ -592,7 +578,7 @@ onUnmounted(() => {
                     <p
                         class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl"
                     >
-                        {{ totalCategories }}
+                        {{ totalSuppliers }}
                     </p>
                 </BaseCard>
 
@@ -600,13 +586,13 @@ onUnmounted(() => {
                     <p
                         class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm"
                     >
-                        Active
+                        With Products
                     </p>
 
                     <p
                         class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl"
                     >
-                        {{ activeCategories }}
+                        {{ suppliersWithProducts }}
                     </p>
                 </BaseCard>
 
@@ -614,13 +600,13 @@ onUnmounted(() => {
                     <p
                         class="text-xs font-medium text-gray-500 dark:text-gray-400 sm:text-sm"
                     >
-                        Inactive
+                        Empty
                     </p>
 
                     <p
                         class="mt-1 text-xl font-bold text-gray-900 dark:text-white sm:text-2xl"
                     >
-                        {{ inactiveCategories }}
+                        {{ suppliersWithoutProducts }}
                     </p>
                 </BaseCard>
 
@@ -655,7 +641,7 @@ onUnmounted(() => {
                             <input
                                 v-model="searchInput"
                                 type="text"
-                                placeholder="Search categories..."
+                                placeholder="Search suppliers..."
                                 class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 pr-10 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                                 @keyup.enter="performSearch"
                             />
@@ -669,36 +655,6 @@ onUnmounted(() => {
                                 ×
                             </button>
                         </div>
-                    </div>
-
-                    <div class="w-full sm:w-48">
-                        <label
-                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                        >
-                            Status
-                        </label>
-
-                        <select
-                            :value="status"
-                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-                            @change="
-                                changeStatusFilter(
-                                    $event.target.value
-                                )
-                            "
-                        >
-                            <option value="all">
-                                All statuses
-                            </option>
-
-                            <option value="active">
-                                Active
-                            </option>
-
-                            <option value="inactive">
-                                Inactive
-                            </option>
-                        </select>
                     </div>
 
                     <BaseButton
@@ -721,13 +677,6 @@ onUnmounted(() => {
                     >
                         Search: "{{ search }}"
                     </span>
-
-                    <span
-                        v-if="hasStatusFilter"
-                        class="rounded-full bg-gray-100 px-3 py-1 text-xs text-gray-600 dark:bg-gray-800 dark:text-gray-300"
-                    >
-                        Status: {{ statusFilterLabel }}
-                    </span>
                 </div>
             </BaseCard>
 
@@ -743,7 +692,7 @@ onUnmounted(() => {
                         <p
                             class="font-medium text-red-700 dark:text-red-400"
                         >
-                            Unable to load categories
+                            Unable to load suppliers
                         </p>
 
                         <p
@@ -756,14 +705,14 @@ onUnmounted(() => {
                     <BaseButton
                         variant="secondary"
                         class="shrink-0"
-                        @click="loadCategories(currentPage)"
+                        @click="loadSuppliers(currentPage)"
                     >
                         Retry
                     </BaseButton>
                 </div>
             </BaseCard>
 
-            <!-- Category List -->
+            <!-- Supplier List -->
             <BaseCard padding="p-0">
                 <div
                     class="flex flex-col gap-1 border-b border-gray-100 px-4 py-4 sm:px-5 dark:border-gray-700"
@@ -775,7 +724,7 @@ onUnmounted(() => {
                             <h2
                                 class="font-semibold text-gray-900 dark:text-white"
                             >
-                                Category List
+                                Supplier List
                             </h2>
 
                             <p
@@ -783,20 +732,20 @@ onUnmounted(() => {
                             >
                                 <template v-if="total">
                                     Showing
-                                    {{ firstCategoryNumber }}–{{
-                                        lastCategoryNumber
+                                    {{ firstSupplierNumber }}–{{
+                                        lastSupplierNumber
                                     }}
                                     of {{ total }}
                                 </template>
 
                                 <template v-else>
-                                    No categories found
+                                    No suppliers found
                                 </template>
                             </p>
                         </div>
 
                         <span
-                            v-if="loading && categories.length"
+                            v-if="loading && suppliers.length"
                             class="text-xs text-gray-500 dark:text-gray-400"
                         >
                             Updating...
@@ -806,7 +755,7 @@ onUnmounted(() => {
 
                 <!-- Loading -->
                 <div
-                    v-if="loading && !categories.length"
+                    v-if="loading && !suppliers.length"
                     class="flex min-h-60 items-center justify-center p-8"
                 >
                     <div
@@ -816,7 +765,7 @@ onUnmounted(() => {
 
                 <!-- Empty -->
                 <div
-                    v-else-if="!categories.length"
+                    v-else-if="!suppliers.length"
                     class="flex min-h-60 flex-col items-center justify-center p-6 text-center"
                 >
                     <div
@@ -832,7 +781,7 @@ onUnmounted(() => {
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
                                 stroke-width="1.8"
-                                d="M4 6h16M4 12h16M4 18h16M8 6v12"
+                                d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M8 9h1m6 0h1m-8 4h1m6 0h1"
                             />
                         </svg>
                     </div>
@@ -840,7 +789,7 @@ onUnmounted(() => {
                     <h3
                         class="mt-4 text-sm font-semibold text-gray-900 dark:text-white"
                     >
-                        No categories found
+                        No suppliers found
                     </h3>
 
                     <p
@@ -848,8 +797,8 @@ onUnmounted(() => {
                     >
                         {{
                             hasActiveFilters
-                                ? "Try adjusting your search or filters."
-                                : "Create your first category to get started."
+                                ? "Try adjusting your search."
+                                : "Create your first supplier to get started."
                         }}
                     </p>
 
@@ -858,7 +807,7 @@ onUnmounted(() => {
                         class="mt-4"
                         @click="openCreateModal"
                     >
-                        Add Category
+                        Add Supplier
                     </BaseButton>
 
                     <BaseButton
@@ -867,7 +816,7 @@ onUnmounted(() => {
                         variant="secondary"
                         @click="clearAllFilters"
                     >
-                        Clear Filters
+                        Clear Search
                     </BaseButton>
                 </div>
 
@@ -882,21 +831,21 @@ onUnmounted(() => {
                                 class="border-b border-gray-100 bg-gray-50 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-800/50 dark:text-gray-400"
                             >
                                 <th class="px-5 py-3.5">
-                                    Category
+                                    Supplier
                                 </th>
 
                                 <th class="px-5 py-3.5">
-                                    Description
+                                    Contact
+                                </th>
+
+                                <th class="px-5 py-3.5">
+                                    Address
                                 </th>
 
                                 <th
                                     class="px-5 py-3.5 text-center"
                                 >
                                     Products
-                                </th>
-
-                                <th class="px-5 py-3.5">
-                                    Status
                                 </th>
 
                                 <th
@@ -911,8 +860,8 @@ onUnmounted(() => {
                             class="divide-y divide-gray-100 dark:divide-gray-700"
                         >
                             <tr
-                                v-for="category in categories"
-                                :key="category.id"
+                                v-for="supplier in suppliers"
+                                :key="supplier.id"
                                 class="transition hover:bg-gray-50 dark:hover:bg-gray-800/40"
                             >
                                 <td class="px-5 py-4">
@@ -923,7 +872,7 @@ onUnmounted(() => {
                                             class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200"
                                         >
                                             {{
-                                                category.name
+                                                supplier.name
                                                     ?.charAt(0)
                                                     ?.toUpperCase()
                                             }}
@@ -933,25 +882,58 @@ onUnmounted(() => {
                                             <p
                                                 class="truncate font-semibold text-gray-900 dark:text-white"
                                             >
-                                                {{ category.name }}
+                                                {{ supplier.name }}
                                             </p>
 
                                             <p
+                                                v-if="supplier.company_name"
                                                 class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
                                             >
-                                                {{ category.slug }}
+                                                {{
+                                                    supplier.company_name
+                                                }}
                                             </p>
                                         </div>
                                     </div>
                                 </td>
 
-                                <td class="max-w-md px-5 py-4">
+                                <td class="px-5 py-4">
+                                    <div class="space-y-1">
+                                        <p
+                                            v-if="supplier.email"
+                                            class="truncate text-sm text-gray-700 dark:text-gray-300"
+                                        >
+                                            {{ supplier.email }}
+                                        </p>
+
+                                        <p
+                                            v-if="supplier.phone"
+                                            class="text-xs text-gray-500 dark:text-gray-400"
+                                        >
+                                            {{ supplier.phone }}
+                                        </p>
+
+                                        <span
+                                            v-if="
+                                                !supplier.email &&
+                                                !supplier.phone
+                                            "
+                                            class="text-sm text-gray-400"
+                                        >
+                                            No contact details
+                                        </span>
+                                    </div>
+                                </td>
+
+                                <td
+                                    class="max-w-xs px-5 py-4"
+                                >
                                     <p
                                         class="truncate text-sm text-gray-600 dark:text-gray-400"
                                     >
                                         {{
-                                            category.description ||
-                                            "No description"
+                                            supplier.address ||
+                                            "No address"
                                         }}
                                     </p>
                                 </td>
@@ -963,25 +945,8 @@ onUnmounted(() => {
                                         class="inline-flex min-w-10 items-center justify-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                                     >
                                         {{
-                                            category.products_count ??
+                                            supplier.products_count ??
                                             0
-                                        }}
-                                    </span>
-                                </td>
-
-                                <td class="px-5 py-4">
-                                    <span
-                                        :class="
-                                            category.is_active
-                                                ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                        "
-                                        class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold"
-                                    >
-                                        {{
-                                            category.is_active
-                                                ? "Active"
-                                                : "Inactive"
                                         }}
                                     </span>
                                 </td>
@@ -995,7 +960,7 @@ onUnmounted(() => {
                                             variant="secondary"
                                             @click="
                                                 openEditModal(
-                                                    category
+                                                    supplier
                                                 )
                                             "
                                         >
@@ -1007,7 +972,7 @@ onUnmounted(() => {
                                             variant="danger"
                                             @click="
                                                 openDeleteModal(
-                                                    category
+                                                    supplier
                                                 )
                                             "
                                         >
@@ -1022,12 +987,12 @@ onUnmounted(() => {
 
                 <!-- Mobile -->
                 <div
-                    v-if="categories.length"
+                    v-if="suppliers.length"
                     class="divide-y divide-gray-100 md:hidden dark:divide-gray-700"
                 >
                     <div
-                        v-for="category in categories"
-                        :key="category.id"
+                        v-for="supplier in suppliers"
+                        :key="supplier.id"
                         class="p-4"
                     >
                         <div
@@ -1040,7 +1005,7 @@ onUnmounted(() => {
                                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200"
                                 >
                                     {{
-                                        category.name
+                                        supplier.name
                                             ?.charAt(0)
                                             ?.toUpperCase()
                                     }}
@@ -1050,83 +1015,110 @@ onUnmounted(() => {
                                     <p
                                         class="truncate font-semibold text-gray-900 dark:text-white"
                                     >
-                                        {{ category.name }}
+                                        {{ supplier.name }}
                                     </p>
 
                                     <p
+                                        v-if="supplier.company_name"
                                         class="truncate text-xs text-gray-500 dark:text-gray-400"
                                     >
-                                        {{ category.slug }}
+                                        {{
+                                            supplier.company_name
+                                        }}
                                     </p>
                                 </div>
                             </div>
 
                             <span
-                                :class="
-                                    category.is_active
-                                        ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
-                                        : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
-                                "
-                                class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+                                class="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                             >
                                 {{
-                                    category.is_active
-                                        ? "Active"
-                                        : "Inactive"
+                                    supplier.products_count ?? 0
                                 }}
+                                products
                             </span>
                         </div>
 
-                        <p
-                            class="mt-3 text-sm leading-6 text-gray-600 dark:text-gray-400"
-                        >
-                            {{
-                                category.description ||
-                                "No description"
-                            }}
-                        </p>
+                        <div class="mt-4 space-y-2">
+                            <div
+                                v-if="supplier.email"
+                                class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400"
+                            >
+                                <span
+                                    class="w-16 shrink-0 text-xs font-medium text-gray-400"
+                                >
+                                    Email
+                                </span>
+
+                                <span class="break-all">
+                                    {{ supplier.email }}
+                                </span>
+                            </div>
+
+                            <div
+                                v-if="supplier.phone"
+                                class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400"
+                            >
+                                <span
+                                    class="w-16 shrink-0 text-xs font-medium text-gray-400"
+                                >
+                                    Phone
+                                </span>
+
+                                <span>
+                                    {{ supplier.phone }}
+                                </span>
+                            </div>
+
+                            <div
+                                v-if="supplier.address"
+                                class="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-400"
+                            >
+                                <span
+                                    class="w-16 shrink-0 text-xs font-medium text-gray-400"
+                                >
+                                    Address
+                                </span>
+
+                                <span>
+                                    {{ supplier.address }}
+                                </span>
+                            </div>
+
+                            <p
+                                v-if="
+                                    !supplier.email &&
+                                    !supplier.phone &&
+                                    !supplier.address
+                                "
+                                class="text-sm text-gray-400"
+                            >
+                                No contact details available.
+                            </p>
+                        </div>
 
                         <div
-                            class="mt-4 flex items-center justify-between gap-3"
+                            class="mt-4 flex justify-end gap-2"
                         >
-                            <div>
-                                <p
-                                    class="text-xs text-gray-500 dark:text-gray-400"
-                                >
-                                    Products
-                                </p>
+                            <BaseButton
+                                v-if="canUpdate"
+                                variant="secondary"
+                                @click="
+                                    openEditModal(supplier)
+                                "
+                            >
+                                Edit
+                            </BaseButton>
 
-                                <p
-                                    class="mt-0.5 font-semibold text-gray-900 dark:text-white"
-                                >
-                                    {{
-                                        category.products_count ??
-                                        0
-                                    }}
-                                </p>
-                            </div>
-
-                            <div class="flex gap-2">
-                                <BaseButton
-                                    v-if="canUpdate"
-                                    variant="secondary"
-                                    @click="
-                                        openEditModal(category)
-                                    "
-                                >
-                                    Edit
-                                </BaseButton>
-
-                                <BaseButton
-                                    v-if="canDelete"
-                                    variant="danger"
-                                    @click="
-                                        openDeleteModal(category)
-                                    "
-                                >
-                                    Delete
-                                </BaseButton>
-                            </div>
+                            <BaseButton
+                                v-if="canDelete"
+                                variant="danger"
+                                @click="
+                                    openDeleteModal(supplier)
+                                "
+                            >
+                                Delete
+                            </BaseButton>
                         </div>
                     </div>
                 </div>
@@ -1143,13 +1135,13 @@ onUnmounted(() => {
                         <span
                             class="font-medium text-gray-900 dark:text-white"
                         >
-                            {{ firstCategoryNumber }}
+                            {{ firstSupplierNumber }}
                         </span>
                         to
                         <span
                             class="font-medium text-gray-900 dark:text-white"
                         >
-                            {{ lastCategoryNumber }}
+                            {{ lastSupplierNumber }}
                         </span>
                         of
                         <span
@@ -1159,11 +1151,14 @@ onUnmounted(() => {
                         </span>
                     </p>
 
-                    <div class="flex items-center gap-2">
+                    <div
+                        class="flex items-center gap-2"
+                    >
                         <BaseButton
                             variant="secondary"
                             :disabled="
-                                !hasPreviousPage || loading
+                                !hasPreviousPage ||
+                                loading
                             "
                             @click="previousPage"
                         >
@@ -1173,13 +1168,15 @@ onUnmounted(() => {
                         <span
                             class="px-2 text-sm text-gray-600 dark:text-gray-400"
                         >
-                            {{ currentPage }} / {{ lastPage }}
+                            {{ currentPage }} /
+                            {{ lastPage }}
                         </span>
 
                         <BaseButton
                             variant="secondary"
                             :disabled="
-                                !hasNextPage || loading
+                                !hasNextPage ||
+                                loading
                             "
                             @click="nextPage"
                         >
@@ -1192,25 +1189,26 @@ onUnmounted(() => {
 
         <!-- Create / Edit Modal -->
         <BaseModal
-            :show="showCategoryModal"
+            :show="showSupplierModal"
             :title="
-                editingCategory
-                    ? 'Edit Category'
-                    : 'Create Category'
+                editingSupplier
+                    ? 'Edit Supplier'
+                    : 'Create Supplier'
             "
             size="md"
             :close-on-backdrop="!saving"
-            @close="closeCategoryModal"
+            @close="closeSupplierModal"
         >
             <form
                 class="space-y-5"
-                @submit.prevent="saveCategory"
+                @submit.prevent="saveSupplier"
             >
+                <!-- Name -->
                 <div>
                     <label
                         class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                        Category Name
+                        Supplier Name
                         <span class="text-red-500">*</span>
                     </label>
 
@@ -1218,7 +1216,7 @@ onUnmounted(() => {
                         v-model="form.name"
                         type="text"
                         maxlength="255"
-                        placeholder="e.g. Electronics"
+                        placeholder="e.g. John Traders"
                         :disabled="saving"
                         :class="{
                             'border-red-500 focus:border-red-500 focus:ring-red-100':
@@ -1235,66 +1233,127 @@ onUnmounted(() => {
                     </p>
                 </div>
 
+                <!-- Company -->
                 <div>
                     <label
                         class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
                     >
-                        Description
+                        Company Name
                     </label>
 
-                    <textarea
-                        v-model="form.description"
-                        rows="4"
-                        maxlength="1000"
-                        placeholder="Describe this category..."
+                    <input
+                        v-model="form.company_name"
+                        type="text"
+                        maxlength="255"
+                        placeholder="e.g. ABC Trading Pvt. Ltd."
                         :disabled="saving"
                         :class="{
                             'border-red-500 focus:border-red-500 focus:ring-red-100':
-                                getFieldError('description'),
+                                getFieldError('company_name'),
                         }"
-                        class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
-                    ></textarea>
+                        class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                    />
 
                     <p
-                        v-if="getFieldError('description')"
+                        v-if="getFieldError('company_name')"
                         class="mt-1.5 text-xs text-red-600 dark:text-red-400"
                     >
                         {{
                             getFieldError(
-                                "description"
+                                "company_name"
                             )
                         }}
                     </p>
                 </div>
 
+                <!-- Contact -->
                 <div
-                    class="rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-800/50"
+                    class="grid grid-cols-1 gap-4 sm:grid-cols-2"
                 >
-                    <label
-                        class="flex cursor-pointer items-start gap-3"
-                    >
+                    <div>
+                        <label
+                            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                            Email
+                        </label>
+
                         <input
-                            v-model="form.is_active"
-                            type="checkbox"
+                            v-model="form.email"
+                            type="email"
+                            maxlength="255"
+                            placeholder="supplier@example.com"
                             :disabled="saving"
-                            class="mt-0.5 h-4 w-4 rounded border-gray-300"
+                            :class="{
+                                'border-red-500 focus:border-red-500 focus:ring-red-100':
+                                    getFieldError('email'),
+                            }"
+                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
                         />
 
-                        <span>
-                            <span
-                                class="block text-sm font-medium text-gray-900 dark:text-white"
-                            >
-                                Active category
-                            </span>
+                        <p
+                            v-if="getFieldError('email')"
+                            class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                        >
+                            {{ getFieldError("email") }}
+                        </p>
+                    </div>
 
-                            <span
-                                class="mt-0.5 block text-xs text-gray-500 dark:text-gray-400"
-                            >
-                                Active categories can be
-                                assigned to products.
-                            </span>
-                        </span>
+                    <div>
+                        <label
+                            class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                        >
+                            Phone
+                        </label>
+
+                        <input
+                            v-model="form.phone"
+                            type="text"
+                            maxlength="50"
+                            placeholder="+977 98XXXXXXXX"
+                            :disabled="saving"
+                            :class="{
+                                'border-red-500 focus:border-red-500 focus:ring-red-100':
+                                    getFieldError('phone'),
+                            }"
+                            class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                        />
+
+                        <p
+                            v-if="getFieldError('phone')"
+                            class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                        >
+                            {{ getFieldError("phone") }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Address -->
+                <div>
+                    <label
+                        class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    >
+                        Address
                     </label>
+
+                    <textarea
+                        v-model="form.address"
+                        rows="3"
+                        maxlength="500"
+                        placeholder="Supplier address..."
+                        :disabled="saving"
+                        :class="{
+                            'border-red-500 focus:border-red-500 focus:ring-red-100':
+                                getFieldError('address'),
+                        }"
+                        class="w-full resize-none rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-500"
+                    ></textarea>
+
+                    <p
+                        v-if="getFieldError('address')"
+                        class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                    >
+                        {{ getFieldError("address") }}
+                    </p>
                 </div>
             </form>
 
@@ -1305,7 +1364,7 @@ onUnmounted(() => {
                     <BaseButton
                         variant="secondary"
                         :disabled="saving"
-                        @click="closeCategoryModal"
+                        @click="closeSupplierModal"
                     >
                         Cancel
                     </BaseButton>
@@ -1314,12 +1373,12 @@ onUnmounted(() => {
                         variant="primary"
                         :loading="saving"
                         :disabled="saving"
-                        @click="saveCategory"
+                        @click="saveSupplier"
                     >
                         {{
-                            editingCategory
-                                ? "Update Category"
-                                : "Create Category"
+                            editingSupplier
+                                ? "Update Supplier"
+                                : "Create Supplier"
                         }}
                     </BaseButton>
                 </div>
@@ -1329,7 +1388,7 @@ onUnmounted(() => {
         <!-- Delete Modal -->
         <BaseModal
             :show="showDeleteModal"
-            title="Delete Category"
+            title="Delete Supplier"
             size="sm"
             :close-on-backdrop="!deleting"
             @close="closeDeleteModal"
@@ -1356,7 +1415,7 @@ onUnmounted(() => {
                 <h3
                     class="mt-4 text-lg font-semibold text-gray-900 dark:text-white"
                 >
-                    Delete this category?
+                    Delete this supplier?
                 </h3>
 
                 <p
@@ -1366,19 +1425,27 @@ onUnmounted(() => {
                     <span
                         class="font-semibold text-gray-900 dark:text-white"
                     >
-                        {{ categoryToDelete?.name }}
+                        {{ supplierToDelete?.name }}
                     </span>
                     .
                 </p>
 
                 <p
-                    v-if="categoryToDelete?.products_count"
+                    v-if="supplierToDelete?.products_count"
                     class="mt-3 rounded-lg bg-yellow-50 p-3 text-left text-xs leading-5 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400"
                 >
-                    This category has
-                    {{ categoryToDelete.products_count }}
-                    product(s) assigned to it and may not be
-                    deleted.
+                    This supplier has
+                    {{ supplierToDelete.products_count }}
+                    product(s) assigned to it and cannot be
+                    deleted until those products are reassigned.
+                </p>
+
+                <p
+                    v-else
+                    class="mt-3 rounded-lg bg-gray-50 p-3 text-left text-xs leading-5 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                >
+                    This supplier has no products assigned and
+                    can be safely deleted.
                 </p>
             </div>
 
@@ -1397,10 +1464,13 @@ onUnmounted(() => {
                     <BaseButton
                         variant="danger"
                         :loading="deleting"
-                        :disabled="deleting"
+                        :disabled="
+                            deleting ||
+                            supplierToDelete?.products_count > 0
+                        "
                         @click="confirmDelete"
                     >
-                        Delete Category
+                        Delete Supplier
                     </BaseButton>
                 </div>
             </template>

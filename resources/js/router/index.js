@@ -22,6 +22,9 @@ import Dashboard from "../components/dashboard/Dashboard.vue";
 
 // categories
 import CategoryIndex from "../components/categories/CategoryIndex.vue";
+// suppliers
+import SupplierIndex from "../components/suppliers/SupplierIndex.vue";
+
 
 // Inventory
 import InventoryIndex from "../components/inventory/InventoryIndex.vue";
@@ -143,6 +146,13 @@ const routes = [
                 name: "categories.index",
                 component: CategoryIndex,
                 meta: { permission: "categories.view" },
+            },
+            // Suppliers
+            {
+                path: "suppliers",
+                name: "suppliers.index",
+                component: SupplierIndex,
+                meta: { permission: "suppliers.view" },
             },
 
             // Inventory
