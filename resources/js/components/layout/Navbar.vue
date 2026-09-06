@@ -37,6 +37,17 @@ function goToCategories() {
         name: "categories.index",
     });
 }
+function goToSuppliers() {
+    showProfileMenu.value = false;
+
+    router.push({
+        name: "suppliers.index",
+    });
+}
+
+function isSuppliersActive() {
+    return route.name === "suppliers.index";
+}
 
 function goToInventory() {
     showProfileMenu.value = false;
@@ -92,18 +103,13 @@ function isCategoriesActive() {
 }
 
 function isInventoryActive() {
-    return [
-        "inventory",
-        "inventory.history",
-    ].includes(route.name);
+    return ["inventory", "inventory.history"].includes(route.name);
 }
 
 function isInvoicesActive() {
-    return [
-        "invoices.index",
-        "invoices.create",
-        "invoices.show",
-    ].includes(route.name);
+    return ["invoices.index", "invoices.create", "invoices.show"].includes(
+        route.name,
+    );
 }
 
 // Permissions
@@ -139,10 +145,7 @@ function toggleProfileMenu() {
 }
 
 function closeProfileMenu(event) {
-    if (
-        profileMenuRef.value &&
-        !profileMenuRef.value.contains(event.target)
-    ) {
+    if (profileMenuRef.value && !profileMenuRef.value.contains(event.target)) {
         showProfileMenu.value = false;
     }
 }
@@ -311,6 +314,35 @@ onBeforeUnmount(() => {
                     Categories
                 </button>
 
+                <!-- Suppliers -->
+
+                <button
+                    v-if="can('suppliers.view')"
+                    type="button"
+                    @click="goToSuppliers"
+                    class="group inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition"
+                    :class="
+                        isSuppliersActive()
+                            ? 'bg-gray-100 text-gray-900 dark:bg-gray-800 dark:text-white'
+                            : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white'
+                    "
+                >
+                    <svg
+                        class="h-4.5 w-4.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="1.8"
+                            d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6M8 9h1m6 0h1m-8 4h1m6 0h1"
+                        />
+                    </svg>
+
+                    Suppliers
+                </button>
                 <!-- Stock -->
 
                 <button
@@ -653,9 +685,7 @@ onBeforeUnmount(() => {
                             </div>
                         </div>
 
-                        <div
-                            class="hidden max-w-[150px] text-left lg:block"
-                        >
+                        <div class="hidden max-w-[150px] text-left lg:block">
                             <p
                                 class="truncate text-sm font-semibold leading-tight text-gray-900 dark:text-white"
                             >
@@ -720,8 +750,7 @@ onBeforeUnmount(() => {
                                                     .profile_picture_url
                                             "
                                             :alt="
-                                                authStore.user?.name ||
-                                                'User'
+                                                authStore.user?.name || 'User'
                                             "
                                             class="h-full w-full object-cover"
                                         />
@@ -742,19 +771,13 @@ onBeforeUnmount(() => {
                                         <p
                                             class="truncate text-sm font-semibold text-gray-900 dark:text-white"
                                         >
-                                            {{
-                                                authStore.user?.name ||
-                                                "User"
-                                            }}
+                                            {{ authStore.user?.name || "User" }}
                                         </p>
 
                                         <p
                                             class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
                                         >
-                                            {{
-                                                authStore.user?.email ||
-                                                ""
-                                            }}
+                                            {{ authStore.user?.email || "" }}
                                         </p>
 
                                         <p
@@ -805,9 +828,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Dashboard
-                                    </span>
+                                    <span class="flex-1"> Dashboard </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -855,9 +876,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Products
-                                    </span>
+                                    <span class="flex-1"> Products </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -905,9 +924,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Categories
-                                    </span>
+                                    <span class="flex-1"> Categories </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -955,9 +972,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Stock
-                                    </span>
+                                    <span class="flex-1"> Stock </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -1005,9 +1020,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Stock History
-                                    </span>
+                                    <span class="flex-1"> Stock History </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -1055,9 +1068,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Invoices
-                                    </span>
+                                    <span class="flex-1"> Invoices </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -1099,9 +1110,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Profile
-                                    </span>
+                                    <span class="flex-1"> Profile </span>
 
                                     <svg
                                         class="h-4 w-4 text-gray-300 dark:text-gray-600"
@@ -1149,9 +1158,7 @@ onBeforeUnmount(() => {
                                         </svg>
                                     </span>
 
-                                    <span class="flex-1">
-                                        Logout
-                                    </span>
+                                    <span class="flex-1"> Logout </span>
                                 </button>
                             </div>
                         </div>
