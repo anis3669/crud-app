@@ -74,6 +74,18 @@ Route::middleware('auth:sanctum')->group(function () {
         ProfileController::class,
         'deletePicture'
     ]);
+    // Bulk actions
+
+    Route::delete('/products/bulk-delete', [
+        ProductApiController::class,
+        'bulkDelete'
+    ])->middleware('permission:products.delete');
+
+    Route::post('/products/bulk-update', [
+        ProductApiController::class,
+        'bulkUpdate'
+    ])->middleware('permission:products.update');
+
 
 
     // Products
@@ -102,19 +114,6 @@ Route::middleware('auth:sanctum')->group(function () {
         ProductApiController::class,
         'destroy'
     ])->middleware('permission:products.delete');
-
-
-    // Bulk actions
-
-    Route::delete('/products/bulk-delete', [
-        ProductApiController::class,
-        'bulkDelete'
-    ])->middleware('permission:products.delete');
-
-    Route::post('/products/bulk-update', [
-        ProductApiController::class,
-        'bulkUpdate'
-    ])->middleware('permission:products.update');
 
 
     // Trash
