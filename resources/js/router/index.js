@@ -15,6 +15,7 @@ import ProductView from "../components/products/ProductView.vue";
 import ProductEdit from "../components/products/ProductEdit.vue";
 import BulkEdit from "../components/products/BulkEdit.vue";
 import Trash from "../components/products/Trash.vue";
+import UserIndex from "../components/users/UserIndex.vue";
 
 // Profile & Dashboard
 import Profile from "../components/profile/Profile.vue";
@@ -24,7 +25,6 @@ import Dashboard from "../components/dashboard/Dashboard.vue";
 import CategoryIndex from "../components/categories/CategoryIndex.vue";
 // suppliers
 import SupplierIndex from "../components/suppliers/SupplierIndex.vue";
-
 
 // Inventory
 import InventoryIndex from "../components/inventory/InventoryIndex.vue";
@@ -210,6 +210,13 @@ const routes = [
                 path: "profile",
                 name: "profile",
                 component: Profile,
+            },
+            // users
+            {
+                path: "users",
+                name: "users.index",
+                component: UserIndex,
+                meta: { permission: "users.view" },
             },
         ],
     },
