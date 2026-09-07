@@ -65,17 +65,23 @@ const perPage = computed(() => Number(userStore.perPage) || 10);
 const hasPreviousPage = computed(() => currentPage.value > 1);
 const hasNextPage = computed(() => currentPage.value < lastPage.value);
 
-// Current page role counts
-const adminUsers = computed(
-    () => users.value.filter((user) => user.role?.slug === "admin").length,
+// Global role counts
+const adminCount = computed(
+    () => Number(
+        roles.value.find((role) => role.slug === "admin")?.users_count ?? 0
+    ),
 );
 
-const managerUsers = computed(
-    () => users.value.filter((user) => user.role?.slug === "manager").length,
+const managerCount = computed(
+    () => Number(
+        roles.value.find((role) => role.slug === "manager")?.users_count ?? 0
+    ),
 );
 
-const staffUsers = computed(
-    () => users.value.filter((user) => user.role?.slug === "staff").length,
+const staffCount = computed(
+    () => Number(
+        roles.value.find((role) => role.slug === "staff")?.users_count ?? 0
+    ),
 );
 
 // Pagination numbers
@@ -149,16 +155,16 @@ function roleLabel(role) {
 function roleBadgeClass(role) {
     switch (role?.slug) {
         case "admin":
-            return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300";
+            return "bg-purple-50 text-purple-700 ring-1 ring-purple-200 dark:bg-purple-900/20 dark:text-purple-300 dark:ring-purple-800";
 
         case "manager":
-            return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300";
+            return "bg-blue-50 text-blue-700 ring-1 ring-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:ring-blue-800";
 
         case "staff":
-            return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+            return "bg-gray-100 text-gray-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700";
 
         default:
-            return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
+            return "bg-gray-100 text-gray-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-700";
     }
 }
 
@@ -224,7 +230,11 @@ function resetForm() {
 // Load users
 async function loadUsers(page = 1) {
     try {
-        await userStore.fetchUsers(page, searchInput.value, selectedRole.value);
+        await userStore.fetchUsers(
+            page,
+            searchInput.value,
+            selectedRole.value,
+        );
     } catch {
         // Store handles the error
     }
@@ -346,7 +356,12 @@ function handleProfilePicture(event) {
 
     validationErrors.value.profile_picture = null;
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+    const allowedTypes = [
+        "image/jpeg",
+        "image/png",
+        "image/jpg",
+        "image/webp",
+    ];
 
     if (!allowedTypes.includes(file.type)) {
         validationErrors.value.profile_picture = [
@@ -427,7 +442,9 @@ function validateForm() {
             errors.password = ["Password must be at least 8 characters."];
         }
 
-        if (form.value.password !== form.value.password_confirmation) {
+        if (
+            form.value.password !== form.value.password_confirmation
+        ) {
             errors.password_confirmation = [
                 "Password confirmation does not match.",
             ];
@@ -437,7 +454,9 @@ function validateForm() {
             errors.password = ["Password must be at least 8 characters."];
         }
 
-        if (form.value.password !== form.value.password_confirmation) {
+        if (
+            form.value.password !== form.value.password_confirmation
+        ) {
             errors.password_confirmation = [
                 "Password confirmation does not match.",
             ];
@@ -459,14 +478,20 @@ function buildFormData() {
 
     if (form.value.password) {
         data.append("password", form.value.password);
-        data.append("password_confirmation", form.value.password_confirmation);
+        data.append(
+            "password_confirmation",
+            form.value.password_confirmation,
+        );
     }
 
     if (profileFile.value) {
         data.append("profile_picture", profileFile.value);
     }
 
-    if (editingUser.value && form.value.remove_profile_picture) {
+    if (
+        editingUser.value &&
+        form.value.remove_profile_picture
+    ) {
         data.append("remove_profile_picture", "1");
     }
 
@@ -501,7 +526,10 @@ async function submitUser() {
                 formData,
             );
         } else {
-            response = await axios.post("/api/users", formData);
+            response = await axios.post(
+                "/api/users",
+                formData,
+            );
         }
 
         const message =
@@ -515,15 +543,21 @@ async function submitUser() {
         showUserModal.value = false;
         resetForm();
 
-        await loadUsers(isEditing ? currentPage.value : 1);
+        await Promise.all([
+            loadUsers(isEditing ? currentPage.value : 1),
+            loadRoles(),
+        ]);
     } catch (error) {
-        validationErrors.value = userStore.getValidationErrors(error);
+        validationErrors.value =
+            userStore.getValidationErrors(error);
 
         const message =
             error.response?.data?.message ||
             userStore.getErrorMessage(
                 error,
-                isEditing ? "Failed to update user." : "Failed to create user.",
+                isEditing
+                    ? "Failed to update user."
+                    : "Failed to create user.",
             );
 
         toastStore.error(message);
@@ -569,19 +603,25 @@ async function confirmDelete() {
 
         const response = await userStore.deleteUser(deletedId);
 
-        toastStore.success(response?.message || "User deleted successfully.");
+        toastStore.success(
+            response?.message || "User deleted successfully.",
+        );
 
         showDeleteModal.value = false;
         userToDelete.value = null;
 
-        if (users.value.length === 1 && currentPage.value > 1) {
-            await loadUsers(currentPage.value - 1);
-        } else {
-            await loadUsers(currentPage.value);
-        }
+        await Promise.all([
+            users.value.length === 1 && currentPage.value > 1
+                ? loadUsers(currentPage.value - 1)
+                : loadUsers(currentPage.value),
+            loadRoles(),
+        ]);
     } catch (error) {
         toastStore.error(
-            userStore.getErrorMessage(error, "Failed to delete user."),
+            userStore.getErrorMessage(
+                error,
+                "Failed to delete user.",
+            ),
         );
     } finally {
         deleting.value = false;
@@ -590,7 +630,10 @@ async function confirmDelete() {
 
 // Refresh
 async function refreshUsers() {
-    await loadUsers(currentPage.value);
+    await Promise.all([
+        loadUsers(currentPage.value),
+        loadRoles(),
+    ]);
 }
 
 // Initial load
@@ -598,7 +641,10 @@ onMounted(async () => {
     searchInput.value = userStore.search || "";
     selectedRole.value = userStore.role || "";
 
-    await Promise.all([loadUsers(1), loadRoles()]);
+    await Promise.all([
+        loadUsers(1),
+        loadRoles(),
+    ]);
 });
 
 // Cleanup
@@ -612,27 +658,32 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <div class="space-y-6">
+    <div class="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6 lg:p-8">
         <!-- Header -->
         <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+            class="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between"
         >
-            <div>
+            <div class="min-w-0">
+
+
                 <h1
-                    class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+                    class="mt-3 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl dark:text-white"
                 >
                     Users
                 </h1>
 
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    Manage users, roles, and account access.
+                <p
+                    class="mt-1 max-w-2xl text-sm leading-6 text-gray-500 dark:text-gray-400"
+                >
+                    Manage users, roles, permissions, and account access.
                 </p>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <BaseButton
                     variant="secondary"
                     :disabled="loading"
+                    class="justify-center"
                     @click="refreshUsers"
                 >
                     <svg
@@ -656,6 +707,7 @@ onBeforeUnmount(() => {
                 <BaseButton
                     v-if="canCreate"
                     variant="primary"
+                    class="justify-center"
                     @click="openCreateModal"
                 >
                     <svg
@@ -678,25 +730,35 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Statistics -->
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <BaseCard padding="p-5">
-                <div class="flex items-center justify-between">
-                    <div>
+        <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+            <!-- Total -->
+            <BaseCard
+                padding="p-4 sm:p-5"
+                class="overflow-hidden"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
                         <p
-                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                            class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
                         >
                             Total Users
                         </p>
 
                         <p
-                            class="mt-2 text-2xl font-bold text-gray-900 dark:text-white"
+                            class="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl dark:text-white"
                         >
                             {{ total }}
+                        </p>
+
+                        <p
+                            class="mt-1 hidden text-xs text-gray-500 sm:block dark:text-gray-400"
+                        >
+                            Registered accounts
                         </p>
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
                     >
                         <svg
                             class="h-5 w-5"
@@ -707,7 +769,7 @@ onBeforeUnmount(() => {
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                stroke-width="2"
+                                stroke-width="1.8"
                                 d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m7-8a4 4 0 11-8 0 4 4 0 018 0zm6 4a3 3 0 10-6 0"
                             />
                         </svg>
@@ -715,24 +777,34 @@ onBeforeUnmount(() => {
                 </div>
             </BaseCard>
 
-            <BaseCard padding="p-5">
-                <div class="flex items-center justify-between">
-                    <div>
+            <!-- Admin -->
+            <BaseCard
+                padding="p-4 sm:p-5"
+                class="overflow-hidden"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
                         <p
-                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                            class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
                         >
                             Admins
                         </p>
 
                         <p
-                            class="mt-2 text-2xl font-bold text-gray-900 dark:text-white"
+                            class="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl dark:text-white"
                         >
-                            {{ adminUsers }}
+                            {{ adminCount }}
+                        </p>
+
+                        <p
+                            class="mt-1 hidden text-xs text-gray-500 sm:block dark:text-gray-400"
+                        >
+                            Full access
                         </p>
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-300"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-50 text-purple-600 dark:bg-purple-900/20 dark:text-purple-300"
                     >
                         <svg
                             class="h-5 w-5"
@@ -743,7 +815,7 @@ onBeforeUnmount(() => {
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                stroke-width="2"
+                                stroke-width="1.8"
                                 d="M12 3l7 4v5c0 4.5-3 7.8-7 9-4-1.2-7-4.5-7-9V7l7-4z"
                             />
                         </svg>
@@ -751,24 +823,34 @@ onBeforeUnmount(() => {
                 </div>
             </BaseCard>
 
-            <BaseCard padding="p-5">
-                <div class="flex items-center justify-between">
-                    <div>
+            <!-- Manager -->
+            <BaseCard
+                padding="p-4 sm:p-5"
+                class="overflow-hidden"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
                         <p
-                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                            class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
                         >
                             Managers
                         </p>
 
                         <p
-                            class="mt-2 text-2xl font-bold text-gray-900 dark:text-white"
+                            class="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl dark:text-white"
                         >
-                            {{ managerUsers }}
+                            {{ managerCount }}
+                        </p>
+
+                        <p
+                            class="mt-1 hidden text-xs text-gray-500 sm:block dark:text-gray-400"
+                        >
+                            Management access
                         </p>
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-300"
                     >
                         <svg
                             class="h-5 w-5"
@@ -779,7 +861,7 @@ onBeforeUnmount(() => {
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                stroke-width="2"
+                                stroke-width="1.8"
                                 d="M12 6v6l4 2m6-2a10 10 0 11-20 0 10 10 0 0120 0z"
                             />
                         </svg>
@@ -787,24 +869,34 @@ onBeforeUnmount(() => {
                 </div>
             </BaseCard>
 
-            <BaseCard padding="p-5">
-                <div class="flex items-center justify-between">
-                    <div>
+            <!-- Staff -->
+            <BaseCard
+                padding="p-4 sm:p-5"
+                class="overflow-hidden"
+            >
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
                         <p
-                            class="text-sm font-medium text-gray-500 dark:text-gray-400"
+                            class="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500"
                         >
                             Staff
                         </p>
 
                         <p
-                            class="mt-2 text-2xl font-bold text-gray-900 dark:text-white"
+                            class="mt-2 text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl dark:text-white"
                         >
-                            {{ staffUsers }}
+                            {{ staffCount }}
+                        </p>
+
+                        <p
+                            class="mt-1 hidden text-xs text-gray-500 sm:block dark:text-gray-400"
+                        >
+                            Operational access
                         </p>
                     </div>
 
                     <div
-                        class="flex h-11 w-11 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300"
                     >
                         <svg
                             class="h-5 w-5"
@@ -815,7 +907,7 @@ onBeforeUnmount(() => {
                             <path
                                 stroke-linecap="round"
                                 stroke-linejoin="round"
-                                stroke-width="2"
+                                stroke-width="1.8"
                                 d="M15 19a6 6 0 00-12 0m6-8a4 4 0 100-8 4 4 0 000 8zm9 8a5 5 0 00-5-5m2-3a3 3 0 100-6"
                             />
                         </svg>
@@ -825,11 +917,14 @@ onBeforeUnmount(() => {
         </div>
 
         <!-- Filters -->
-        <BaseCard padding="p-4">
+        <BaseCard
+            padding="p-4"
+            class="border-gray-200/80 dark:border-gray-800"
+        >
             <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-                <div class="relative flex-1">
+                <div class="relative min-w-0 flex-1">
                     <svg
-                        class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
+                        class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -837,7 +932,7 @@ onBeforeUnmount(() => {
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            stroke-width="2"
+                            stroke-width="1.8"
                             d="M21 21l-4.35-4.35m2.35-5.65a8 8 0 11-16 0 8 8 0 0116 0z"
                         />
                     </svg>
@@ -846,88 +941,151 @@ onBeforeUnmount(() => {
                         v-model="searchInput"
                         type="search"
                         placeholder="Search by name or email..."
-                        class="w-full rounded-lg border border-gray-300 bg-white py-2.5 pl-10 pr-10 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400 dark:focus:ring-gray-700"
+                        class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-10 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100 dark:border-gray-700 dark:bg-gray-800/70 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-500 dark:focus:bg-gray-800 dark:focus:ring-gray-800"
                         @input="handleSearch"
                     />
 
                     <button
                         v-if="searchInput"
                         type="button"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 text-xl leading-none text-gray-400 hover:text-gray-700 dark:hover:text-white"
+                        aria-label="Clear search"
+                        class="absolute right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition hover:bg-gray-200 hover:text-gray-700 dark:hover:bg-gray-700 dark:hover:text-white"
                         @click="clearSearch"
                     >
                         ×
                     </button>
                 </div>
 
-                <select
-                    v-model="selectedRole"
-                    class="rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-700 outline-none focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:focus:border-gray-400 dark:focus:ring-gray-700"
-                    @change="changeRole"
-                >
-                    <option value="">All Roles</option>
-
-                    <option
-                        v-for="role in roles"
-                        :key="role.id"
-                        :value="role.slug"
+                <div class="w-full lg:w-52">
+                    <select
+                        v-model="selectedRole"
+                        class="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-3 text-sm font-medium text-gray-700 outline-none transition focus:border-gray-400 focus:bg-white focus:ring-4 focus:ring-gray-100 dark:border-gray-700 dark:bg-gray-800/70 dark:text-gray-200 dark:focus:border-gray-500 dark:focus:bg-gray-800 dark:focus:ring-gray-800"
+                        @change="changeRole"
                     >
-                        {{ role.name }}
-                    </option>
-                </select>
+                        <option value="">All Roles</option>
+
+                        <option
+                            v-for="role in roles"
+                            :key="role.id"
+                            :value="role.slug"
+                        >
+                            {{ role.name }}
+                        </option>
+                    </select>
+                </div>
             </div>
         </BaseCard>
 
         <!-- Error -->
         <div
             v-if="error"
-            class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300"
+            class="rounded-xl border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-900/20"
         >
-            <div
-                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-            >
-                <span>{{ error }}</span>
+            <div class="flex items-start gap-3">
+                <div
+                    class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-300"
+                >
+                    <svg
+                        class="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 8v4m0 4h.01M10.29 3.86l-7.5 13A2 2 0 004.53 20h14.94a2 2 0 001.74-3.14l-7.5-13a2 2 0 00-3.42 0z"
+                        />
+                    </svg>
+                </div>
 
-                <BaseButton variant="secondary" @click="refreshUsers">
+                <div class="min-w-0 flex-1">
+                    <p
+                        class="text-sm font-semibold text-red-800 dark:text-red-200"
+                    >
+                        Unable to load users
+                    </p>
+
+                    <p
+                        class="mt-1 text-sm leading-5 text-red-700 dark:text-red-300"
+                    >
+                        {{ error }}
+                    </p>
+                </div>
+
+                <BaseButton
+                    variant="secondary"
+                    class="shrink-0"
+                    @click="refreshUsers"
+                >
                     Try Again
                 </BaseButton>
             </div>
         </div>
 
         <!-- Desktop table -->
-        <BaseCard padding="p-0" class="hidden overflow-hidden lg:block">
+        <BaseCard
+            padding="p-0"
+            class="hidden overflow-hidden lg:block"
+        >
+            <div
+                class="flex items-center justify-between gap-4 border-b border-gray-100 px-6 py-4 dark:border-gray-800"
+            >
+                <div>
+                    <h2
+                        class="text-sm font-semibold text-gray-900 dark:text-white"
+                    >
+                        All Users
+                    </h2>
+
+                    <p
+                        class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
+                    >
+                        {{ total }} total {{ total === 1 ? "user" : "users" }}
+                    </p>
+                </div>
+
+                <div
+                    v-if="total"
+                    class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                >
+                    {{ firstUserNumber }}–{{ lastUserNumber }}
+                </div>
+            </div>
+
             <div class="overflow-x-auto">
                 <table
-                    class="min-w-full divide-y divide-gray-200 dark:divide-gray-700"
+                    class="min-w-full divide-y divide-gray-100 dark:divide-gray-800"
                 >
-                    <thead class="bg-gray-50 dark:bg-gray-800/70">
+                    <thead class="bg-gray-50/80 dark:bg-gray-800/40">
                         <tr>
                             <th
-                                class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                class="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                             >
                                 User
                             </th>
 
                             <th
-                                class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                class="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                             >
                                 Role
                             </th>
 
                             <th
-                                class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                class="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                             >
                                 Status
                             </th>
 
                             <th
-                                class="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                class="px-6 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                             >
                                 Joined
                             </th>
 
                             <th
-                                class="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                                class="px-6 py-3.5 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
                             >
                                 Actions
                             </th>
@@ -938,23 +1096,44 @@ onBeforeUnmount(() => {
                         class="divide-y divide-gray-100 bg-white dark:divide-gray-800 dark:bg-gray-900"
                     >
                         <template v-if="loading">
-                            <tr v-for="row in 5" :key="`loading-${row}`">
-                                <td colspan="5" class="px-6 py-5">
-                                    <div
-                                        class="h-10 animate-pulse rounded-lg bg-gray-100 dark:bg-gray-800"
-                                    ></div>
+                            <tr
+                                v-for="row in 6"
+                                :key="`loading-${row}`"
+                            >
+                                <td
+                                    colspan="5"
+                                    class="px-6 py-4"
+                                >
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="h-10 w-10 animate-pulse rounded-full bg-gray-100 dark:bg-gray-800"
+                                        ></div>
+
+                                        <div class="flex-1 space-y-2">
+                                            <div
+                                                class="h-3 w-32 animate-pulse rounded bg-gray-100 dark:bg-gray-800"
+                                            ></div>
+
+                                            <div
+                                                class="h-3 w-48 animate-pulse rounded bg-gray-100 dark:bg-gray-800"
+                                            ></div>
+                                        </div>
+                                    </div>
                                 </td>
                             </tr>
                         </template>
 
                         <template v-else-if="!users.length">
                             <tr>
-                                <td colspan="5" class="px-6 py-16 text-center">
+                                <td
+                                    colspan="5"
+                                    class="px-6 py-20 text-center"
+                                >
                                     <div
-                                        class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800"
+                                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
                                     >
                                         <svg
-                                            class="h-6 w-6"
+                                            class="h-7 w-7"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -962,7 +1141,7 @@ onBeforeUnmount(() => {
                                             <path
                                                 stroke-linecap="round"
                                                 stroke-linejoin="round"
-                                                stroke-width="2"
+                                                stroke-width="1.6"
                                                 d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m7-8a4 4 0 11-8 0 4 4 0 018 0zm6 4a3 3 0 10-6 0"
                                             />
                                         </svg>
@@ -975,7 +1154,7 @@ onBeforeUnmount(() => {
                                     </h3>
 
                                     <p
-                                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                                        class="mx-auto mt-1 max-w-sm text-sm text-gray-500 dark:text-gray-400"
                                     >
                                         Try changing your search or role filter.
                                     </p>
@@ -987,12 +1166,12 @@ onBeforeUnmount(() => {
                             <tr
                                 v-for="user in users"
                                 :key="user.id"
-                                class="transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                                class="group transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40"
                             >
                                 <td class="px-6 py-4">
                                     <div class="flex items-center gap-3">
                                         <div
-                                            class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                                            class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700"
                                         >
                                             <img
                                                 v-if="profilePictureUrl(user)"
@@ -1014,7 +1193,7 @@ onBeforeUnmount(() => {
                                             </p>
 
                                             <p
-                                                class="truncate text-sm text-gray-500 dark:text-gray-400"
+                                                class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
                                             >
                                                 {{ user.email }}
                                             </p>
@@ -1033,10 +1212,10 @@ onBeforeUnmount(() => {
 
                                 <td class="px-6 py-4">
                                     <span
-                                        class="inline-flex items-center gap-1.5 text-sm font-medium text-green-600 dark:text-green-400"
+                                        class="inline-flex items-center gap-2 text-xs font-medium text-green-600 dark:text-green-400"
                                     >
                                         <span
-                                            class="h-2 w-2 rounded-full bg-green-500"
+                                            class="h-1.5 w-1.5 rounded-full bg-green-500"
                                         ></span>
                                         Active
                                     </span>
@@ -1079,29 +1258,34 @@ onBeforeUnmount(() => {
             <!-- Desktop pagination -->
             <div
                 v-if="total > perPage"
-                class="flex flex-col gap-3 border-t border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-700"
+                class="flex flex-col gap-4 border-t border-gray-100 px-6 py-4 sm:flex-row sm:items-center sm:justify-between dark:border-gray-800"
             >
-                <p class="text-sm text-gray-500 dark:text-gray-400">
+                <p class="text-xs text-gray-500 dark:text-gray-400">
                     Showing
-                    <span class="font-medium text-gray-900 dark:text-white">
+                    <span
+                        class="font-semibold text-gray-900 dark:text-white"
+                    >
                         {{ firstUserNumber }}
                     </span>
-                    to
-                    <span class="font-medium text-gray-900 dark:text-white">
+                    –
+                    <span
+                        class="font-semibold text-gray-900 dark:text-white"
+                    >
                         {{ lastUserNumber }}
                     </span>
                     of
-                    <span class="font-medium text-gray-900 dark:text-white">
+                    <span
+                        class="font-semibold text-gray-900 dark:text-white"
+                    >
                         {{ total }}
                     </span>
-                    users
                 </p>
 
                 <div class="flex items-center gap-1">
                     <button
                         type="button"
                         :disabled="!hasPreviousPage"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                        class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                         @click="previousPage"
                     >
                         Previous
@@ -1111,17 +1295,20 @@ onBeforeUnmount(() => {
                         v-for="(page, index) in paginationPages"
                         :key="`${page}-${index}`"
                     >
-                        <span v-if="page === '...'" class="px-2 text-gray-400">
+                        <span
+                            v-if="page === '...'"
+                            class="px-2 text-xs text-gray-400"
+                        >
                             ...
                         </span>
 
                         <button
                             v-else
                             type="button"
-                            class="min-w-9 rounded-lg px-3 py-2 text-sm font-medium transition"
+                            class="min-w-9 rounded-lg px-3 py-2 text-xs font-medium transition"
                             :class="
                                 page === currentPage
-                                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                    ? 'bg-gray-900 text-white shadow-sm dark:bg-white dark:text-gray-900'
                                     : 'text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
                             "
                             @click="goToPage(page)"
@@ -1133,7 +1320,7 @@ onBeforeUnmount(() => {
                     <button
                         type="button"
                         :disabled="!hasNextPage"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-800"
+                        class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
                         @click="nextPage"
                     >
                         Next
@@ -1145,23 +1332,39 @@ onBeforeUnmount(() => {
         <!-- Mobile cards -->
         <div class="space-y-3 lg:hidden">
             <template v-if="loading">
-                <div
+                <BaseCard
                     v-for="row in 5"
                     :key="`mobile-loading-${row}`"
-                    class="h-28 animate-pulse rounded-xl bg-gray-100 dark:bg-gray-800"
-                ></div>
+                    padding="p-4"
+                >
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="h-11 w-11 animate-pulse rounded-full bg-gray-100 dark:bg-gray-800"
+                        ></div>
+
+                        <div class="flex-1 space-y-2">
+                            <div
+                                class="h-3 w-32 animate-pulse rounded bg-gray-100 dark:bg-gray-800"
+                            ></div>
+
+                            <div
+                                class="h-3 w-48 max-w-full animate-pulse rounded bg-gray-100 dark:bg-gray-800"
+                            ></div>
+                        </div>
+                    </div>
+                </BaseCard>
             </template>
 
             <BaseCard
                 v-else-if="!users.length"
-                padding="p-6"
+                padding="p-8"
                 class="text-center"
             >
                 <div
-                    class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800"
+                    class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 text-gray-400 dark:bg-gray-800 dark:text-gray-500"
                 >
                     <svg
-                        class="h-6 w-6"
+                        class="h-7 w-7"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -1169,27 +1372,36 @@ onBeforeUnmount(() => {
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            stroke-width="2"
+                            stroke-width="1.6"
                             d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H4v-2a4 4 0 014-4h1m7-8a4 4 0 11-8 0 4 4 0 018 0zm6 4a3 3 0 10-6 0"
                         />
                     </svg>
                 </div>
 
-                <h3 class="mt-4 font-semibold text-gray-900 dark:text-white">
+                <h3
+                    class="mt-4 text-sm font-semibold text-gray-900 dark:text-white"
+                >
                     No users found
                 </h3>
 
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                <p
+                    class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                >
                     Try changing your search or role filter.
                 </p>
             </BaseCard>
 
             <template v-else>
-                <BaseCard v-for="user in users" :key="user.id" padding="p-4">
+                <BaseCard
+                    v-for="user in users"
+                    :key="user.id"
+                    padding="p-4"
+                    class="overflow-hidden"
+                >
                     <div class="flex items-start justify-between gap-3">
                         <div class="flex min-w-0 items-center gap-3">
                             <div
-                                class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-sm font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200"
+                                class="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-sm font-semibold text-gray-700 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700"
                             >
                                 <img
                                     v-if="profilePictureUrl(user)"
@@ -1205,13 +1417,13 @@ onBeforeUnmount(() => {
 
                             <div class="min-w-0">
                                 <p
-                                    class="truncate font-semibold text-gray-900 dark:text-white"
+                                    class="truncate text-sm font-semibold text-gray-900 dark:text-white"
                                 >
                                     {{ user.name }}
                                 </p>
 
                                 <p
-                                    class="truncate text-sm text-gray-500 dark:text-gray-400"
+                                    class="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400"
                                 >
                                     {{ user.email }}
                                 </p>
@@ -1219,7 +1431,7 @@ onBeforeUnmount(() => {
                         </div>
 
                         <span
-                            class="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
+                            class="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
                             :class="roleBadgeClass(user.role)"
                         >
                             {{ roleLabel(user.role) }}
@@ -1227,38 +1439,48 @@ onBeforeUnmount(() => {
                     </div>
 
                     <div
-                        class="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 dark:border-gray-700"
+                        class="mt-4 grid grid-cols-2 gap-3 border-t border-gray-100 pt-4 dark:border-gray-800"
                     >
                         <div>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <p
+                                class="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                            >
                                 Status
                             </p>
 
                             <p
-                                class="mt-1 text-sm font-medium text-green-600 dark:text-green-400"
+                                class="mt-1.5 flex items-center gap-2 text-sm font-medium text-green-600 dark:text-green-400"
                             >
+                                <span
+                                    class="h-1.5 w-1.5 rounded-full bg-green-500"
+                                ></span>
                                 Active
                             </p>
                         </div>
 
                         <div>
-                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                            <p
+                                class="text-[11px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500"
+                            >
                                 Joined
                             </p>
 
                             <p
-                                class="mt-1 text-sm font-medium text-gray-700 dark:text-gray-200"
+                                class="mt-1.5 text-sm font-medium text-gray-700 dark:text-gray-200"
                             >
                                 {{ formatDate(user.created_at) }}
                             </p>
                         </div>
                     </div>
 
-                    <div v-if="canUpdate || canDelete" class="mt-4 flex gap-2">
+                    <div
+                        v-if="canUpdate || canDelete"
+                        class="mt-4 flex gap-2"
+                    >
                         <BaseButton
                             v-if="canUpdate"
                             variant="secondary"
-                            class="flex-1"
+                            class="flex-1 justify-center"
                             @click="openEditModal(user)"
                         >
                             Edit
@@ -1267,7 +1489,7 @@ onBeforeUnmount(() => {
                         <BaseButton
                             v-if="canDelete"
                             variant="danger"
-                            class="flex-1"
+                            class="flex-1 justify-center"
                             :disabled="user.id === authStore.user?.id"
                             @click="openDeleteModal(user)"
                         >
@@ -1278,23 +1500,30 @@ onBeforeUnmount(() => {
             </template>
 
             <!-- Mobile pagination -->
-            <BaseCard v-if="total > perPage" padding="p-4">
+            <BaseCard
+                v-if="total > perPage"
+                padding="p-3"
+            >
                 <div class="flex items-center justify-between gap-3">
                     <BaseButton
                         variant="secondary"
                         :disabled="!hasPreviousPage"
+                        class="flex-1 justify-center"
                         @click="previousPage"
                     >
                         Previous
                     </BaseButton>
 
-                    <span class="text-sm text-gray-500 dark:text-gray-400">
+                    <div
+                        class="shrink-0 rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                    >
                         {{ currentPage }} / {{ lastPage }}
-                    </span>
+                    </div>
 
                     <BaseButton
                         variant="secondary"
                         :disabled="!hasNextPage"
+                        class="flex-1 justify-center"
                         @click="nextPage"
                     >
                         Next
@@ -1311,247 +1540,314 @@ onBeforeUnmount(() => {
             :close-on-backdrop="!submitting"
             @close="closeUserModal"
         >
-            <form id="user-form" class="space-y-5" @submit.prevent="submitUser">
+            <form
+                id="user-form"
+                class="space-y-6"
+                @submit.prevent="submitUser"
+            >
                 <!-- Profile -->
-                <div class="flex flex-col items-center gap-4 sm:flex-row">
-                    <div
-                        class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100 text-xl font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200"
-                    >
-                        <img
-                            v-if="profilePreview"
-                            :src="profilePreview"
-                            alt="Profile preview"
-                            class="h-full w-full object-cover"
-                        />
-
-                        <span v-else>
-                            {{
-                                form.name
-                                    ? userInitials({
-                                          name: form.name,
-                                      })
-                                    : "U"
-                            }}
-                        </span>
-                    </div>
-
-                    <div class="text-center sm:text-left">
-                        <p
-                            class="text-sm font-semibold text-gray-900 dark:text-white"
-                        >
-                            Profile Picture
-                        </p>
-
-                        <p
-                            class="mt-1 text-xs text-gray-500 dark:text-gray-400"
-                        >
-                            JPEG, PNG, JPG or WEBP. Maximum 5 MB.
-                        </p>
-
+                <div
+                    class="rounded-xl border border-gray-100 bg-gray-50/70 p-4 dark:border-gray-800 dark:bg-gray-800/40"
+                >
+                    <div class="flex flex-col items-center gap-4 sm:flex-row">
                         <div
-                            class="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start"
+                            class="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-xl font-semibold text-gray-700 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:ring-gray-700"
                         >
-                            <label
-                                class="inline-flex cursor-pointer items-center rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
-                            >
-                                Choose Image
-
-                                <input
-                                    type="file"
-                                    accept="image/jpeg,image/png,image/jpg,image/webp"
-                                    class="hidden"
-                                    @change="handleProfilePicture"
-                                />
-                            </label>
-
-                            <button
+                            <img
                                 v-if="profilePreview"
-                                type="button"
-                                class="rounded-lg px-3 py-2 text-sm font-medium text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                                @click="removeProfilePicture"
-                            >
-                                Remove
-                            </button>
+                                :src="profilePreview"
+                                alt="Profile preview"
+                                class="h-full w-full object-cover"
+                            />
+
+                            <span v-else>
+                                {{
+                                    form.name
+                                        ? userInitials({
+                                              name: form.name,
+                                          })
+                                        : "U"
+                                }}
+                            </span>
                         </div>
 
-                        <p
-                            v-if="fieldError('profile_picture')"
-                            class="mt-2 text-xs text-red-600 dark:text-red-400"
-                        >
-                            {{ fieldError("profile_picture") }}
-                        </p>
+                        <div class="min-w-0 text-center sm:text-left">
+                            <p
+                                class="text-sm font-semibold text-gray-900 dark:text-white"
+                            >
+                                Profile Picture
+                            </p>
+
+                            <p
+                                class="mt-1 text-xs leading-5 text-gray-500 dark:text-gray-400"
+                            >
+                                JPEG, PNG, JPG or WEBP. Maximum 5 MB.
+                            </p>
+
+                            <div
+                                class="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start"
+                            >
+                                <label
+                                    class="inline-flex cursor-pointer items-center rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
+                                >
+                                    Choose Image
+
+                                    <input
+                                        type="file"
+                                        accept="image/jpeg,image/png,image/jpg,image/webp"
+                                        class="hidden"
+                                        @change="handleProfilePicture"
+                                    />
+                                </label>
+
+                                <button
+                                    v-if="profilePreview"
+                                    type="button"
+                                    class="rounded-lg px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    @click="removeProfilePicture"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+
+                            <p
+                                v-if="fieldError('profile_picture')"
+                                class="mt-2 text-xs text-red-600 dark:text-red-400"
+                            >
+                                {{ fieldError("profile_picture") }}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Name -->
+                <!-- Account information -->
                 <div>
-                    <label
-                        for="user-name"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                    <div
+                        class="mb-4 flex items-center gap-3"
                     >
-                        Full Name
-                    </label>
+                        <div
+                            class="h-px flex-1 bg-gray-100 dark:bg-gray-800"
+                        ></div>
 
-                    <input
-                        id="user-name"
-                        v-model="form.name"
-                        type="text"
-                        autocomplete="name"
-                        placeholder="Enter full name"
-                        class="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition"
-                        :class="
-                            fieldError('name')
-                                ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-2 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
-                                : 'border-gray-300 bg-white text-gray-900 focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400 dark:focus:ring-gray-700'
-                        "
-                    />
-
-                    <p
-                        v-if="fieldError('name')"
-                        class="mt-1 text-xs text-red-600 dark:text-red-400"
-                    >
-                        {{ fieldError("name") }}
-                    </p>
-                </div>
-
-                <!-- Email -->
-                <div>
-                    <label
-                        for="user-email"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                        Email Address
-                    </label>
-
-                    <input
-                        id="user-email"
-                        v-model="form.email"
-                        type="email"
-                        autocomplete="email"
-                        placeholder="user@example.com"
-                        class="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition"
-                        :class="
-                            fieldError('email')
-                                ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-2 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
-                                : 'border-gray-300 bg-white text-gray-900 focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400 dark:focus:ring-gray-700'
-                        "
-                    />
-
-                    <p
-                        v-if="fieldError('email')"
-                        class="mt-1 text-xs text-red-600 dark:text-red-400"
-                    >
-                        {{ fieldError("email") }}
-                    </p>
-                </div>
-
-                <!-- Role -->
-                <div>
-                    <label
-                        for="user-role"
-                        class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                    >
-                        Role
-                    </label>
-
-                    <select
-                        id="user-role"
-                        v-model="form.role_id"
-                        class="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition"
-                        :class="
-                            fieldError('role_id')
-                                ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-2 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
-                                : 'border-gray-300 bg-white text-gray-900 focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400 dark:focus:ring-gray-700'
-                        "
-                    >
-                        <option value="">Select a role</option>
-
-                        <option
-                            v-for="role in roles"
-                            :key="role.id"
-                            :value="role.id"
-                            :disabled="!role.is_active"
+                        <span
+                            class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500"
                         >
-                            {{ role.name }}
-                            {{ !role.is_active ? " (Inactive)" : "" }}
-                        </option>
-                    </select>
+                            Account Information
+                        </span>
 
-                    <p
-                        v-if="fieldError('role_id')"
-                        class="mt-1 text-xs text-red-600 dark:text-red-400"
-                    >
-                        {{ fieldError("role_id") }}
-                    </p>
+                        <div
+                            class="h-px flex-1 bg-gray-100 dark:bg-gray-800"
+                        ></div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <!-- Name -->
+                        <div>
+                            <label
+                                for="user-name"
+                                class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300"
+                            >
+                                Full Name
+                            </label>
+
+                            <input
+                                id="user-name"
+                                v-model="form.name"
+                                type="text"
+                                autocomplete="name"
+                                placeholder="Enter full name"
+                                class="w-full rounded-xl border px-3.5 py-3 text-sm outline-none transition"
+                                :class="
+                                    fieldError('name')
+                                        ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-4 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
+                                        : 'border-gray-200 bg-white text-gray-900 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-500 dark:focus:ring-gray-800'
+                                "
+                            />
+
+                            <p
+                                v-if="fieldError('name')"
+                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                            >
+                                {{ fieldError("name") }}
+                            </p>
+                        </div>
+
+                        <!-- Email -->
+                        <div>
+                            <label
+                                for="user-email"
+                                class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300"
+                            >
+                                Email Address
+                            </label>
+
+                            <input
+                                id="user-email"
+                                v-model="form.email"
+                                type="email"
+                                autocomplete="email"
+                                placeholder="user@example.com"
+                                class="w-full rounded-xl border px-3.5 py-3 text-sm outline-none transition"
+                                :class="
+                                    fieldError('email')
+                                        ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-4 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
+                                        : 'border-gray-200 bg-white text-gray-900 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-500 dark:focus:ring-gray-800'
+                                "
+                            />
+
+                            <p
+                                v-if="fieldError('email')"
+                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                            >
+                                {{ fieldError("email") }}
+                            </p>
+                        </div>
+
+                        <!-- Role -->
+                        <div>
+                            <label
+                                for="user-role"
+                                class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300"
+                            >
+                                Role
+                            </label>
+
+                            <select
+                                id="user-role"
+                                v-model="form.role_id"
+                                class="w-full rounded-xl border px-3.5 py-3 text-sm outline-none transition"
+                                :class="
+                                    fieldError('role_id')
+                                        ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-4 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
+                                        : 'border-gray-200 bg-white text-gray-900 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-500 dark:focus:ring-gray-800'
+                                "
+                            >
+                                <option value="">
+                                    Select a role
+                                </option>
+
+                                <option
+                                    v-for="role in roles"
+                                    :key="role.id"
+                                    :value="role.id"
+                                    :disabled="!role.is_active"
+                                >
+                                    {{ role.name }}
+                                    {{
+                                        !role.is_active
+                                            ? " (Inactive)"
+                                            : ""
+                                    }}
+                                </option>
+                            </select>
+
+                            <p
+                                v-if="fieldError('role_id')"
+                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                            >
+                                {{ fieldError("role_id") }}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Password -->
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                        <label
-                            for="user-password"
-                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+                <div>
+                    <div
+                        class="mb-4 flex items-center gap-3"
+                    >
+                        <div
+                            class="h-px flex-1 bg-gray-100 dark:bg-gray-800"
+                        ></div>
+
+                        <span
+                            class="text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-400 dark:text-gray-500"
                         >
-                            Password
+                            Security
+                        </span>
 
-                            <span
-                                v-if="editingUser"
-                                class="font-normal text-gray-400"
-                            >
-                                (leave blank to keep)
-                            </span>
-                        </label>
-
-                        <input
-                            id="user-password"
-                            v-model="form.password"
-                            type="password"
-                            autocomplete="new-password"
-                            placeholder="Minimum 8 characters"
-                            class="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition"
-                            :class="
-                                fieldError('password')
-                                    ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-2 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
-                                    : 'border-gray-300 bg-white text-gray-900 focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400 dark:focus:ring-gray-700'
-                            "
-                        />
-
-                        <p
-                            v-if="fieldError('password')"
-                            class="mt-1 text-xs text-red-600 dark:text-red-400"
-                        >
-                            {{ fieldError("password") }}
-                        </p>
+                        <div
+                            class="h-px flex-1 bg-gray-100 dark:bg-gray-800"
+                        ></div>
                     </div>
 
-                    <div>
-                        <label
-                            for="user-password-confirmation"
-                            class="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-                        >
-                            Confirm Password
-                        </label>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <!-- Password -->
+                        <div>
+                            <label
+                                for="user-password"
+                                class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300"
+                            >
+                                Password
 
-                        <input
-                            id="user-password-confirmation"
-                            v-model="form.password_confirmation"
-                            type="password"
-                            autocomplete="new-password"
-                            placeholder="Confirm password"
-                            class="w-full rounded-lg border px-3 py-2.5 text-sm outline-none transition"
-                            :class="
-                                fieldError('password_confirmation')
-                                    ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-2 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
-                                    : 'border-gray-300 bg-white text-gray-900 focus:border-gray-500 focus:ring-2 focus:ring-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-gray-400 dark:focus:ring-gray-700'
-                            "
-                        />
+                                <span
+                                    v-if="editingUser"
+                                    class="font-normal text-gray-400"
+                                >
+                                    (leave blank to keep)
+                                </span>
+                            </label>
 
-                        <p
-                            v-if="fieldError('password_confirmation')"
-                            class="mt-1 text-xs text-red-600 dark:text-red-400"
-                        >
-                            {{ fieldError("password_confirmation") }}
-                        </p>
+                            <input
+                                id="user-password"
+                                v-model="form.password"
+                                type="password"
+                                autocomplete="new-password"
+                                placeholder="Minimum 8 characters"
+                                class="w-full rounded-xl border px-3.5 py-3 text-sm outline-none transition"
+                                :class="
+                                    fieldError('password')
+                                        ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-4 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
+                                        : 'border-gray-200 bg-white text-gray-900 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-500 dark:focus:ring-gray-800'
+                                "
+                            />
+
+                            <p
+                                v-if="fieldError('password')"
+                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                            >
+                                {{ fieldError("password") }}
+                            </p>
+                        </div>
+
+                        <!-- Confirmation -->
+                        <div>
+                            <label
+                                for="user-password-confirmation"
+                                class="mb-1.5 block text-xs font-semibold text-gray-700 dark:text-gray-300"
+                            >
+                                Confirm Password
+                            </label>
+
+                            <input
+                                id="user-password-confirmation"
+                                v-model="form.password_confirmation"
+                                type="password"
+                                autocomplete="new-password"
+                                placeholder="Confirm password"
+                                class="w-full rounded-xl border px-3.5 py-3 text-sm outline-none transition"
+                                :class="
+                                    fieldError('password_confirmation')
+                                        ? 'border-red-400 bg-red-50 text-gray-900 focus:ring-4 focus:ring-red-100 dark:border-red-500 dark:bg-red-900/10 dark:text-white'
+                                        : 'border-gray-200 bg-white text-gray-900 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:focus:border-gray-500 dark:focus:ring-gray-800'
+                                "
+                            />
+
+                            <p
+                                v-if="
+                                    fieldError(
+                                        'password_confirmation',
+                                    )
+                                "
+                                class="mt-1.5 text-xs text-red-600 dark:text-red-400"
+                            >
+                                {{
+                                    fieldError(
+                                        "password_confirmation",
+                                    )
+                                }}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -1565,6 +1861,7 @@ onBeforeUnmount(() => {
                         type="button"
                         variant="secondary"
                         :disabled="submitting"
+                        class="justify-center"
                         @click="closeUserModal"
                     >
                         Cancel
@@ -1575,6 +1872,7 @@ onBeforeUnmount(() => {
                         form="user-form"
                         variant="primary"
                         :loading="submitting"
+                        class="justify-center"
                     >
                         {{ submitButtonText }}
                     </BaseButton>
@@ -1590,9 +1888,9 @@ onBeforeUnmount(() => {
             :close-on-backdrop="!deleting"
             @close="closeDeleteModal"
         >
-            <div class="space-y-4">
+            <div class="space-y-5">
                 <div
-                    class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                    class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400"
                 >
                     <svg
                         class="h-6 w-6"
@@ -1603,28 +1901,36 @@ onBeforeUnmount(() => {
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            stroke-width="2"
+                            stroke-width="1.8"
                             d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M9 7V4a1 1 0 011-1h4a1 1 0 011 1v3m-8 0h10"
                         />
                     </svg>
                 </div>
 
                 <div class="text-center">
-                    <p class="text-sm text-gray-600 dark:text-gray-300">
-                        Are you sure you want to delete
+                    <h3
+                        class="text-base font-semibold text-gray-900 dark:text-white"
+                    >
+                        Delete this user?
+                    </h3>
 
+                    <p
+                        class="mt-2 text-sm leading-6 text-gray-500 dark:text-gray-400"
+                    >
+                        You are about to permanently delete
                         <strong
                             class="font-semibold text-gray-900 dark:text-white"
                         >
                             {{ userToDelete?.name }}
                         </strong>
-
-                        ?
+                        .
                     </p>
 
-                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    <div
+                        class="mt-4 rounded-xl bg-red-50 p-3 text-xs leading-5 text-red-700 dark:bg-red-900/20 dark:text-red-300"
+                    >
                         This action cannot be undone.
-                    </p>
+                    </div>
                 </div>
             </div>
 
@@ -1636,6 +1942,7 @@ onBeforeUnmount(() => {
                         type="button"
                         variant="secondary"
                         :disabled="deleting"
+                        class="justify-center"
                         @click="closeDeleteModal"
                     >
                         Cancel
@@ -1645,6 +1952,7 @@ onBeforeUnmount(() => {
                         type="button"
                         variant="danger"
                         :loading="deleting"
+                        class="justify-center"
                         @click="confirmDelete"
                     >
                         Delete User
