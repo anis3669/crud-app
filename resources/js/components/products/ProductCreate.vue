@@ -134,7 +134,6 @@ function validateForm() {
 }
 
 // Create product
-
 async function submitForm() {
     error.value = "";
 
@@ -160,6 +159,13 @@ async function submitForm() {
         }
 
         await productStore.createProduct(productData);
+
+        // Refresh products and complete inventory statistics
+        await productStore.fetchProducts(
+            1,
+            productStore.search,
+            productStore.filter,
+        );
 
         toastStore.success("Product created successfully.");
 
@@ -216,7 +222,6 @@ async function submitForm() {
         loading.value = false;
     }
 }
-
 // Cancel
 
 function cancel() {
