@@ -167,6 +167,15 @@ export const useProductStore = defineStore("product", {
             }
         },
 
+        // Refresh products and dashboard statistics
+        async refreshStats() {
+            return await this.fetchProducts(
+                this.currentPage,
+                this.search,
+                this.filter,
+            );
+        },
+
         // Fetch single product
         async fetchProduct(productId) {
             this.loading = true;
@@ -211,6 +220,9 @@ export const useProductStore = defineStore("product", {
                     this.products.unshift(product);
                     this.total += 1;
                 }
+
+                // Refresh dashboard statistics
+                await this.refreshStats();
 
                 return response.data;
             } catch (error) {
@@ -276,6 +288,9 @@ export const useProductStore = defineStore("product", {
                     this.product = updatedProduct;
                 }
 
+                // Refresh dashboard statistics
+                await this.refreshStats();
+
                 return response.data;
             } catch (error) {
                 if (error.response?.status === 404) {
@@ -303,11 +318,16 @@ export const useProductStore = defineStore("product", {
                     `/api/products/${productId}`,
                 );
 
+                const numericId = Number(productId);
+
                 this.products = this.products.filter(
-                    (product) => product.id !== productId,
+                    (product) => Number(product.id) !== numericId,
                 );
 
                 this.total = Math.max(0, this.total - 1);
+
+                // Refresh dashboard statistics
+                await this.refreshStats();
 
                 return response.data;
             } catch (error) {
@@ -333,7 +353,9 @@ export const useProductStore = defineStore("product", {
 
             try {
                 const ids = productsToDelete.map((product) =>
-                    typeof product === "object" ? product.id : product,
+                    typeof product === "object"
+                        ? Number(product.id)
+                        : Number(product),
                 );
 
                 if (!ids.length) {
@@ -352,10 +374,13 @@ export const useProductStore = defineStore("product", {
                 );
 
                 this.products = this.products.filter(
-                    (product) => !ids.includes(product.id),
+                    (product) => !ids.includes(Number(product.id)),
                 );
 
                 this.total = Math.max(0, this.total - ids.length);
+
+                // Refresh dashboard statistics
+                await this.refreshStats();
 
                 return response.data;
             } catch (error) {
@@ -381,6 +406,7 @@ export const useProductStore = defineStore("product", {
                     productsToUpdate.length === 0
                 ) {
                     this.error = "Please select at least one product.";
+
                     return;
                 }
 
@@ -450,6 +476,7 @@ export const useProductStore = defineStore("product", {
                     },
                 );
 
+                // Refresh products and statistics
                 await this.fetchProducts(
                     this.currentPage,
                     this.search,
@@ -557,11 +584,16 @@ export const useProductStore = defineStore("product", {
                     `/api/trash/${productId}/restore`,
                 );
 
+                const numericId = Number(productId);
+
                 this.trash = this.trash.filter(
-                    (product) => product.id !== productId,
+                    (product) => Number(product.id) !== numericId,
                 );
 
                 this.trashTotal = Math.max(0, this.trashTotal - 1);
+
+                // Refresh dashboard statistics
+                await this.refreshStats();
 
                 return response.data;
             } catch (error) {
@@ -588,8 +620,10 @@ export const useProductStore = defineStore("product", {
             try {
                 const response = await axios.delete(`/api/trash/${productId}`);
 
+                const numericId = Number(productId);
+
                 this.trash = this.trash.filter(
-                    (product) => product.id !== productId,
+                    (product) => Number(product.id) !== numericId,
                 );
 
                 this.trashTotal = Math.max(0, this.trashTotal - 1);
@@ -618,11 +652,14 @@ export const useProductStore = defineStore("product", {
 
             try {
                 const ids = productsToRestore.map((product) =>
-                    typeof product === "object" ? product.id : product,
+                    typeof product === "object"
+                        ? Number(product.id)
+                        : Number(product),
                 );
 
                 if (!ids.length) {
                     this.trashError = "Please select at least one product.";
+
                     return;
                 }
 
@@ -631,10 +668,13 @@ export const useProductStore = defineStore("product", {
                 });
 
                 this.trash = this.trash.filter(
-                    (product) => !ids.includes(product.id),
+                    (product) => !ids.includes(Number(product.id)),
                 );
 
                 this.trashTotal = Math.max(0, this.trashTotal - ids.length);
+
+                // Refresh dashboard statistics
+                await this.refreshStats();
 
                 return response.data;
             } catch (error) {
@@ -656,11 +696,14 @@ export const useProductStore = defineStore("product", {
 
             try {
                 const ids = productsToDelete.map((product) =>
-                    typeof product === "object" ? product.id : product,
+                    typeof product === "object"
+                        ? Number(product.id)
+                        : Number(product),
                 );
 
                 if (!ids.length) {
                     this.trashError = "Please select at least one product.";
+
                     return;
                 }
 
@@ -671,7 +714,7 @@ export const useProductStore = defineStore("product", {
                 });
 
                 this.trash = this.trash.filter(
-                    (product) => !ids.includes(product.id),
+                    (product) => !ids.includes(Number(product.id)),
                 );
 
                 this.trashTotal = Math.max(0, this.trashTotal - ids.length);
