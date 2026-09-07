@@ -54,6 +54,7 @@ class RolePermissionSeeder extends Seeder
         $staffPermissions = [
             'products.view',
             'inventory.view',
+             'invoices.view',
         ];
 
         $staff->permissions()->sync(
