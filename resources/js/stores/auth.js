@@ -27,18 +27,24 @@ export const useAuthStore = defineStore("auth", {
             const picture =
                 profilePictureUrl !== undefined
                     ? profilePictureUrl
-                    : (user.profile_picture_url ?? null);
+                    : (user.profile_picture_url ??
+                      this.user?.profile_picture_url ??
+                      null);
 
             this.user = {
                 ...user,
                 profile_picture_url: picture,
             };
 
-            this.role = user.role ?? null;
+            if (user.role !== undefined) {
+                this.role = user.role;
+            }
 
-            this.permissions = Array.isArray(user.permissions)
-                ? user.permissions
-                : [];
+            if (user.permissions !== undefined) {
+                this.permissions = Array.isArray(user.permissions)
+                    ? user.permissions
+                    : [];
+            }
 
             this.authenticated = true;
         },
