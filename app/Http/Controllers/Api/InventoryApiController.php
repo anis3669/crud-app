@@ -39,7 +39,31 @@ class InventoryApiController extends Controller
             ->orderBy('name')
             ->paginate($request->integer('per_page', 10));
 
-        return response()->json($products);
+        // Complete inventory statistics
+        $stats = [
+            'total_products' => Product::count(),
+
+            'total_quantity' => Product::sum('quantity'),
+
+            'low_stock' => Product::whereBetween(
+                'quantity',
+                [1, 5]
+            )->count(),
+
+            'out_of_stock' => Product::where(
+                'quantity',
+                0
+            )->count(),
+        ];
+
+        return response()->json([
+            'data' => $products->items(),
+            'current_page' => $products->currentPage(),
+            'last_page' => $products->lastPage(),
+            'per_page' => $products->perPage(),
+            'total' => $products->total(),
+            'stats' => $stats,
+        ]);
     }
 
     // Adjust product stock
