@@ -24,11 +24,9 @@ const { categories } = storeToRefs(categoryStore);
 const { suppliers } = storeToRefs(supplierStore);
 
 // Product ID
-
 const productId = computed(() => route.params.id);
 
 // Form
-
 const form = ref({
     name: "",
     sku: "",
@@ -36,24 +34,21 @@ const form = ref({
     supplier_id: "",
     description: "",
     price: "",
-    quantity: "",
+    quantity: 0,
     image: null,
     remove_image: false,
 });
 
 // Existing image
-
 const existingImage = ref(null);
 
 // State
-
 const loading = ref(false);
 const loadingProduct = ref(false);
 const loadingFormData = ref(false);
 const error = ref("");
 
 // Form data loading
-
 const formDataLoading = computed(() => {
     return (
         loadingProduct.value ||
@@ -64,7 +59,6 @@ const formDataLoading = computed(() => {
 });
 
 // Image URL
-
 function imageUrl(image) {
     if (!image) {
         return null;
@@ -78,7 +72,6 @@ function imageUrl(image) {
 }
 
 // Load categories and suppliers
-
 async function loadFormData() {
     loadingFormData.value = true;
 
@@ -115,7 +108,6 @@ async function loadFormData() {
 }
 
 // Load product
-
 async function loadProduct() {
     loadingProduct.value = true;
     error.value = "";
@@ -133,14 +125,16 @@ async function loadProduct() {
         form.value.category_id = product.category_id ?? "";
         form.value.supplier_id = product.supplier_id ?? "";
         form.value.description = product.description ?? "";
+
         form.value.price =
             product.price !== null && product.price !== undefined
                 ? String(product.price)
                 : "";
+
         form.value.quantity =
             product.quantity !== null && product.quantity !== undefined
                 ? String(product.quantity)
-                : "";
+                : "0";
 
         form.value.image = null;
         form.value.remove_image = false;
@@ -177,12 +171,10 @@ async function loadProduct() {
 }
 
 // Validation
-
 function validateForm() {
     const name = form.value.name.trim();
     const sku = form.value.sku.trim();
     const price = Number(form.value.price);
-    const quantity = Number(form.value.quantity);
 
     if (!name) {
         error.value = "Please enter a product name.";
@@ -196,16 +188,6 @@ function validateForm() {
 
     if (form.value.price === "" || !Number.isFinite(price) || price < 0) {
         error.value = "Please enter a valid price.";
-        return false;
-    }
-
-    if (
-        form.value.quantity === "" ||
-        !Number.isFinite(quantity) ||
-        quantity < 0 ||
-        !Number.isInteger(quantity)
-    ) {
-        error.value = "Please enter a valid whole-number quantity.";
         return false;
     }
 
@@ -233,7 +215,6 @@ function validateForm() {
 }
 
 // Update product
-
 async function submitForm() {
     error.value = "";
 
@@ -273,7 +254,8 @@ async function submitForm() {
 
         productData.append("price", Number(form.value.price).toFixed(2));
 
-        productData.append("quantity", String(Number(form.value.quantity)));
+        // Quantity is not sent here.
+        // Stock changes must be made through Inventory Adjust.
 
         productData.append("remove_image", form.value.remove_image ? "1" : "0");
 
@@ -349,14 +331,12 @@ async function submitForm() {
 }
 
 // Remove existing image
-
 function removeExistingImage() {
     existingImage.value = null;
     form.value.remove_image = true;
 }
 
 // Cancel
-
 function cancel() {
     router.push({
         name: "products.index",
@@ -364,7 +344,6 @@ function cancel() {
 }
 
 // Load everything
-
 async function initialize() {
     await Promise.all([loadFormData(), loadProduct()]);
 }
@@ -384,7 +363,8 @@ onMounted(initialize);
             </h1>
 
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                Update the product information and inventory details.
+                Update the product information. Stock is managed separately
+                through Inventory.
             </p>
         </div>
 
@@ -590,27 +570,29 @@ onMounted(initialize);
                         />
                     </div>
 
-                    <!-- Quantity -->
+                    <!-- Current Stock -->
 
                     <div>
                         <label
                             for="quantity"
                             class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
                         >
-                            Quantity
+                            Current Stock
                         </label>
 
                         <input
                             id="quantity"
-                            v-model="form.quantity"
+                            :value="form.quantity"
                             type="number"
-                            min="0"
-                            step="1"
-                            inputmode="numeric"
-                            placeholder="0"
-                            :disabled="loading"
-                            class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                            readonly
+                            class="mt-2 block w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm text-gray-700 outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                         />
+
+                        <p
+                            class="mt-1 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            Stock can only be changed from Inventory Adjust.
+                        </p>
                     </div>
                 </div>
 

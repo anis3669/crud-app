@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Inventory;
+use App\Models\InventoryHistory;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -39,6 +41,7 @@ class ProductApiController extends Controller
         $query = Product::with([
             'category:id,name',
             'supplier:id,name',
+            'inventory:id,product_id',
         ]);
 
         // Search
@@ -125,7 +128,7 @@ class ProductApiController extends Controller
         ]);
     }
 
-    // Create product
+    // Create product with initial inventory
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -185,13 +188,38 @@ class ProductApiController extends Controller
                 ->store('products', 'public');
         }
 
-        $product = Product::create($validated);
+        $product = null;
+
+        DB::transaction(function () use ($validated, &$product) {
+            $initialQuantity = $validated['quantity'];
+
+            $product = Product::create($validated);
+
+            // Create inventory record
+            Inventory::create([
+                'product_id' => $product->id,
+            ]);
+
+            // Record initial stock
+            if ($initialQuantity > 0) {
+                InventoryHistory::create([
+                    'product_id' => $product->id,
+                    'user_id' => auth()->id(),
+                    'quantity_before' => 0,
+                    'quantity_change' => $initialQuantity,
+                    'quantity_after' => $initialQuantity,
+                    'type' => 'stock_in',
+                    'reason' => 'Initial stock',
+                ]);
+            }
+        });
 
         return response()->json([
             'message' => 'Product created successfully.',
             'product' => $product->load([
                 'category:id,name',
                 'supplier:id,name',
+                'inventory:id,product_id',
             ]),
         ], 201);
     }
@@ -202,12 +230,13 @@ class ProductApiController extends Controller
         $product->load([
             'category:id,name',
             'supplier:id,name',
+            'inventory:id,product_id',
         ]);
 
         return response()->json($product);
     }
 
-    // Update product
+    // Update product details only
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
@@ -248,12 +277,6 @@ class ProductApiController extends Controller
                 'min:0',
             ],
 
-            'quantity' => [
-                'required',
-                'integer',
-                'min:0',
-            ],
-
             'image' => [
                 'nullable',
                 'image',
@@ -272,7 +295,8 @@ class ProductApiController extends Controller
         $product->supplier_id = $validated['supplier_id'] ?? null;
         $product->description = $validated['description'] ?? null;
         $product->price = $validated['price'];
-        $product->quantity = $validated['quantity'];
+
+        // Quantity is intentionally not changed here
 
         // Remove existing image
         $removeImage = $request->input('remove_image');
@@ -307,6 +331,7 @@ class ProductApiController extends Controller
             'product' => $product->load([
                 'category:id,name',
                 'supplier:id,name',
+                'inventory:id,product_id',
             ]),
         ]);
     }
@@ -350,7 +375,7 @@ class ProductApiController extends Controller
         ]);
     }
 
-    // Bulk update
+    // Bulk update product details only
     public function bulkUpdate(Request $request)
     {
         $validated = $request->validate([
@@ -401,12 +426,6 @@ class ProductApiController extends Controller
                 'min:0',
             ],
 
-            'products.*.quantity' => [
-                'required',
-                'integer',
-                'min:0',
-            ],
-
             'products.*.removeImage' => [
                 'nullable',
                 'in:0,1',
@@ -432,7 +451,8 @@ class ProductApiController extends Controller
                 $product->supplier_id = $data['supplier_id'];
                 $product->description = $data['description'] ?? null;
                 $product->price = $data['price'];
-                $product->quantity = $data['quantity'];
+
+                // Quantity is intentionally not changed here
 
                 // Check image removal directly from request
                 $removeImage = $request->input(
@@ -505,6 +525,7 @@ class ProductApiController extends Controller
             'product' => $product->load([
                 'category:id,name',
                 'supplier:id,name',
+                'inventory:id,product_id',
             ]),
         ]);
     }
@@ -548,7 +569,7 @@ class ProductApiController extends Controller
         ]);
     }
 
-    // Permanent delete
+    // Permanently delete product
     public function forceDelete($id)
     {
         try {
@@ -564,7 +585,10 @@ class ProductApiController extends Controller
 
             $product->forceDelete();
 
-            if ($image && !filter_var($image, FILTER_VALIDATE_URL)) {
+            if (
+                $image &&
+                !filter_var($image, FILTER_VALIDATE_URL)
+            ) {
                 Storage::disk('public')->delete($image);
             }
 
@@ -574,7 +598,9 @@ class ProductApiController extends Controller
         } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Permanent delete failed.',
-                'error' => $e->getMessage(),
+                'error' => config('app.debug')
+                    ? $e->getMessage()
+                    : null,
             ], 500);
         }
     }
@@ -588,6 +614,7 @@ class ProductApiController extends Controller
                 'array',
                 'min:1',
             ],
+
             'ids.*' => [
                 'required',
                 'integer',
@@ -608,7 +635,6 @@ class ProductApiController extends Controller
                 ->get();
 
             foreach ($products as $product) {
-
                 if ($product->invoiceItems()->exists()) {
                     $skippedCount++;
                     continue;
@@ -618,7 +644,10 @@ class ProductApiController extends Controller
 
                 $product->forceDelete();
 
-                if ($image && !filter_var($image, FILTER_VALIDATE_URL)) {
+                if (
+                    $image &&
+                    !filter_var($image, FILTER_VALIDATE_URL)
+                ) {
                     Storage::disk('public')->delete($image);
                 }
 
@@ -651,6 +680,7 @@ class ProductApiController extends Controller
             ->with([
                 'category:id,name',
                 'supplier:id,name',
+                'inventory:id,product_id',
             ])
             ->latest('deleted_at')
             ->paginate($perPage);
