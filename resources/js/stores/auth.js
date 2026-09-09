@@ -15,7 +15,6 @@ export const useAuthStore = defineStore("auth", {
 
     actions: {
         // USER
-
         setUser(user, profilePictureUrl = undefined) {
             if (!user) {
                 this.user = null;
@@ -227,11 +226,10 @@ export const useAuthStore = defineStore("auth", {
 
                 if (!response.ok) {
                     this.setUser(null);
-
                     return false;
                 }
 
-                this.setUser(data.user ?? data, data.profile_picture_url);
+                this.setUser(data, data.profile_picture_url);
 
                 return true;
             } catch (error) {

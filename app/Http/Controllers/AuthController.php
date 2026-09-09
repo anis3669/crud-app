@@ -25,9 +25,11 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        $user = Auth::user()->load('role.permissions');
+
         return response()->json([
             'message' => 'Login successful.',
-            'user' => Auth::user(),
+            'user' => $this->formatUser($user),
         ]);
     }
 
@@ -51,19 +53,24 @@ class AuthController extends Controller
             ],
         ]);
 
+        $staffRole = \App\Models\Role::where('slug', 'staff')->firstOrFail();
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'role_id' => $staffRole->id,
         ]);
 
         Auth::login($user);
 
         $request->session()->regenerate();
 
+        $user = Auth::user()->load('role.permissions');
+
         return response()->json([
             'message' => 'Registration successful.',
-            'user' => $user,
+            'user' => $this->formatUser($user),
         ], 201);
     }
 
@@ -78,5 +85,33 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Logout successful.',
         ]);
+    }
+
+    // Format authenticated user
+    private function formatUser(User $user)
+    {
+        return [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_picture' => $user->profile_picture,
+            'profile_picture_url' => $user->profile_picture_url,
+
+            'role' => $user->role
+                ? [
+                    'id' => $user->role->id,
+                    'name' => $user->role->name,
+                    'slug' => $user->role->slug,
+                ]
+                : null,
+
+            'permissions' => $user->role
+                ? $user->role->permissions
+                ->where('is_active', true)
+                ->pluck('slug')
+                ->values()
+                ->toArray()
+                : [],
+        ];
     }
 }
