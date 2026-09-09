@@ -50,6 +50,7 @@ Route::get('/user', function (Request $request) {
             ->where('is_active', true)
             ->pluck('slug')
             ->values()
+            ->toArray()
             : [],
     ]);
 })->middleware('auth:sanctum');
