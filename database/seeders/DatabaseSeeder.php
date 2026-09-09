@@ -56,19 +56,24 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Seed role permissions
+        // Connect permissions to roles
         $this->call([
             RolePermissionSeeder::class,
         ]);
 
-        // Create products
+        // Create categories
         $this->call([
-            ProductSeeder::class,
+            CategorySeeder::class,
         ]);
 
         // Create suppliers
         $this->call([
             SupplierSeeder::class,
+        ]);
+
+        // Create products with inventory and history
+        $this->call([
+            ProductSeeder::class,
         ]);
     }
 }

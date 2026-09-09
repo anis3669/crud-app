@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Inventory;
 use App\Models\InventoryHistory;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
@@ -11,13 +12,15 @@ use Illuminate\Support\Facades\DB;
 
 class InventoryApiController extends Controller
 {
-    /**
-     * Get current inventory.
-     */
+    // Get current inventory
     public function index(Request $request): JsonResponse
     {
         $products = Product::query()
-            ->with(['category', 'supplier'])
+            ->with([
+                'category:id,name',
+                'supplier:id,name',
+                'inventory:id,product_id',
+            ])
             ->when($request->search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -25,10 +28,13 @@ class InventoryApiController extends Controller
                 });
             })
             ->when($request->filter === 'in_stock', function ($query) {
-                $query->where('quantity', '>', 0);
+                $query->where('quantity', '>', 5);
+            })
+            ->when($request->filter === 'low_stock', function ($query) {
+                $query->whereBetween('quantity', [1, 5]);
             })
             ->when($request->filter === 'out_of_stock', function ($query) {
-                $query->where('quantity', '<=', 0);
+                $query->where('quantity', 0);
             })
             ->orderBy('name')
             ->paginate($request->integer('per_page', 10));
@@ -36,29 +42,51 @@ class InventoryApiController extends Controller
         return response()->json($products);
     }
 
-    /**
-     * Adjust product stock.
-     */
-    public function adjust(Request $request, Product $product): JsonResponse
-    {
+    // Adjust product stock
+    public function adjust(
+        Request $request,
+        Product $product
+    ): JsonResponse {
         $validated = $request->validate([
-            'type' => ['required', 'in:stock_in,stock_out,adjustment'],
-            'quantity' => ['required', 'integer', 'min:0'],
-            'reason' => ['nullable', 'string', 'max:500'],
+            'type' => [
+                'required',
+                'in:stock_in,stock_out,adjustment',
+            ],
+            'quantity' => [
+                'required',
+                'integer',
+                'min:0',
+            ],
+            'reason' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
         ]);
 
-        return DB::transaction(function () use ($validated, $product) {
+        return DB::transaction(function () use (
+            $validated,
+            $product
+        ) {
+            // Lock the product so two stock changes cannot
+            // modify the same quantity at the same time.
+            $product = Product::whereKey($product->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
             $quantityBefore = $product->quantity;
 
             switch ($validated['type']) {
                 case 'stock_in':
                     $quantityChange = $validated['quantity'];
-                    $quantityAfter = $quantityBefore + $quantityChange;
+                    $quantityAfter =
+                        $quantityBefore + $quantityChange;
                     break;
 
                 case 'stock_out':
                     $quantityChange = -$validated['quantity'];
-                    $quantityAfter = $quantityBefore + $quantityChange;
+                    $quantityAfter =
+                        $quantityBefore + $quantityChange;
 
                     if ($quantityAfter < 0) {
                         return response()->json([
@@ -70,17 +98,28 @@ class InventoryApiController extends Controller
 
                 case 'adjustment':
                     $quantityAfter = $validated['quantity'];
-                    $quantityChange = $quantityAfter - $quantityBefore;
+                    $quantityChange =
+                        $quantityAfter - $quantityBefore;
                     break;
 
                 default:
-                    abort(422, 'Invalid inventory adjustment type.');
+                    abort(
+                        422,
+                        'Invalid inventory adjustment type.'
+                    );
             }
 
+            // Update current stock
             $product->update([
                 'quantity' => $quantityAfter,
             ]);
 
+            // Make sure the product has an inventory record
+            Inventory::firstOrCreate([
+                'product_id' => $product->id,
+            ]);
+
+            // Record stock movement
             $history = InventoryHistory::create([
                 'product_id' => $product->id,
                 'user_id' => auth()->id(),
@@ -93,15 +132,17 @@ class InventoryApiController extends Controller
 
             return response()->json([
                 'message' => 'Inventory updated successfully.',
-                'product' => $product->fresh(),
+                'product' => $product->fresh([
+                    'category:id,name',
+                    'supplier:id,name',
+                    'inventory:id,product_id',
+                ]),
                 'history' => $history,
             ]);
         });
     }
 
-    /**
-     * Get inventory history.
-     */
+    // Get inventory history
     public function history(Request $request): JsonResponse
     {
         $history = InventoryHistory::query()
@@ -109,14 +150,22 @@ class InventoryApiController extends Controller
                 'product:id,name,sku',
                 'user:id,name,email',
             ])
-            ->when($request->product_id, function ($query, $productId) {
+            ->when($request->product_id, function (
+                $query,
+                $productId
+            ) {
                 $query->where('product_id', $productId);
             })
-            ->when($request->type, function ($query, $type) {
+            ->when($request->type, function (
+                $query,
+                $type
+            ) {
                 $query->where('type', $type);
             })
             ->latest()
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(
+                $request->integer('per_page', 20)
+            );
 
         return response()->json($history);
     }
