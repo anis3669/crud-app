@@ -102,7 +102,7 @@ function stockStatus(product) {
         };
     }
 
-    if (quantity <= 10) {
+    if (quantity <= 5) {
         return {
             label: "Low stock",
             classes:
