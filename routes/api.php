@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\InventoryApiController;
 use App\Http\Controllers\Api\InvoiceApiController;
 use App\Http\Controllers\Api\UserApiController;
 use App\Http\Controllers\Api\RoleApiController;
+use App\Exports\ProductsExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 // Authentication
@@ -115,6 +117,11 @@ Route::middleware('auth:sanctum')->group(function () {
         ProductApiController::class,
         'destroy'
     ])->middleware('permission:products.delete');
+
+    // product excel
+    Route::get('/products/export', function () {
+        return Excel::download(new ProductsExport, 'products.xlsx');
+    })->middleware('auth:sanctum');
 
 
     // Trash
