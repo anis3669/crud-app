@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use App\Imports\ProductsImport;
 use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Validators\ValidationException;
 
 class ProductApiController extends Controller
 {
@@ -699,31 +700,38 @@ class ProductApiController extends Controller
             ],
         ]);
 
-        $import = new ProductsImport();
+        try {
+            DB::transaction(function () use ($request) {
+                Excel::import(
+                    new ProductsImport(),
+                    $request->file('file')
+                );
+            });
 
-        Excel::import(
-            $import,
-            $request->file('file')
-        );
-
-        $failures = $import->failures();
-
-        if ($failures->isNotEmpty()) {
             return response()->json([
-                'message' => 'Some products could not be imported.',
-                'errors' => $failures->map(function ($failure) {
-                    return [
-                        'row' => $failure->row(),
-                        'attribute' => $failure->attribute(),
-                        'errors' => $failure->errors(),
-                        'values' => $failure->values(),
-                    ];
-                })->values(),
+                'message' => 'Products imported successfully.',
+            ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => 'Import failed. No products were imported.',
+                'errors' => collect($e->failures())
+                    ->map(function ($failure) {
+                        return [
+                            'row' => $failure->row(),
+                            'attribute' => $failure->attribute(),
+                            'errors' => $failure->errors(),
+                            'values' => $failure->values(),
+                        ];
+                    })
+                    ->values(),
             ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Import failed. No products were imported.',
+                'error' => config('app.debug')
+                    ? $e->getMessage()
+                    : null,
+            ], 500);
         }
-
-        return response()->json([
-            'message' => 'Products imported successfully.',
-        ]);
     }
 }

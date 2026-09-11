@@ -7,10 +7,7 @@ use App\Models\Inventory;
 use App\Models\InventoryHistory;
 use App\Models\Product;
 use App\Models\Supplier;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Maatwebsite\Excel\Concerns\SkipsFailures;
-use Maatwebsite\Excel\Concerns\SkipsOnFailure;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
@@ -18,56 +15,58 @@ use Maatwebsite\Excel\Concerns\WithValidation;
 class ProductsImport implements
     ToModel,
     WithHeadingRow,
-    WithValidation,
-    SkipsOnFailure
+    WithValidation
 {
-    use SkipsFailures;
-
     public function model(array $row)
     {
-        return DB::transaction(function () use ($row) {
-            $category = Category::where(
-                'name',
-                trim($row['category'])
-            )->first();
+        $productName = trim((string) ($row['product_name'] ?? ''));
+        $sku = trim((string) ($row['sku'] ?? ''));
+        $categoryName = trim((string) ($row['category'] ?? ''));
+        $supplierName = trim((string) ($row['supplier'] ?? ''));
 
-            $supplier = Supplier::where(
-                'name',
-                trim($row['supplier'])
-            )->first();
+        $category = Category::where(
+            'name',
+            $categoryName
+        )->first();
 
-            $quantity = (int) $row['quantity'];
+        $supplier = Supplier::where(
+            'name',
+            $supplierName
+        )->first();
 
-            $product = Product::create([
-                'name'        => trim($row['product_name']),
-                'sku'         => trim($row['sku']),
-                'category_id' => $category?->id,
-                'supplier_id' => $supplier?->id,
-                'price'       => $row['price'],
-                'quantity'    => $quantity,
-                'description' => isset($row['description'])
-                    ? trim($row['description'])
-                    : null,
+        $quantity = (int) $row['quantity'];
+
+        $product = new Product([
+            'name'        => $productName,
+            'sku'         => $sku,
+            'category_id' => $category?->id,
+            'supplier_id' => $supplier?->id,
+            'price'       => $row['price'],
+            'quantity'    => $quantity,
+            'description' => isset($row['description'])
+                ? trim((string) $row['description'])
+                : null,
+        ]);
+
+        $product->save();
+
+        Inventory::create([
+            'product_id' => $product->id,
+        ]);
+
+        if ($quantity > 0) {
+            InventoryHistory::create([
+                'product_id'      => $product->id,
+                'user_id'         => auth()->id(),
+                'quantity_before' => 0,
+                'quantity_change' => $quantity,
+                'quantity_after'  => $quantity,
+                'type'            => 'stock_in',
+                'reason'          => 'Initial stock via Excel import',
             ]);
+        }
 
-            Inventory::create([
-                'product_id' => $product->id,
-            ]);
-
-            if ($quantity > 0) {
-                InventoryHistory::create([
-                    'product_id'      => $product->id,
-                    'user_id'         => auth()->id(),
-                    'quantity_before' => 0,
-                    'quantity_change' => $quantity,
-                    'quantity_after'  => $quantity,
-                    'type'            => 'stock_in',
-                    'reason'          => 'Initial stock via Excel import',
-                ]);
-            }
-
-            return $product;
-        });
+        return $product;
     }
 
     public function rules(): array
@@ -89,13 +88,39 @@ class ProductsImport implements
             'category' => [
                 'required',
                 'string',
-                'exists:categories,name',
+                function ($attribute, $value, $fail) {
+                    $categoryName = trim((string) $value);
+
+                    if (
+                        !Category::where(
+                            'name',
+                            $categoryName
+                        )->exists()
+                    ) {
+                        $fail(
+                            "The category '{$categoryName}' does not exist."
+                        );
+                    }
+                },
             ],
 
             'supplier' => [
                 'required',
                 'string',
-                'exists:suppliers,name',
+                function ($attribute, $value, $fail) {
+                    $supplierName = trim((string) $value);
+
+                    if (
+                        !Supplier::where(
+                            'name',
+                            $supplierName
+                        )->exists()
+                    ) {
+                        $fail(
+                            "The supplier '{$supplierName}' does not exist."
+                        );
+                    }
+                },
             ],
 
             'price' => [
