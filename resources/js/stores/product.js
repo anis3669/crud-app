@@ -118,13 +118,9 @@ export const useProductStore = defineStore("product", {
                 // Read Laravel paginator
                 if (data?.products && Array.isArray(data.products.data)) {
                     this.products = data.products.data;
-
                     this.currentPage = data.products.current_page || 1;
-
                     this.lastPage = data.products.last_page || 1;
-
                     this.total = data.products.total || 0;
-
                     this.perPage = data.products.per_page || this.perPage;
                 } else {
                     this.products = [];
@@ -137,15 +133,10 @@ export const useProductStore = defineStore("product", {
                 if (data?.stats) {
                     this.stats = {
                         total_products: data.stats.total_products || 0,
-
                         in_stock: data.stats.in_stock || 0,
-
                         out_of_stock: data.stats.out_of_stock || 0,
-
                         low_stock: data.stats.low_stock || 0,
-
                         total_quantity: data.stats.total_quantity || 0,
-
                         total_inventory_value:
                             data.stats.total_inventory_value || 0,
                     };
@@ -182,7 +173,9 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const response = await axios.get(`/api/products/${productId}`);
+                const response = await axios.get(
+                    `/api/products/${productId}`,
+                );
 
                 this.product =
                     response.data.product ||
@@ -212,16 +205,19 @@ export const useProductStore = defineStore("product", {
             this.error = null;
 
             try {
-                const response = await axios.post("/api/products", productData);
+                const response = await axios.post(
+                    "/api/products",
+                    productData,
+                );
 
-                const product = response.data.product || response.data.data;
+                const product =
+                    response.data.product || response.data.data;
 
                 if (product) {
                     this.products.unshift(product);
                     this.total += 1;
                 }
 
-                // Refresh dashboard statistics
                 await this.refreshStats();
 
                 return response.data;
@@ -268,7 +264,9 @@ export const useProductStore = defineStore("product", {
                 );
 
                 const updatedProduct =
-                    response.data.product || response.data.data || null;
+                    response.data.product ||
+                    response.data.data ||
+                    null;
 
                 const numericId = Number(productId);
 
@@ -288,7 +286,6 @@ export const useProductStore = defineStore("product", {
                     this.product = updatedProduct;
                 }
 
-                // Refresh dashboard statistics
                 await this.refreshStats();
 
                 return response.data;
@@ -326,7 +323,6 @@ export const useProductStore = defineStore("product", {
 
                 this.total = Math.max(0, this.total - 1);
 
-                // Refresh dashboard statistics
                 await this.refreshStats();
 
                 return response.data;
@@ -360,7 +356,6 @@ export const useProductStore = defineStore("product", {
 
                 if (!ids.length) {
                     this.error = "Please select at least one product.";
-
                     return;
                 }
 
@@ -377,9 +372,11 @@ export const useProductStore = defineStore("product", {
                     (product) => !ids.includes(Number(product.id)),
                 );
 
-                this.total = Math.max(0, this.total - ids.length);
+                this.total = Math.max(
+                    0,
+                    this.total - ids.length,
+                );
 
-                // Refresh dashboard statistics
                 await this.refreshStats();
 
                 return response.data;
@@ -406,7 +403,6 @@ export const useProductStore = defineStore("product", {
                     productsToUpdate.length === 0
                 ) {
                     this.error = "Please select at least one product.";
-
                     return;
                 }
 
@@ -476,7 +472,6 @@ export const useProductStore = defineStore("product", {
                     },
                 );
 
-                // Refresh products and statistics
                 await this.fetchProducts(
                     this.currentPage,
                     this.search,
@@ -500,21 +495,33 @@ export const useProductStore = defineStore("product", {
         async searchProducts(searchTerm) {
             this.search = searchTerm;
 
-            return await this.fetchProducts(1, searchTerm, this.filter);
+            return await this.fetchProducts(
+                1,
+                searchTerm,
+                this.filter,
+            );
         },
 
         // Clear search
         async clearSearch() {
             this.search = "";
 
-            return await this.fetchProducts(1, "", this.filter);
+            return await this.fetchProducts(
+                1,
+                "",
+                this.filter,
+            );
         },
 
         // Filter products
         async filterProducts(selectedFilter) {
             this.filter = selectedFilter;
 
-            return await this.fetchProducts(1, this.search, selectedFilter);
+            return await this.fetchProducts(
+                1,
+                this.search,
+                selectedFilter,
+            );
         },
 
         // Filter products by price
@@ -526,6 +533,45 @@ export const useProductStore = defineStore("product", {
                 minPrice,
                 maxPrice,
             );
+        },
+
+        // Export products to Excel
+        async exportProducts() {
+            this.error = null;
+
+            try {
+                const response = await axios.get(
+                    "/api/products/export",
+                    {
+                        responseType: "blob",
+                    },
+                );
+
+                const blob = new Blob([response.data], {
+                    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                });
+
+                const url = window.URL.createObjectURL(blob);
+
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = "products.xlsx";
+
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+
+                window.URL.revokeObjectURL(url);
+
+                return true;
+            } catch (error) {
+                this.error = this.getErrorMessage(
+                    error,
+                    "Failed to export products.",
+                );
+
+                throw error;
+            }
         },
 
         // Fetch trash
@@ -543,17 +589,15 @@ export const useProductStore = defineStore("product", {
 
                 const data = response.data;
 
-                // Read Laravel paginator
                 if (data && Array.isArray(data.data)) {
                     this.trash = data.data;
-
-                    this.trashCurrentPage = data.current_page || 1;
-
-                    this.trashLastPage = data.last_page || 1;
-
+                    this.trashCurrentPage =
+                        data.current_page || 1;
+                    this.trashLastPage =
+                        data.last_page || 1;
                     this.trashTotal = data.total || 0;
-
-                    this.trashPerPage = data.per_page || this.trashPerPage;
+                    this.trashPerPage =
+                        data.per_page || this.trashPerPage;
                 } else {
                     this.trash = [];
                     this.trashCurrentPage = 1;
@@ -590,9 +634,11 @@ export const useProductStore = defineStore("product", {
                     (product) => Number(product.id) !== numericId,
                 );
 
-                this.trashTotal = Math.max(0, this.trashTotal - 1);
+                this.trashTotal = Math.max(
+                    0,
+                    this.trashTotal - 1,
+                );
 
-                // Refresh dashboard statistics
                 await this.refreshStats();
 
                 return response.data;
@@ -618,7 +664,9 @@ export const useProductStore = defineStore("product", {
             this.trashError = null;
 
             try {
-                const response = await axios.delete(`/api/trash/${productId}`);
+                const response = await axios.delete(
+                    `/api/trash/${productId}`,
+                );
 
                 const numericId = Number(productId);
 
@@ -626,7 +674,10 @@ export const useProductStore = defineStore("product", {
                     (product) => Number(product.id) !== numericId,
                 );
 
-                this.trashTotal = Math.max(0, this.trashTotal - 1);
+                this.trashTotal = Math.max(
+                    0,
+                    this.trashTotal - 1,
+                );
 
                 return response.data;
             } catch (error) {
@@ -658,22 +709,27 @@ export const useProductStore = defineStore("product", {
                 );
 
                 if (!ids.length) {
-                    this.trashError = "Please select at least one product.";
-
+                    this.trashError =
+                        "Please select at least one product.";
                     return;
                 }
 
-                const response = await axios.post("/api/trash/bulk-restore", {
-                    ids,
-                });
+                const response = await axios.post(
+                    "/api/trash/bulk-restore",
+                    {
+                        ids,
+                    },
+                );
 
                 this.trash = this.trash.filter(
                     (product) => !ids.includes(Number(product.id)),
                 );
 
-                this.trashTotal = Math.max(0, this.trashTotal - ids.length);
+                this.trashTotal = Math.max(
+                    0,
+                    this.trashTotal - ids.length,
+                );
 
-                // Refresh dashboard statistics
                 await this.refreshStats();
 
                 return response.data;
@@ -702,22 +758,28 @@ export const useProductStore = defineStore("product", {
                 );
 
                 if (!ids.length) {
-                    this.trashError = "Please select at least one product.";
-
+                    this.trashError =
+                        "Please select at least one product.";
                     return;
                 }
 
-                const response = await axios.delete("/api/trash/bulk-delete", {
-                    data: {
-                        ids,
+                const response = await axios.delete(
+                    "/api/trash/bulk-delete",
+                    {
+                        data: {
+                            ids,
+                        },
                     },
-                });
+                );
 
                 this.trash = this.trash.filter(
                     (product) => !ids.includes(Number(product.id)),
                 );
 
-                this.trashTotal = Math.max(0, this.trashTotal - ids.length);
+                this.trashTotal = Math.max(
+                    0,
+                    this.trashTotal - ids.length,
+                );
 
                 return response.data;
             } catch (error) {

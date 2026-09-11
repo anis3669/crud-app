@@ -103,6 +103,12 @@ Route::middleware('auth:sanctum')->group(function () {
         'store'
     ])->middleware('permission:products.create');
 
+    // product excel
+    Route::get('/products/export', function () {
+        return Excel::download(new ProductsExport, 'products.xlsx');
+    })->middleware('auth:sanctum');
+
+
     Route::get('/products/{product}', [
         ProductApiController::class,
         'show'
@@ -117,11 +123,6 @@ Route::middleware('auth:sanctum')->group(function () {
         ProductApiController::class,
         'destroy'
     ])->middleware('permission:products.delete');
-
-    // product excel
-    Route::get('/products/export', function () {
-        return Excel::download(new ProductsExport, 'products.xlsx');
-    })->middleware('auth:sanctum');
 
 
     // Trash
