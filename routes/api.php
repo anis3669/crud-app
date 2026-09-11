@@ -124,6 +124,8 @@ Route::middleware('auth:sanctum')->group(function () {
         'destroy'
     ])->middleware('permission:products.delete');
 
+    Route::post('/products/import', [ProductApiController::class, 'import']);
+
 
     // Trash
 

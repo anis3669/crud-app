@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use App\Imports\ProductsImport;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ProductApiController extends Controller
 {
@@ -686,5 +688,42 @@ class ProductApiController extends Controller
             ->paginate($perPage);
 
         return response()->json($products);
+    }
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'mimes:xlsx,xls,csv',
+            ],
+        ]);
+
+        $import = new ProductsImport();
+
+        Excel::import(
+            $import,
+            $request->file('file')
+        );
+
+        $failures = $import->failures();
+
+        if ($failures->isNotEmpty()) {
+            return response()->json([
+                'message' => 'Some products could not be imported.',
+                'errors' => $failures->map(function ($failure) {
+                    return [
+                        'row' => $failure->row(),
+                        'attribute' => $failure->attribute(),
+                        'errors' => $failure->errors(),
+                        'values' => $failure->values(),
+                    ];
+                })->values(),
+            ], 422);
+        }
+
+        return response()->json([
+            'message' => 'Products imported successfully.',
+        ]);
     }
 }
