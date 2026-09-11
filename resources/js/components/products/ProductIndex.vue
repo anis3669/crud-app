@@ -375,6 +375,15 @@ onMounted(() => {
 
     loadProducts(productStore.currentPage);
 });
+async function exportProducts() {
+    try {
+        await productStore.exportProducts();
+
+        toastStore.success("Products exported successfully.");
+    } catch (err) {
+        console.error("Export products error:", err);
+    }
+}
 </script>
 
 <template>
@@ -421,6 +430,29 @@ onMounted(() => {
                     </div>
 
                     <div class="flex w-full items-center gap-2 sm:w-auto">
+                        <BaseButton
+                            type="button"
+                            variant="secondary"
+                            :disabled="loading"
+                            class="flex-1 justify-center sm:flex-none"
+                            @click="exportProducts"
+                        >
+                            <svg
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"
+                                />
+                            </svg>
+
+                            <span>Export Excel</span>
+                        </BaseButton>
                         <BaseButton
                             type="button"
                             variant="secondary"
