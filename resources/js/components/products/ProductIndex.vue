@@ -23,49 +23,35 @@ const deleting = ref(false);
 const searchInput = ref("");
 const priceFilter = ref("all");
 
+const importInput = ref(null);
+const importing = ref(false);
+const importErrors = ref([]);
+
+// computed
+
 const products = computed(() => {
     return Array.isArray(productStore.products) ? productStore.products : [];
 });
 
-const loading = computed(() => {
-    return productStore.loading;
-});
+const loading = computed(() => productStore.loading);
 
-const error = computed(() => {
-    return productStore.error;
-});
+const error = computed(() => productStore.error);
 
-const currentPage = computed(() => {
-    return productStore.currentPage;
-});
+const currentPage = computed(() => productStore.currentPage);
 
-const lastPage = computed(() => {
-    return productStore.lastPage;
-});
+const lastPage = computed(() => productStore.lastPage);
 
-const total = computed(() => {
-    return productStore.total;
-});
+const total = computed(() => productStore.total);
 
-const perPage = computed(() => {
-    return productStore.perPage;
-});
+const perPage = computed(() => productStore.perPage);
 
-const hasPreviousPage = computed(() => {
-    return currentPage.value > 1;
-});
+const hasPreviousPage = computed(() => currentPage.value > 1);
 
-const hasNextPage = computed(() => {
-    return currentPage.value < lastPage.value;
-});
+const hasNextPage = computed(() => currentPage.value < lastPage.value);
 
-const search = computed(() => {
-    return productStore.search;
-});
+const search = computed(() => productStore.search);
 
-const filter = computed(() => {
-    return productStore.filter;
-});
+const filter = computed(() => productStore.filter);
 
 const stats = computed(() => {
     return (
@@ -75,6 +61,7 @@ const stats = computed(() => {
             low_stock: 0,
             out_of_stock: 0,
             total_quantity: 0,
+            total_inventory_value: 0,
         }
     );
 });
@@ -166,6 +153,8 @@ const priceFilterLabel = computed(() => {
     return labels[priceFilter.value] || "All prices";
 });
 
+// product loading
+
 async function loadProducts(page = productStore.currentPage) {
     await productStore.fetchProducts(
         page,
@@ -175,6 +164,8 @@ async function loadProducts(page = productStore.currentPage) {
         priceRange.value.max,
     );
 }
+
+// search
 
 async function performSearch() {
     try {
@@ -205,6 +196,8 @@ async function clearSearch() {
         console.error("Clear search error:", err);
     }
 }
+
+// filters
 
 async function clearAllFilters() {
     searchInput.value = "";
@@ -244,6 +237,8 @@ async function changePriceFilter() {
     }
 }
 
+// pagination
+
 async function goToPage(page) {
     if (page < 1 || page > lastPage.value || page === currentPage.value) {
         return;
@@ -272,6 +267,8 @@ async function nextPage() {
     await goToPage(currentPage.value + 1);
 }
 
+// navigation
+
 function addProduct() {
     router.push({
         name: "products.create",
@@ -295,6 +292,8 @@ function editProduct(product) {
         },
     });
 }
+
+// delete product
 
 function openDeleteModal(product) {
     productToDelete.value = product;
@@ -352,7 +351,6 @@ function bulkEdit(productsToEdit) {
 
     if (productsToEdit.length === 1) {
         editProduct(productsToEdit[0]);
-
         return;
     }
 
@@ -366,15 +364,51 @@ function bulkEdit(productsToEdit) {
     });
 }
 
+// refresh products
+
 async function refreshProducts() {
     await loadProducts(currentPage.value);
 }
 
-onMounted(() => {
-    searchInput.value = productStore.search;
+// excel import
 
-    loadProducts(productStore.currentPage);
-});
+async function handleImport(event) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+        return;
+    }
+
+    importErrors.value = [];
+    importing.value = true;
+
+    try {
+        await productStore.importProducts(file);
+
+        toastStore.success("Products imported successfully.");
+
+        await loadProducts(1);
+    } catch (err) {
+        console.error("Import products error:", err);
+
+        const responseData = err?.response?.data;
+
+        if (responseData?.errors && Array.isArray(responseData.errors)) {
+            importErrors.value = responseData.errors;
+        }
+
+        toastStore.error(responseData?.message || "Failed to import products.");
+    } finally {
+        importing.value = false;
+
+        if (importInput.value) {
+            importInput.value.value = "";
+        }
+    }
+}
+
+// excel export
+
 async function exportProducts() {
     try {
         await productStore.exportProducts();
@@ -382,8 +416,22 @@ async function exportProducts() {
         toastStore.success("Products exported successfully.");
     } catch (err) {
         console.error("Export products error:", err);
+
+        toastStore.error("Failed to export products.");
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Lifecycle
+|--------------------------------------------------------------------------
+*/
+
+onMounted(() => {
+    searchInput.value = productStore.search;
+
+    loadProducts(productStore.currentPage);
+});
 </script>
 
 <template>
@@ -391,6 +439,7 @@ async function exportProducts() {
         class="min-h-[calc(100vh-4rem)] bg-gray-50 transition-colors duration-300 dark:bg-gray-950"
     >
         <div class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
+            <!-- Header -->
             <div class="mb-6">
                 <div
                     class="flex flex-col gap-5 rounded-2xl border border-gray-200 bg-white px-5 py-5 shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900 sm:px-6 sm:py-6 lg:flex-row lg:items-center lg:justify-between"
@@ -429,11 +478,75 @@ async function exportProducts() {
                         </div>
                     </div>
 
-                    <div class="flex w-full items-center gap-2 sm:w-auto">
+                    <div
+                        class="flex w-full flex-wrap items-center gap-2 sm:w-auto"
+                    >
+                        <!-- Import Excel -->
+                        <label
+                            class="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-gray-750 sm:flex-none"
+                            :class="{
+                                'pointer-events-none opacity-60':
+                                    loading || importing,
+                            }"
+                        >
+                            <input
+                                ref="importInput"
+                                type="file"
+                                accept=".xlsx,.xls,.csv"
+                                class="sr-only"
+                                :disabled="loading || importing"
+                                @change="handleImport"
+                            />
+
+                            <svg
+                                v-if="!importing"
+                                class="h-4 w-4"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M12 21V9m0 0l-4 4m4-4l4 4M5 3h14"
+                                />
+                            </svg>
+
+                            <svg
+                                v-else
+                                class="h-4 w-4 animate-spin"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                            >
+                                <circle
+                                    class="opacity-25"
+                                    cx="12"
+                                    cy="12"
+                                    r="10"
+                                    stroke="currentColor"
+                                    stroke-width="4"
+                                />
+
+                                <path
+                                    class="opacity-75"
+                                    fill="currentColor"
+                                    d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                                />
+                            </svg>
+
+                            <span>
+                                {{
+                                    importing ? "Importing..." : "Import Excel"
+                                }}
+                            </span>
+                        </label>
+
+                        <!-- Export Excel -->
                         <BaseButton
                             type="button"
                             variant="secondary"
-                            :disabled="loading"
+                            :disabled="loading || importing"
                             class="flex-1 justify-center sm:flex-none"
                             @click="exportProducts"
                         >
@@ -451,12 +564,14 @@ async function exportProducts() {
                                 />
                             </svg>
 
-                            <span>Export Excel</span>
+                            <span> Export Excel </span>
                         </BaseButton>
+
+                        <!-- Refresh -->
                         <BaseButton
                             type="button"
                             variant="secondary"
-                            :disabled="loading"
+                            :disabled="loading || importing"
                             class="flex-1 justify-center sm:flex-none"
                             @click="refreshProducts"
                         >
@@ -482,8 +597,10 @@ async function exportProducts() {
                             </span>
                         </BaseButton>
 
+                        <!-- Add Product -->
                         <BaseButton
                             type="button"
+                            :disabled="importing"
                             class="flex-1 justify-center sm:flex-none"
                             @click="addProduct"
                         >
@@ -501,13 +618,20 @@ async function exportProducts() {
                                 />
                             </svg>
 
-                            <span>Add Product</span>
+                            <span> Add Product </span>
                         </BaseButton>
-                        <!-- trash button -->
+
+                        <!-- Trash -->
                         <BaseButton
                             type="button"
                             variant="secondary"
-                            @click="router.push({ name: 'trash' })"
+                            :disabled="importing"
+                            class="flex-1 justify-center sm:flex-none"
+                            @click="
+                                router.push({
+                                    name: 'trash',
+                                })
+                            "
                         >
                             <svg
                                 class="h-4 w-4"
@@ -529,6 +653,7 @@ async function exportProducts() {
                 </div>
             </div>
 
+            <!-- Statistics -->
             <div class="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
                 <div
                     class="group rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800 dark:bg-gray-900"
@@ -681,6 +806,7 @@ async function exportProducts() {
                 </div>
             </div>
 
+            <!-- Filters -->
             <BaseCard class="mb-6 overflow-visible">
                 <div class="space-y-4">
                     <form
@@ -739,7 +865,7 @@ async function exportProducts() {
 
                         <BaseButton
                             type="submit"
-                            :disabled="loading"
+                            :disabled="loading || importing"
                             class="h-12 w-full justify-center px-6 sm:w-auto"
                         >
                             <svg
@@ -792,7 +918,7 @@ async function exportProducts() {
                             <div class="relative">
                                 <select
                                     :value="filter"
-                                    :disabled="loading"
+                                    :disabled="loading || importing"
                                     aria-label="Product filter"
                                     class="h-10 min-w-[150px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:border-gray-500 dark:focus:ring-gray-700/50"
                                     @change="changeFilter"
@@ -830,7 +956,7 @@ async function exportProducts() {
                             <div class="relative">
                                 <select
                                     v-model="priceFilter"
-                                    :disabled="loading"
+                                    :disabled="loading || importing"
                                     aria-label="Price filter"
                                     class="h-10 min-w-[125px] appearance-none rounded-lg border border-gray-200 bg-white pl-3 pr-9 text-sm font-medium text-gray-700 outline-none transition hover:border-gray-300 focus:border-gray-400 focus:ring-4 focus:ring-gray-100 disabled:cursor-not-allowed disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:focus:border-gray-500 dark:focus:ring-gray-700/50"
                                     @change="changePriceFilter"
@@ -936,6 +1062,93 @@ async function exportProducts() {
                 </div>
             </BaseCard>
 
+            <!-- Import Errors -->
+            <BaseCard
+                v-if="importErrors.length"
+                class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
+            >
+                <div class="flex items-start gap-3">
+                    <div
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/40"
+                    >
+                        <svg
+                            class="h-5 w-5 text-red-600 dark:text-red-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
+                            />
+                        </svg>
+                    </div>
+
+                    <div class="min-w-0 flex-1">
+                        <h3
+                            class="text-sm font-semibold text-red-800 dark:text-red-300"
+                        >
+                            Import validation failed
+                        </h3>
+
+                        <div class="mt-3 space-y-2">
+                            <div
+                                v-for="(item, index) in importErrors"
+                                :key="index"
+                                class="rounded-lg border border-red-200 bg-white p-3 dark:border-red-900/50 dark:bg-red-950/20"
+                            >
+                                <p
+                                    class="text-sm font-semibold text-red-800 dark:text-red-300"
+                                >
+                                    Row {{ item.row }}
+
+                                    <span v-if="item.attribute">
+                                        — {{ item.attribute }}
+                                    </span>
+                                </p>
+
+                                <ul
+                                    class="mt-1 list-disc pl-5 text-sm text-red-700 dark:text-red-400"
+                                >
+                                    <li
+                                        v-for="(
+                                            message, errorIndex
+                                        ) in item.errors"
+                                        :key="errorIndex"
+                                    >
+                                        {{ message }}
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        aria-label="Close import errors"
+                        class="shrink-0 text-red-400 transition hover:text-red-700 dark:hover:text-red-200"
+                        @click="importErrors = []"
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12"
+                            />
+                        </svg>
+                    </button>
+                </div>
+            </BaseCard>
+
+            <!-- General Error -->
             <BaseCard
                 v-if="error"
                 class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
@@ -987,6 +1200,7 @@ async function exportProducts() {
                 </div>
             </BaseCard>
 
+            <!-- Loading -->
             <BaseCard v-if="loading && products.length === 0" class="py-20">
                 <div class="flex flex-col items-center justify-center">
                     <div
@@ -1021,6 +1235,7 @@ async function exportProducts() {
                 </div>
             </BaseCard>
 
+            <!-- Product List -->
             <div
                 v-else
                 class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900"
@@ -1073,6 +1288,7 @@ async function exportProducts() {
                 </div>
             </div>
 
+            <!-- Pagination -->
             <div
                 v-if="total > 0"
                 class="mt-6 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-colors duration-300 dark:border-gray-800 dark:bg-gray-900"
@@ -1108,7 +1324,7 @@ async function exportProducts() {
                         <BaseButton
                             type="button"
                             variant="secondary"
-                            :disabled="!hasPreviousPage || loading"
+                            :disabled="!hasPreviousPage || loading || importing"
                             class="h-9 justify-center"
                             @click="previousPage"
                         >
@@ -1126,7 +1342,7 @@ async function exportProducts() {
                                 />
                             </svg>
 
-                            <span class="hidden sm:inline">Previous</span>
+                            <span class="hidden sm:inline"> Previous </span>
                         </BaseButton>
 
                         <div
@@ -1134,7 +1350,7 @@ async function exportProducts() {
                         >
                             {{ currentPage }}
 
-                            <span class="mx-1 text-gray-400">/</span>
+                            <span class="mx-1 text-gray-400"> / </span>
 
                             {{ lastPage }}
                         </div>
@@ -1142,11 +1358,11 @@ async function exportProducts() {
                         <BaseButton
                             type="button"
                             variant="secondary"
-                            :disabled="!hasNextPage || loading"
+                            :disabled="!hasNextPage || loading || importing"
                             class="h-9 justify-center"
                             @click="nextPage"
                         >
-                            <span class="hidden sm:inline">Next</span>
+                            <span class="hidden sm:inline"> Next </span>
 
                             <svg
                                 class="h-4 w-4"
@@ -1166,6 +1382,7 @@ async function exportProducts() {
                 </div>
             </div>
 
+            <!-- Delete Modal -->
             <BaseModal
                 :show="showDeleteModal"
                 title="Delete Product"

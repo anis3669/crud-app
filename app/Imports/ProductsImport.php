@@ -3,8 +3,11 @@
 namespace App\Imports;
 
 use App\Models\Category;
+use App\Models\Inventory;
+use App\Models\InventoryHistory;
 use App\Models\Product;
 use App\Models\Supplier;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Concerns\SkipsFailures;
 use Maatwebsite\Excel\Concerns\SkipsOnFailure;
@@ -22,27 +25,49 @@ class ProductsImport implements
 
     public function model(array $row)
     {
-        $category = Category::where(
-            'name',
-            trim($row['category'])
-        )->first();
+        return DB::transaction(function () use ($row) {
+            $category = Category::where(
+                'name',
+                trim($row['category'])
+            )->first();
 
-        $supplier = Supplier::where(
-            'name',
-            trim($row['supplier'])
-        )->first();
+            $supplier = Supplier::where(
+                'name',
+                trim($row['supplier'])
+            )->first();
 
-        return new Product([
-            'name'        => trim($row['product_name']),
-            'sku'         => trim($row['sku']),
-            'category_id' => $category?->id,
-            'supplier_id' => $supplier?->id,
-            'price'       => $row['price'],
-            'quantity'    => $row['quantity'],
-            'description' => isset($row['description'])
-                ? trim($row['description'])
-                : null,
-        ]);
+            $quantity = (int) $row['quantity'];
+
+            $product = Product::create([
+                'name'        => trim($row['product_name']),
+                'sku'         => trim($row['sku']),
+                'category_id' => $category?->id,
+                'supplier_id' => $supplier?->id,
+                'price'       => $row['price'],
+                'quantity'    => $quantity,
+                'description' => isset($row['description'])
+                    ? trim($row['description'])
+                    : null,
+            ]);
+
+            Inventory::create([
+                'product_id' => $product->id,
+            ]);
+
+            if ($quantity > 0) {
+                InventoryHistory::create([
+                    'product_id'      => $product->id,
+                    'user_id'         => auth()->id(),
+                    'quantity_before' => 0,
+                    'quantity_change' => $quantity,
+                    'quantity_after'  => $quantity,
+                    'type'            => 'stock_in',
+                    'reason'          => 'Initial stock via Excel import',
+                ]);
+            }
+
+            return $product;
+        });
     }
 
     public function rules(): array
