@@ -371,7 +371,6 @@ async function refreshProducts() {
 }
 
 // excel import
-
 async function handleImport(event) {
     const file = event.target.files?.[0];
 
