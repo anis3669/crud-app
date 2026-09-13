@@ -406,6 +406,15 @@ async function handleImport(event) {
         }
     }
 }
+function formatImportError(error) {
+    const row = error?.row ? `Row ${error.row}: ` : "";
+
+    const message = Array.isArray(error?.errors)
+        ? error.errors.join(", ")
+        : error?.errors || "Invalid data.";
+
+    return `${row}${message}`;
+}
 
 // excel export
 
@@ -566,6 +575,55 @@ onMounted(() => {
 
                             <span> Export Excel </span>
                         </BaseButton>
+                        <div
+                            v-if="importErrors.length"
+                            class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30"
+                        >
+                            <div class="mb-2 flex items-center gap-2">
+                                <svg
+                                    class="h-5 w-5 text-red-600 dark:text-red-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13a2 2 0 001.71 2.14h15.64a2 2 0 001.71-2.14l-7.82-13a2 2 0 00-3.42 0z"
+                                    />
+                                </svg>
+
+                                <h3
+                                    class="text-sm font-semibold text-red-800 dark:text-red-300"
+                                >
+                                    Import failed
+                                </h3>
+                            </div>
+
+                            <p
+                                class="mb-3 text-sm text-red-700 dark:text-red-400"
+                            >
+                                No products were imported. Please fix the
+                                following errors and try again.
+                            </p>
+
+                            <ul
+                                class="space-y-1.5 text-sm text-red-700 dark:text-red-400"
+                            >
+                                <li
+                                    v-for="(error, index) in importErrors"
+                                    :key="index"
+                                    class="flex gap-2"
+                                >
+                                    <span>•</span>
+
+                                    <span>
+                                        {{ formatImportError(error) }}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
 
                         <!-- Refresh -->
                         <BaseButton
