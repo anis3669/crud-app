@@ -78,15 +78,12 @@ class ProductFactory extends Factory
         ];
 
         $product = fake()->randomElement($products);
-        $category = Category::where('name', $product['category'])->first();
-
-        $supplier = Supplier::inRandomOrder()->first();
 
         return [
             'name' => $product['name'],
             'sku' => 'SKU-' . strtoupper(Str::random(8)),
-            'category_id' => $category->id,
-            'supplier_id' => $supplier->id,
+            'category_id' => Category::where('name', $product['category'])->value('id'),
+            'supplier_id' => Supplier::inRandomOrder()->value('id'),
             'description' => $product['description'],
             'price' => fake()->randomFloat(2, 500, 50000),
             'quantity' => fake()->numberBetween(1, 100),
