@@ -10,9 +10,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException as LaravelValidationException;
 use App\Imports\ProductsImport;
 use Maatwebsite\Excel\Facades\Excel;
-use Maatwebsite\Excel\Validators\ValidationException;
+use Maatwebsite\Excel\Validators\ValidationException as ExcelValidationException;
 
 class ProductApiController extends Controller
 {
@@ -692,13 +694,25 @@ class ProductApiController extends Controller
     }
     public function import(Request $request)
     {
-        $request->validate([
+        $validator = Validator::make($request->all(), [
             'file' => [
                 'required',
                 'file',
                 'mimes:xlsx,xls,csv',
             ],
         ]);
+
+        if ($validator->fails()) {
+            return $this->importErrorResponse(
+                'Import failed. No products were imported.',
+                [
+                    [
+                        'row' => null,
+                        'messages' => $validator->errors()->all(),
+                    ],
+                ]
+            );
+        }
 
         try {
             DB::transaction(function () use ($request) {
@@ -710,28 +724,65 @@ class ProductApiController extends Controller
 
             return response()->json([
                 'message' => 'Products imported successfully.',
+                'errors' => [],
             ]);
-        } catch (ValidationException $e) {
-            return response()->json([
-                'message' => 'Import failed. No products were imported.',
-                'errors' => collect($e->failures())
-                    ->map(function ($failure) {
-                        return [
-                            'row' => $failure->row(),
-                            'attribute' => $failure->attribute(),
-                            'errors' => $failure->errors(),
-                            'values' => $failure->values(),
-                        ];
-                    })
-                    ->values(),
-            ], 422);
+        } catch (ExcelValidationException $e) {
+            $errors = collect($e->failures())
+                ->map(function ($failure) {
+                    return [
+                        'row' => $failure->row(),
+                        'messages' => collect($failure->errors())
+                            ->filter(fn($message) => is_string($message))
+                            ->unique()
+                            ->values()
+                            ->all(),
+                    ];
+                })
+                ->filter(fn($error) => !empty($error['messages']))
+                ->unique(fn($error) => $error['row'] . '|' . implode('|', $error['messages']))
+                ->values()
+                ->all();
+
+            return $this->importErrorResponse(
+                'Import failed. No products were imported.',
+                $errors
+            );
+        } catch (LaravelValidationException $e) {
+            return $this->importErrorResponse(
+                'Import failed. No products were imported.',
+                [
+                    [
+                        'row' => null,
+                        'messages' => collect($e->errors())->flatten()->values()->all(),
+                    ],
+                ]
+            );
         } catch (\Throwable $e) {
-            return response()->json([
-                'message' => 'Import failed. No products were imported.',
-                'error' => config('app.debug')
-                    ? $e->getMessage()
-                    : null,
-            ], 500);
+            report($e);
+
+            return $this->importErrorResponse(
+                'Unable to import products right now. Please try again.',
+                [
+                    [
+                        'row' => null,
+                        'messages' => [
+                            'The import could not be completed. No products were imported.',
+                        ],
+                    ],
+                ],
+                500
+            );
         }
+    }
+
+    private function importErrorResponse(
+        string $message,
+        array $errors,
+        int $status = 422
+    ) {
+        return response()->json([
+            'message' => $message,
+            'errors' => $errors,
+        ], $status);
     }
 }

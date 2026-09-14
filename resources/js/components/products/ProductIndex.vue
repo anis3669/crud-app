@@ -25,7 +25,6 @@ const priceFilter = ref("all");
 
 const importInput = ref(null);
 const importing = ref(false);
-const importErrors = ref([]);
 
 // computed
 
@@ -36,6 +35,16 @@ const products = computed(() => {
 const loading = computed(() => productStore.loading);
 
 const error = computed(() => productStore.error);
+
+const importErrors = computed(() => {
+    return Array.isArray(productStore.importErrors)
+        ? productStore.importErrors
+        : [];
+});
+
+const importErrorMessage = computed(() => {
+    return productStore.error;
+});
 
 const currentPage = computed(() => productStore.currentPage);
 
@@ -153,7 +162,7 @@ const priceFilterLabel = computed(() => {
     return labels[priceFilter.value] || "All prices";
 });
 
-// product loading
+// products loading
 
 async function loadProducts(page = productStore.currentPage) {
     await productStore.fetchProducts(
@@ -267,7 +276,7 @@ async function nextPage() {
     await goToPage(currentPage.value + 1);
 }
 
-// navigation
+// Navigation
 
 function addProduct() {
     router.push({
@@ -371,6 +380,7 @@ async function refreshProducts() {
 }
 
 // excel import
+
 async function handleImport(event) {
     const file = event.target.files?.[0];
 
@@ -378,7 +388,6 @@ async function handleImport(event) {
         return;
     }
 
-    importErrors.value = [];
     importing.value = true;
 
     try {
@@ -387,16 +396,8 @@ async function handleImport(event) {
         toastStore.success("Products imported successfully.");
 
         await loadProducts(1);
-    } catch (err) {
-        console.error("Import products error:", err);
-
-        const responseData = err?.response?.data;
-
-        if (responseData?.errors && Array.isArray(responseData.errors)) {
-            importErrors.value = responseData.errors;
-        }
-
-        toastStore.error(responseData?.message || "Failed to import products.");
+    } catch {
+        toastStore.error(productStore.error || "Failed to import products.");
     } finally {
         importing.value = false;
 
@@ -404,15 +405,6 @@ async function handleImport(event) {
             importInput.value.value = "";
         }
     }
-}
-function formatImportError(error) {
-    const row = error?.row ? `Row ${error.row}: ` : "";
-
-    const message = Array.isArray(error?.errors)
-        ? error.errors.join(", ")
-        : error?.errors || "Invalid data.";
-
-    return `${row}${message}`;
 }
 
 // excel export
@@ -429,11 +421,7 @@ async function exportProducts() {
     }
 }
 
-/*
-|--------------------------------------------------------------------------
-| Lifecycle
-|--------------------------------------------------------------------------
-*/
+// lifecycle
 
 onMounted(() => {
     searchInput.value = productStore.search;
@@ -574,56 +562,6 @@ onMounted(() => {
 
                             <span> Export Excel </span>
                         </BaseButton>
-                        <div
-                            v-if="importErrors.length"
-                            class="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900/50 dark:bg-red-950/30"
-                        >
-                            <div class="mb-2 flex items-center gap-2">
-                                <svg
-                                    class="h-5 w-5 text-red-600 dark:text-red-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13a2 2 0 001.71 2.14h15.64a2 2 0 001.71-2.14l-7.82-13a2 2 0 00-3.42 0z"
-                                    />
-                                </svg>
-
-                                <h3
-                                    class="text-sm font-semibold text-red-800 dark:text-red-300"
-                                >
-                                    Import failed
-                                </h3>
-                            </div>
-
-                            <p
-                                class="mb-3 text-sm text-red-700 dark:text-red-400"
-                            >
-                                No products were imported. Please fix the
-                                following errors and try again.
-                            </p>
-
-                            <ul
-                                class="space-y-1.5 text-sm text-red-700 dark:text-red-400"
-                            >
-                                <li
-                                    v-for="(error, index) in importErrors"
-                                    :key="index"
-                                    class="flex gap-2"
-                                >
-                                    <span>•</span>
-
-                                    <span>
-                                        {{ formatImportError(error) }}
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
-
                         <!-- Refresh -->
                         <BaseButton
                             type="button"
@@ -1121,7 +1059,7 @@ onMounted(() => {
 
             <!-- Import Errors -->
             <BaseCard
-                v-if="importErrors.length"
+                v-if="importErrorMessage || importErrors.length > 0"
                 class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
             >
                 <div class="flex items-start gap-3">
@@ -1147,38 +1085,20 @@ onMounted(() => {
                         <h3
                             class="text-sm font-semibold text-red-800 dark:text-red-300"
                         >
-                            Import validation failed
+                            {{ importErrorMessage || "Import failed." }}
                         </h3>
 
-                        <div class="mt-3 space-y-2">
-                            <div
-                                v-for="(item, index) in importErrors"
-                                :key="index"
-                                class="rounded-lg border border-red-200 bg-white p-3 dark:border-red-900/50 dark:bg-red-950/20"
+                        <div
+                            v-if="importErrors.length > 0"
+                            class="mt-3 space-y-2"
+                        >
+                            <p
+                                v-for="(message, index) in importErrors"
+                                :key="`${message}-${index}`"
+                                class="rounded-lg border border-red-200 bg-white p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-400"
                             >
-                                <p
-                                    class="text-sm font-semibold text-red-800 dark:text-red-300"
-                                >
-                                    Row {{ item.row }}
-
-                                    <span v-if="item.attribute">
-                                        — {{ item.attribute }}
-                                    </span>
-                                </p>
-
-                                <ul
-                                    class="mt-1 list-disc pl-5 text-sm text-red-700 dark:text-red-400"
-                                >
-                                    <li
-                                        v-for="(
-                                            message, errorIndex
-                                        ) in item.errors"
-                                        :key="errorIndex"
-                                    >
-                                        {{ message }}
-                                    </li>
-                                </ul>
-                            </div>
+                                {{ message }}
+                            </p>
                         </div>
                     </div>
 
@@ -1186,7 +1106,10 @@ onMounted(() => {
                         type="button"
                         aria-label="Close import errors"
                         class="shrink-0 text-red-400 transition hover:text-red-700 dark:hover:text-red-200"
-                        @click="importErrors = []"
+                        @click="
+                            productStore.clearImportErrors();
+                            productStore.error = null;
+                        "
                     >
                         <svg
                             class="h-5 w-5"

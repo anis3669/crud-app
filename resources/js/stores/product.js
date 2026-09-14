@@ -12,6 +12,7 @@ export const useProductStore = defineStore("product", {
         trashLoading: false,
 
         error: null,
+        importErrors: [],
         trashError: null,
 
         currentPage: 1,
@@ -85,9 +86,35 @@ export const useProductStore = defineStore("product", {
             }
         },
 
-        // Get validation errors
-        getValidationErrors(error) {
-            return error.response?.data?.errors || {};
+        // Convert backend import errors into clean frontend messages
+        getImportErrors(error) {
+            const errors = error.response?.data?.errors;
+
+            if (!Array.isArray(errors)) {
+                return [];
+            }
+
+            const messages = errors.flatMap((item) => {
+                if (!item || !Array.isArray(item.messages)) {
+                    return [];
+                }
+
+                return item.messages
+                    .filter((message) => typeof message === "string")
+                    .map((message) => {
+                        return item.row
+                            ? `Row ${item.row}: ${message}`
+                            : message;
+                    });
+            });
+
+            // Remove duplicate messages
+            return [...new Set(messages)];
+        },
+
+        // Clear import errors
+        clearImportErrors() {
+            this.importErrors = [];
         },
 
         // Fetch products
@@ -549,6 +576,7 @@ export const useProductStore = defineStore("product", {
         async importProducts(file) {
             this.loading = true;
             this.error = null;
+            this.importErrors = [];
 
             try {
                 const formData = new FormData();
@@ -565,6 +593,8 @@ export const useProductStore = defineStore("product", {
                     error,
                     "Failed to import products.",
                 );
+
+                this.importErrors = this.getImportErrors(error);
 
                 throw error;
             } finally {

@@ -3,21 +3,17 @@
 namespace Database\Seeders;
 
 use App\Models\Role;
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Create permissions first
         $this->call([
             PermissionSeeder::class,
         ]);
 
-        // Create roles
-        $admin = Role::updateOrCreate(
+        Role::updateOrCreate(
             ['slug' => 'admin'],
             [
                 'name' => 'Admin',
@@ -26,7 +22,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $manager = Role::updateOrCreate(
+        Role::updateOrCreate(
             ['slug' => 'manager'],
             [
                 'name' => 'Manager',
@@ -35,7 +31,7 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        $staff = Role::updateOrCreate(
+        Role::updateOrCreate(
             ['slug' => 'staff'],
             [
                 'name' => 'Staff',
@@ -44,35 +40,11 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
-        // Create login user as Admin
-        User::updateOrCreate(
-            [
-                'email' => 'anisbastola@gmail.com',
-            ],
-            [
-                'name' => 'Test User',
-                'password' => Hash::make('password'),
-                'role_id' => $admin->id,
-            ]
-        );
-
-        // Connect permissions to roles
         $this->call([
+            UserSeeder::class,
             RolePermissionSeeder::class,
-        ]);
-
-        // Create categories
-        $this->call([
             CategorySeeder::class,
-        ]);
-
-        // Create suppliers
-        $this->call([
             SupplierSeeder::class,
-        ]);
-
-        // Create products with inventory and history
-        $this->call([
             ProductSeeder::class,
         ]);
     }
