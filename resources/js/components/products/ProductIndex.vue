@@ -26,8 +26,6 @@ const priceFilter = ref("all");
 const importInput = ref(null);
 const importing = ref(false);
 
-// computed
-
 const products = computed(() => {
     return Array.isArray(productStore.products) ? productStore.products : [];
 });
@@ -162,8 +160,6 @@ const priceFilterLabel = computed(() => {
     return labels[priceFilter.value] || "All prices";
 });
 
-// products loading
-
 async function loadProducts(page = productStore.currentPage) {
     await productStore.fetchProducts(
         page,
@@ -173,8 +169,6 @@ async function loadProducts(page = productStore.currentPage) {
         priceRange.value.max,
     );
 }
-
-// search
 
 async function performSearch() {
     try {
@@ -205,8 +199,6 @@ async function clearSearch() {
         console.error("Clear search error:", err);
     }
 }
-
-// filters
 
 async function clearAllFilters() {
     searchInput.value = "";
@@ -246,8 +238,6 @@ async function changePriceFilter() {
     }
 }
 
-// pagination
-
 async function goToPage(page) {
     if (page < 1 || page > lastPage.value || page === currentPage.value) {
         return;
@@ -276,8 +266,6 @@ async function nextPage() {
     await goToPage(currentPage.value + 1);
 }
 
-// Navigation
-
 function addProduct() {
     router.push({
         name: "products.create",
@@ -301,8 +289,6 @@ function editProduct(product) {
         },
     });
 }
-
-// delete product
 
 function openDeleteModal(product) {
     productToDelete.value = product;
@@ -373,13 +359,9 @@ function bulkEdit(productsToEdit) {
     });
 }
 
-// refresh products
-
 async function refreshProducts() {
     await loadProducts(currentPage.value);
 }
-
-// excel import
 
 async function handleImport(event) {
     const file = event.target.files?.[0];
@@ -407,8 +389,6 @@ async function handleImport(event) {
     }
 }
 
-// excel export
-
 async function exportProducts() {
     try {
         await productStore.exportProducts();
@@ -420,8 +400,6 @@ async function exportProducts() {
         toastStore.error("Failed to export products.");
     }
 }
-
-// lifecycle
 
 onMounted(() => {
     searchInput.value = productStore.search;

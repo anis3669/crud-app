@@ -5,14 +5,20 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Invoice;
 use App\Models\Product;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Notifications\InvoiceCreatedNotification;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Services\InvoiceService;
 
 class InvoiceApiController extends Controller
 {
+    public function __construct(
+        private InvoiceService $invoiceService
+    ) {}
     public function index(Request $request)
     {
         $validated = $request->validate([
@@ -102,156 +108,18 @@ class InvoiceApiController extends Controller
             ],
         ]);
 
-        $taxPercentage = (float) (
-            $validated['tax_percentage'] ?? 0
-        );
-
-        $discountPercentage = (float) (
-            $validated['discount_percentage'] ?? 0
-        );
-
         try {
-            $result = DB::transaction(function () use (
+            $result = $this->invoiceService->create(
                 $validated,
-                $request,
-                $taxPercentage,
-                $discountPercentage
-            ) {
-                $subtotal = 0;
-                $invoiceItems = [];
-                $stockChanges = [];
+                $request->user()->id
+            );
 
-                // Lock products before checking or changing stock.
-                foreach ($validated['items'] as $item) {
-                    $product = Product::query()
-                        ->lockForUpdate()
-                        ->find($item['product_id']);
-
-                    if (!$product) {
-                        abort(
-                            422,
-                            "Product #{$item['product_id']} was not found."
-                        );
-                    }
-
-                    $quantity = (int) $item['quantity'];
-                    $stockBefore = (int) $product->quantity;
-
-                    if ($quantity > $stockBefore) {
-                        abort(
-                            422,
-                            "Insufficient stock for {$product->name}. Available stock: {$stockBefore}."
-                        );
-                    }
-
-                    $unitPrice = (float) $product->price;
-
-                    $itemSubtotal = round(
-                        $quantity * $unitPrice,
-                        2
-                    );
-
-                    $subtotal += $itemSubtotal;
-
-                    $invoiceItems[] = [
-                        'product_id' => $product->id,
-                        'product_name' => $product->name,
-                        'quantity' => $quantity,
-                        'unit_price' => $unitPrice,
-                        'subtotal' => $itemSubtotal,
-                    ];
-
-                    $stockChanges[] = [
-                        'product' => $product,
-                        'quantity' => $quantity,
-                        'quantity_before' => $stockBefore,
-                    ];
-                }
-
-                $subtotal = round($subtotal, 2);
-
-                // Calculate tax from the subtotal.
-                $tax = round(
-                    $subtotal * ($taxPercentage / 100),
-                    2
+            User::whereHas('role', function ($query) {
+                $query->whereIn('slug', ['admin', 'manager']);
+            })->each(function (User $user) use ($result) {
+                $user->notify(
+                    new InvoiceCreatedNotification($result['invoice'])
                 );
-
-                // Calculate discount from the subtotal.
-                $discount = round(
-                    $subtotal * ($discountPercentage / 100),
-                    2
-                );
-
-                if ($discount > ($subtotal + $tax)) {
-                    abort(
-                        422,
-                        'Discount cannot be greater than the invoice amount.'
-                    );
-                }
-
-                $total = round(
-                    $subtotal + $tax - $discount,
-                    2
-                );
-
-                $invoiceNumber = $this->generateInvoiceNumber();
-
-                $invoice = Invoice::create([
-                    'invoice_number' => $invoiceNumber,
-                    'user_id' => $request->user()->id,
-
-                    'customer_name' => $validated['customer_name'],
-                    'customer_email' => $validated['customer_email'] ?? null,
-                    'customer_phone' => $validated['customer_phone'] ?? null,
-
-                    'subtotal' => $subtotal,
-                    'tax' => $tax,
-                    'discount' => $discount,
-                    'total' => $total,
-
-                    'status' => 'completed',
-                ]);
-
-                foreach ($invoiceItems as $item) {
-                    $invoice->items()->create($item);
-                }
-
-                foreach ($stockChanges as $stockChange) {
-                    $product = $stockChange['product'];
-                    $quantity = $stockChange['quantity'];
-                    $quantityBefore = $stockChange['quantity_before'];
-
-                    $quantityAfter = $quantityBefore - $quantity;
-
-                    $product->quantity = $quantityAfter;
-                    $product->save();
-
-                    $product->inventoryHistories()->create([
-                        'user_id' => $request->user()->id,
-                        'type' => 'sale',
-                        'quantity_before' => $quantityBefore,
-                        'quantity_change' => -$quantity,
-                        'quantity_after' => $quantityAfter,
-                        'reason' => "Invoice #{$invoice->invoice_number}",
-                    ]);
-                }
-
-                $invoice->load([
-                    'user:id,name,email',
-                    'items.product',
-                ]);
-
-                return [
-                    'invoice' => $invoice,
-                    'calculation' => [
-                        'subtotal' => $subtotal,
-                        'tax_percentage' => $taxPercentage,
-                        'tax' => $tax,
-                        'discount_percentage' => $discountPercentage,
-                        'discount' => $discount,
-                        'total' => $total,
-                    ],
-                ];
             });
 
             return response()->json([
@@ -259,7 +127,7 @@ class InvoiceApiController extends Controller
                 'invoice' => $result['invoice'],
                 'calculation' => $result['calculation'],
             ], 201);
-       } catch (HttpResponseException $e) {
+        } catch (HttpResponseException $e) {
             throw $e;
         } catch (\Throwable $e) {
             report($e);

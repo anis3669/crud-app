@@ -1,17 +1,32 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
+
 import { useAuthStore } from "../../stores/auth";
 import { useThemeStore } from "../../stores/theme";
+import { useNotificationStore } from "../../stores/notification";
 
 const router = useRouter();
 const route = useRoute();
+
 const authStore = useAuthStore();
 const themeStore = useThemeStore();
+const notificationStore = useNotificationStore();
 
 const sidebarOpen = ref(false);
 const showProfileMenu = ref(false);
+const showNotificationMenu = ref(false);
+
 const profileMenuRef = ref(null);
+const notificationMenuRef = ref(null);
+
+const notifications = computed(() => notificationStore.notifications);
+
+const unreadCount = computed(() => notificationStore.unreadCount);
+
+const hasNotifications = computed(() => notifications.value.length > 0);
+
+const notificationLoading = computed(() => notificationStore.loading);
 
 // Navigation
 
@@ -125,10 +140,72 @@ function can(permission) {
     return authStore.can(permission);
 }
 
+// Notifications
+
+async function loadNotifications() {
+    if (!authStore.authenticated) {
+        return;
+    }
+
+    try {
+        await notificationStore.fetchNotifications(1);
+    } catch (error) {
+        console.error("Failed to load notifications:", error);
+    }
+}
+
+async function toggleNotificationMenu() {
+    showNotificationMenu.value = !showNotificationMenu.value;
+
+    if (showNotificationMenu.value && notifications.value.length === 0) {
+        await loadNotifications();
+    }
+}
+
+async function openNotification(notification) {
+    showNotificationMenu.value = false;
+
+    if (!notification.read_at) {
+        try {
+            await notificationStore.markAsRead(notification.id);
+        } catch (error) {
+            console.error("Failed to mark notification as read:", error);
+        }
+    }
+
+    if (notification.invoice_id) {
+        router.push({
+            name: "invoices.show",
+            params: {
+                id: notification.invoice_id,
+            },
+        });
+    }
+}
+
+function notificationTime(notification) {
+    if (!notification.created_at) {
+        return "";
+    }
+
+    const date = new Date(notification.created_at);
+
+    if (Number.isNaN(date.getTime())) {
+        return "";
+    }
+
+    return date.toLocaleString();
+}
+
+function closeNotificationMenu() {
+    showNotificationMenu.value = false;
+}
+
 // Logout
 
 async function logout() {
     showProfileMenu.value = false;
+    showNotificationMenu.value = false;
     closeSidebar();
 
     try {
@@ -156,17 +233,27 @@ function closeProfileMenu(event) {
     if (profileMenuRef.value && !profileMenuRef.value.contains(event.target)) {
         showProfileMenu.value = false;
     }
+
+    if (
+        notificationMenuRef.value &&
+        !notificationMenuRef.value.contains(event.target)
+    ) {
+        showNotificationMenu.value = false;
+    }
 }
 
-// Close sidebar when route changes
+// Close menus/sidebar when route changes
 
 function handleRouteChange() {
     sidebarOpen.value = false;
     showProfileMenu.value = false;
+    showNotificationMenu.value = false;
 }
 
-onMounted(() => {
+onMounted(async () => {
     document.addEventListener("click", closeProfileMenu);
+
+    await loadNotifications();
 });
 
 onBeforeUnmount(() => {
@@ -236,25 +323,234 @@ onBeforeUnmount(() => {
                 </span>
             </button>
 
-            <!-- Mobile Profile -->
+            <!-- Mobile Actions -->
 
-            <button
-                type="button"
-                @click="goToProfile"
-                class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gray-900 text-sm font-semibold text-white shadow-sm dark:bg-white dark:text-gray-900"
-                aria-label="Profile"
-            >
-                <img
-                    v-if="authStore.user?.profile_picture_url"
-                    :src="authStore.user.profile_picture_url"
-                    :alt="authStore.user?.name || 'User'"
-                    class="h-full w-full object-cover"
-                />
+            <div class="flex items-center gap-1">
+                <!-- Notifications -->
 
-                <span v-else>
-                    {{ authStore.user?.name?.charAt(0)?.toUpperCase() || "U" }}
-                </span>
-            </button>
+                <div ref="notificationMenuRef" class="relative">
+                    <button
+                        type="button"
+                        @click.stop="toggleNotificationMenu"
+                        class="relative flex h-10 w-10 items-center justify-center rounded-xl text-gray-600 transition hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+                        aria-label="Notifications"
+                        :aria-expanded="showNotificationMenu"
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="M15 17H9m10-2V10a7 7 0 1 0-14 0v5l-2 2h18l-2-2Zm-6 6a2.5 2.5 0 0 0 5 0"
+                            />
+                        </svg>
+
+                        <span
+                            v-if="unreadCount > 0"
+                            class="absolute right-1 top-1 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white"
+                        >
+                            {{ unreadCount > 99 ? "99+" : unreadCount }}
+                        </span>
+                    </button>
+
+                    <!-- Notification Dropdown -->
+
+                    <Transition
+                        enter-active-class="transition duration-150 ease-out"
+                        enter-from-class="translate-y-1 scale-95 opacity-0"
+                        enter-to-class="translate-y-0 scale-100 opacity-100"
+                        leave-active-class="transition duration-100 ease-in"
+                        leave-from-class="translate-y-0 scale-100 opacity-100"
+                        leave-to-class="translate-y-1 scale-95 opacity-0"
+                    >
+                        <div
+                            v-if="showNotificationMenu"
+                            class="absolute right-0 top-full z-[60] mt-2 w-80 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900"
+                            @click.stop
+                        >
+                            <div
+                                class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800"
+                            >
+                                <div>
+                                    <h3
+                                        class="text-sm font-semibold text-gray-900 dark:text-white"
+                                    >
+                                        Notifications
+                                    </h3>
+
+                                    <p
+                                        v-if="unreadCount > 0"
+                                        class="mt-0.5 text-[11px] text-gray-400"
+                                    >
+                                        {{ unreadCount }} unread
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    @click="closeNotificationMenu"
+                                    class="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                    aria-label="Close notifications"
+                                >
+                                    <svg
+                                        class="h-4 w-4"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            stroke-width="1.8"
+                                            d="M6 6l12 12M18 6 6 18"
+                                        />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div class="max-h-96 overflow-y-auto">
+                                <!-- Loading -->
+
+                                <div
+                                    v-if="notificationLoading"
+                                    class="flex items-center justify-center px-4 py-8"
+                                >
+                                    <div
+                                        class="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900 dark:border-gray-700 dark:border-t-white"
+                                    ></div>
+                                </div>
+
+                                <!-- Empty -->
+
+                                <div
+                                    v-else-if="!hasNotifications"
+                                    class="px-4 py-10 text-center"
+                                >
+                                    <div
+                                        class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800"
+                                    >
+                                        <svg
+                                            class="h-5 w-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M15 17H9m10-2V10a7 7 0 1 0-14 0v5l-2 2h18l-2-2Zm-6 6a2.5 2.5 0 0 0 5 0"
+                                            />
+                                        </svg>
+                                    </div>
+
+                                    <p
+                                        class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                    >
+                                        No notifications
+                                    </p>
+
+                                    <p
+                                        class="mt-1 text-xs text-gray-400 dark:text-gray-500"
+                                    >
+                                        You're all caught up.
+                                    </p>
+                                </div>
+
+                                <!-- Notifications -->
+
+                                <button
+                                    v-for="notification in notifications"
+                                    :key="notification.id"
+                                    type="button"
+                                    @click="openNotification(notification)"
+                                    class="flex w-full gap-3 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/70"
+                                    :class="
+                                        !notification.read_at
+                                            ? 'bg-gray-50/70 dark:bg-gray-800/30'
+                                            : ''
+                                    "
+                                >
+                                    <span
+                                        class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                                        :class="
+                                            !notification.read_at
+                                                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                                : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                        "
+                                    >
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M6 3h12a1 1 0 0 1 1 1v16l-7-3-7 3V4a1 1 0 0 1 1-1Zm3 5h6M9 12h6"
+                                            />
+                                        </svg>
+                                    </span>
+
+                                    <span class="min-w-0 flex-1">
+                                        <span
+                                            class="block text-xs leading-5"
+                                            :class="
+                                                !notification.read_at
+                                                    ? 'font-semibold text-gray-900 dark:text-white'
+                                                    : 'font-medium text-gray-600 dark:text-gray-300'
+                                            "
+                                        >
+                                            {{ notification.message }}
+                                        </span>
+
+                                        <span
+                                            class="mt-1 block text-[10px] text-gray-400 dark:text-gray-500"
+                                        >
+                                            {{ notificationTime(notification) }}
+                                        </span>
+                                    </span>
+
+                                    <span
+                                        v-if="!notification.read_at"
+                                        class="mt-2 h-2 w-2 shrink-0 rounded-full bg-gray-900 dark:bg-white"
+                                    ></span>
+                                </button>
+                            </div>
+                        </div>
+                    </Transition>
+                </div>
+
+                <!-- Mobile Profile -->
+
+                <button
+                    type="button"
+                    @click="goToProfile"
+                    class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gray-900 text-sm font-semibold text-white shadow-sm dark:bg-white dark:text-gray-900"
+                    aria-label="Profile"
+                >
+                    <img
+                        v-if="authStore.user?.profile_picture_url"
+                        :src="authStore.user.profile_picture_url"
+                        :alt="authStore.user?.name || 'User'"
+                        class="h-full w-full object-cover"
+                    />
+
+                    <span v-else>
+                        {{
+                            authStore.user?.name?.charAt(0)?.toUpperCase() ||
+                            "U"
+                        }}
+                    </span>
+                </button>
+            </div>
         </header>
 
         <!-- Mobile Overlay -->
@@ -323,28 +619,231 @@ onBeforeUnmount(() => {
                     </div>
                 </button>
 
-                <!-- Mobile Close -->
+                <div class="flex items-center gap-1">
+                    <!-- Desktop Notifications -->
 
-                <button
-                    type="button"
-                    @click="closeSidebar"
-                    class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white lg:hidden"
-                    aria-label="Close navigation"
-                >
-                    <svg
-                        class="h-5 w-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+                    <div
+                        ref="notificationMenuRef"
+                        class="relative hidden lg:block"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="1.8"
-                            d="M6 6l12 12M18 6 6 18"
-                        />
-                    </svg>
-                </button>
+                        <button
+                            type="button"
+                            @click.stop="toggleNotificationMenu"
+                            class="relative flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
+                            aria-label="Notifications"
+                            :aria-expanded="showNotificationMenu"
+                        >
+                            <svg
+                                class="h-5 w-5"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="1.8"
+                                    d="M15 17H9m10-2V10a7 7 0 1 0-14 0v5l-2 2h18l-2-2Zm-6 6a2.5 2.5 0 0 0 5 0"
+                                />
+                            </svg>
+
+                            <span
+                                v-if="unreadCount > 0"
+                                class="absolute right-0.5 top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white"
+                            >
+                                {{ unreadCount > 99 ? "99+" : unreadCount }}
+                            </span>
+                        </button>
+
+                        <Transition
+                            enter-active-class="transition duration-150 ease-out"
+                            enter-from-class="translate-y-1 scale-95 opacity-0"
+                            enter-to-class="translate-y-0 scale-100 opacity-100"
+                            leave-active-class="transition duration-100 ease-in"
+                            leave-from-class="translate-y-0 scale-100 opacity-100"
+                            leave-to-class="translate-y-1 scale-95 opacity-0"
+                        >
+                            <div
+                                v-if="showNotificationMenu"
+                                class="absolute left-0 top-full z-[60] mt-2 w-80 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900"
+                                @click.stop
+                            >
+                                <div
+                                    class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800"
+                                >
+                                    <div>
+                                        <h3
+                                            class="text-sm font-semibold text-gray-900 dark:text-white"
+                                        >
+                                            Notifications
+                                        </h3>
+
+                                        <p
+                                            v-if="unreadCount > 0"
+                                            class="mt-0.5 text-[11px] text-gray-400"
+                                        >
+                                            {{ unreadCount }} unread
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        @click="closeNotificationMenu"
+                                        class="flex h-7 w-7 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                                        aria-label="Close notifications"
+                                    >
+                                        <svg
+                                            class="h-4 w-4"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                stroke-width="1.8"
+                                                d="M6 6l12 12M18 6 6 18"
+                                            />
+                                        </svg>
+                                    </button>
+                                </div>
+
+                                <div class="max-h-96 overflow-y-auto">
+                                    <div
+                                        v-if="notificationLoading"
+                                        class="flex items-center justify-center px-4 py-8"
+                                    >
+                                        <div
+                                            class="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900 dark:border-gray-700 dark:border-t-white"
+                                        ></div>
+                                    </div>
+
+                                    <div
+                                        v-else-if="!hasNotifications"
+                                        class="px-4 py-10 text-center"
+                                    >
+                                        <div
+                                            class="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400 dark:bg-gray-800"
+                                        >
+                                            <svg
+                                                class="h-5 w-5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="1.8"
+                                                    d="M15 17H9m10-2V10a7 7 0 1 0-14 0v5l-2 2h18l-2-2Zm-6 6a2.5 2.5 0 0 0 5 0"
+                                                />
+                                            </svg>
+                                        </div>
+
+                                        <p
+                                            class="text-sm font-medium text-gray-700 dark:text-gray-300"
+                                        >
+                                            No notifications
+                                        </p>
+
+                                        <p
+                                            class="mt-1 text-xs text-gray-400 dark:text-gray-500"
+                                        >
+                                            You're all caught up.
+                                        </p>
+                                    </div>
+
+                                    <button
+                                        v-for="notification in notifications"
+                                        :key="notification.id"
+                                        type="button"
+                                        @click="openNotification(notification)"
+                                        class="flex w-full gap-3 border-b border-gray-100 px-4 py-3 text-left transition hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/70"
+                                        :class="
+                                            !notification.read_at
+                                                ? 'bg-gray-50/70 dark:bg-gray-800/30'
+                                                : ''
+                                        "
+                                    >
+                                        <span
+                                            class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                                            :class="
+                                                !notification.read_at
+                                                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                                                    : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                                            "
+                                        >
+                                            <svg
+                                                class="h-4 w-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                    stroke-width="1.8"
+                                                    d="M6 3h12a1 1 0 0 1 1 1v16l-7-3-7 3V4a1 1 0 0 1 1 1Zm3 5h6M9 12h6"
+                                                />
+                                            </svg>
+                                        </span>
+
+                                        <span class="min-w-0 flex-1">
+                                            <span
+                                                class="block text-xs leading-5"
+                                                :class="
+                                                    !notification.read_at
+                                                        ? 'font-semibold text-gray-900 dark:text-white'
+                                                        : 'font-medium text-gray-600 dark:text-gray-300'
+                                                "
+                                            >
+                                                {{ notification.message }}
+                                            </span>
+
+                                            <span
+                                                class="mt-1 block text-[10px] text-gray-400 dark:text-gray-500"
+                                            >
+                                                {{
+                                                    notificationTime(
+                                                        notification,
+                                                    )
+                                                }}
+                                            </span>
+                                        </span>
+
+                                        <span
+                                            v-if="!notification.read_at"
+                                            class="mt-2 h-2 w-2 shrink-0 rounded-full bg-gray-900 dark:bg-white"
+                                        ></span>
+                                    </button>
+                                </div>
+                            </div>
+                        </Transition>
+                    </div>
+
+                    <!-- Mobile Close -->
+
+                    <button
+                        type="button"
+                        @click="closeSidebar"
+                        class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white lg:hidden"
+                        aria-label="Close navigation"
+                    >
+                        <svg
+                            class="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="M6 6l12 12M18 6 6 18"
+                            />
+                        </svg>
+                    </button>
+                </div>
             </div>
 
             <!-- Navigation -->
@@ -663,8 +1162,6 @@ onBeforeUnmount(() => {
                     <span
                         class="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-500 dark:bg-gray-900 dark:text-gray-400"
                     >
-                        <!-- Sun -->
-
                         <svg
                             v-if="themeStore.dark"
                             class="h-5 w-5"
@@ -679,8 +1176,6 @@ onBeforeUnmount(() => {
                                 d="M12 3v1.5M12 19.5V21M4.22 4.22l1.06 1.06M18.72 18.72l1.06 1.06M3 12h1.5M19.5 12H21M4.22 19.78l1.06-1.06M18.72 5.28l1.06-1.06M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z"
                             />
                         </svg>
-
-                        <!-- Moon -->
 
                         <svg
                             v-else

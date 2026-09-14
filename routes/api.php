@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\UserApiController;
 use App\Http\Controllers\Api\RoleApiController;
 use App\Exports\ProductsExport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Http\Controllers\Api\NotificationApiController;
 
 
 // Authentication
@@ -251,6 +252,22 @@ Route::middleware('auth:sanctum')->group(function () {
         'destroy'
     ])->middleware('permission:invoices.delete');
 
+    // Notifications
+
+    Route::get('/notifications', [
+        NotificationApiController::class,
+        'index',
+    ]);
+
+    Route::get('/notifications/unread', [
+        NotificationApiController::class,
+        'unread',
+    ]);
+
+    Route::patch('/notifications/{id}/read', [
+        NotificationApiController::class,
+        'markAsRead',
+    ]);
 
     // User management
 
