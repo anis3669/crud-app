@@ -12,12 +12,12 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use App\Services\InvoiceService;
+use App\Contracts\Services\InvoiceServiceInterface;
 
 class InvoiceApiController extends Controller
 {
     public function __construct(
-        private InvoiceService $invoiceService
+        private InvoiceServiceInterface $invoiceService
     ) {}
     public function index(Request $request)
     {
