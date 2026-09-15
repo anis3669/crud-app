@@ -2,22 +2,22 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Contracts\Services\ProductServiceInterface;
 use App\Http\Controllers\Controller;
-use App\Models\Inventory;
-use App\Models\InventoryHistory;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException as LaravelValidationException;
-use App\Imports\ProductsImport;
-use Maatwebsite\Excel\Facades\Excel;
 use Maatwebsite\Excel\Validators\ValidationException as ExcelValidationException;
 
 class ProductApiController extends Controller
 {
+    public function __construct(
+        private ProductServiceInterface $productService
+    ) {}
+
     // Get products with search, filters, price filters and pagination
     public function index(Request $request)
     {
@@ -134,6 +134,7 @@ class ProductApiController extends Controller
     }
 
     // Create product with initial inventory
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -142,43 +143,36 @@ class ProductApiController extends Controller
                 'string',
                 'max:255',
             ],
-
             'sku' => [
                 'required',
                 'string',
                 'max:100',
                 'unique:products,sku',
             ],
-
             'category_id' => [
                 'nullable',
                 'integer',
                 'exists:categories,id',
             ],
-
             'supplier_id' => [
                 'nullable',
                 'integer',
                 'exists:suppliers,id',
             ],
-
             'description' => [
                 'nullable',
                 'string',
             ],
-
             'price' => [
                 'required',
                 'numeric',
                 'min:0',
             ],
-
             'quantity' => [
                 'required',
                 'integer',
                 'min:0',
             ],
-
             'image' => [
                 'nullable',
                 'image',
@@ -193,31 +187,10 @@ class ProductApiController extends Controller
                 ->store('products', 'public');
         }
 
-        $product = null;
-
-        DB::transaction(function () use ($validated, &$product) {
-            $initialQuantity = $validated['quantity'];
-
-            $product = Product::create($validated);
-
-            // Create inventory record
-            Inventory::create([
-                'product_id' => $product->id,
-            ]);
-
-            // Record initial stock
-            if ($initialQuantity > 0) {
-                InventoryHistory::create([
-                    'product_id' => $product->id,
-                    'user_id' => auth()->id(),
-                    'quantity_before' => 0,
-                    'quantity_change' => $initialQuantity,
-                    'quantity_after' => $initialQuantity,
-                    'type' => 'stock_in',
-                    'reason' => 'Initial stock',
-                ]);
-            }
-        });
+        $product = $this->productService->create(
+            $validated,
+            $request->user()->id
+        );
 
         return response()->json([
             'message' => 'Product created successfully.',
@@ -228,6 +201,7 @@ class ProductApiController extends Controller
             ]),
         ], 201);
     }
+
 
     // Get single product
     public function show(Product $product)
@@ -250,7 +224,6 @@ class ProductApiController extends Controller
                 'string',
                 'max:255',
             ],
-
             'sku' => [
                 'required',
                 'string',
@@ -258,78 +231,56 @@ class ProductApiController extends Controller
                 Rule::unique('products', 'sku')
                     ->ignore($product->id),
             ],
-
             'category_id' => [
                 'nullable',
                 'integer',
                 'exists:categories,id',
             ],
-
             'supplier_id' => [
                 'nullable',
                 'integer',
                 'exists:suppliers,id',
             ],
-
             'description' => [
                 'nullable',
                 'string',
             ],
-
             'price' => [
                 'required',
                 'numeric',
                 'min:0',
             ],
-
             'image' => [
                 'nullable',
                 'image',
                 'mimes:jpeg,png,jpg,webp',
                 'max:5120',
             ],
-
             'remove_image' => [
                 'nullable',
             ],
         ]);
 
-        $product->name = $validated['name'];
-        $product->sku = $validated['sku'];
-        $product->category_id = $validated['category_id'] ?? null;
-        $product->supplier_id = $validated['supplier_id'] ?? null;
-        $product->description = $validated['description'] ?? null;
-        $product->price = $validated['price'];
+        $image = null;
 
-        // Quantity is intentionally not changed here
-
-        // Remove existing image
-        $removeImage = $request->input('remove_image');
-
-        $removeImage =
-            $removeImage === '1' ||
-            $removeImage === 1 ||
-            $removeImage === true ||
-            $removeImage === 'true';
-
-        if ($removeImage && !empty($product->image)) {
-            Storage::disk('public')->delete($product->image);
-
-            $product->image = null;
-        }
-
-        // Upload new image
         if ($request->hasFile('image')) {
-            if (!empty($product->image)) {
-                Storage::disk('public')->delete($product->image);
-            }
-
-            $product->image = $request
+            $image = $request
                 ->file('image')
                 ->store('products', 'public');
         }
 
-        $product->save();
+        $removeImage = in_array(
+            $request->input('remove_image'),
+            ['1', 1, true, 'true'],
+            true
+        );
+
+        $product = $this->productService->update(
+            $product,
+            $validated,
+            $image,
+            $removeImage
+        );
 
         return response()->json([
             'message' => 'Product updated successfully.',
@@ -344,12 +295,13 @@ class ProductApiController extends Controller
     // Delete product
     public function destroy(Product $product)
     {
-        $product->delete();
+        $this->productService->delete($product);
 
         return response()->json([
             'message' => 'Product moved to trash successfully.',
         ]);
     }
+
 
     // Bulk delete
     public function bulkDelete(Request $request)
@@ -360,7 +312,6 @@ class ProductApiController extends Controller
                 'array',
                 'min:1',
             ],
-
             'ids.*' => [
                 'required',
                 'integer',
@@ -369,17 +320,15 @@ class ProductApiController extends Controller
             ],
         ]);
 
-        $deletedCount = Product::whereIn(
-            'id',
+        $deletedCount = $this->productService->bulkDelete(
             $validated['ids']
-        )->delete();
+        );
 
         return response()->json([
             'message' => 'Selected products moved to trash successfully.',
             'deleted_count' => $deletedCount,
         ]);
     }
-
     // Bulk update product details only
     public function bulkUpdate(Request $request)
     {
@@ -389,53 +338,44 @@ class ProductApiController extends Controller
                 'array',
                 'min:1',
             ],
-
             'products.*.id' => [
                 'required',
                 'integer',
                 'exists:products,id',
             ],
-
             'products.*.name' => [
                 'required',
                 'string',
                 'max:255',
             ],
-
             'products.*.sku' => [
                 'required',
                 'string',
                 'max:100',
             ],
-
             'products.*.category_id' => [
                 'required',
                 'integer',
                 'exists:categories,id',
             ],
-
             'products.*.supplier_id' => [
                 'required',
                 'integer',
                 'exists:suppliers,id',
             ],
-
             'products.*.description' => [
                 'nullable',
                 'string',
             ],
-
             'products.*.price' => [
                 'required',
                 'numeric',
                 'min:0',
             ],
-
             'products.*.removeImage' => [
                 'nullable',
                 'in:0,1',
             ],
-
             'products.*.image' => [
                 'nullable',
                 'image',
@@ -444,86 +384,36 @@ class ProductApiController extends Controller
             ],
         ]);
 
-        DB::beginTransaction();
+        $images = [];
+        $removeImages = [];
 
-        try {
-            foreach ($validated['products'] as $index => $data) {
-                $product = Product::findOrFail($data['id']);
+        foreach ($validated['products'] as $index => $data) {
+            $removeImages[$index] =
+                $request->input("products.$index.removeImage") === '1';
 
-                $product->name = $data['name'];
-                $product->sku = $data['sku'];
-                $product->category_id = $data['category_id'];
-                $product->supplier_id = $data['supplier_id'];
-                $product->description = $data['description'] ?? null;
-                $product->price = $data['price'];
-
-                // Quantity is intentionally not changed here
-
-                // Check image removal directly from request
-                $removeImage = $request->input(
-                    "products.$index.removeImage"
+            if ($request->hasFile("products.$index.image")) {
+                $images[$index] = $request->file(
+                    "products.$index.image"
                 );
-
-                if (
-                    $removeImage === '1' ||
-                    $removeImage === 1 ||
-                    $removeImage === true ||
-                    $removeImage === 'true'
-                ) {
-                    if (!empty($product->image)) {
-                        Storage::disk('public')->delete(
-                            $product->image
-                        );
-                    }
-
-                    $product->image = null;
-                }
-
-                // Upload new image
-                if ($request->hasFile("products.$index.image")) {
-                    if (!empty($product->image)) {
-                        Storage::disk('public')->delete(
-                            $product->image
-                        );
-                    }
-
-                    $image = $request->file(
-                        "products.$index.image"
-                    );
-
-                    $product->image = $image->store(
-                        'products',
-                        'public'
-                    );
-                }
-
-                $product->save();
             }
-
-            DB::commit();
-
-            return response()->json([
-                'message' => 'Products updated successfully.',
-            ]);
-        } catch (\Throwable $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'message' => 'Failed to update products.',
-                'error' => config('app.debug')
-                    ? $e->getMessage()
-                    : null,
-            ], 500);
         }
+
+        $this->productService->bulkUpdate(
+            $validated['products'],
+            $images,
+            $removeImages
+        );
+
+        return response()->json([
+            'message' => 'Products updated successfully.',
+        ]);
     }
 
     // Restore product from trash
+
     public function restore($id)
     {
-        $product = Product::withTrashed()
-            ->findOrFail($id);
-
-        $product->restore();
+        $product = $this->productService->restore((int) $id);
 
         return response()->json([
             'message' => 'Product restored successfully.',
@@ -544,7 +434,6 @@ class ProductApiController extends Controller
                 'array',
                 'min:1',
             ],
-
             'ids.*' => [
                 'required',
                 'integer',
@@ -552,21 +441,9 @@ class ProductApiController extends Controller
             ],
         ]);
 
-        $restoredCount = 0;
-
-        DB::transaction(function () use (
-            $validated,
-            &$restoredCount
-        ) {
-            $products = Product::onlyTrashed()
-                ->whereIn('id', $validated['ids'])
-                ->get();
-
-            foreach ($products as $product) {
-                $product->restore();
-                $restoredCount++;
-            }
-        });
+        $restoredCount = $this->productService->bulkRestore(
+            $validated['ids']
+        );
 
         return response()->json([
             'message' => 'Selected products restored successfully.',
@@ -578,34 +455,20 @@ class ProductApiController extends Controller
     public function forceDelete($id)
     {
         try {
-            $product = Product::onlyTrashed()->findOrFail($id);
-
-            if ($product->invoiceItems()->exists()) {
-                return response()->json([
-                    'message' => 'This product cannot be permanently deleted because it is used in one or more invoices.',
-                ], 422);
-            }
-
-            $image = $product->image;
-
-            $product->forceDelete();
-
-            if (
-                $image &&
-                !filter_var($image, FILTER_VALIDATE_URL)
-            ) {
-                Storage::disk('public')->delete($image);
-            }
+            $this->productService->forceDelete((int) $id);
 
             return response()->json([
                 'message' => 'Product permanently deleted.',
             ]);
+        } catch (LaravelValidationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+            ], 422);
         } catch (\Throwable $e) {
+            report($e);
+
             return response()->json([
                 'message' => 'Permanent delete failed.',
-                'error' => config('app.debug')
-                    ? $e->getMessage()
-                    : null,
             ], 500);
         }
     }
@@ -619,7 +482,6 @@ class ProductApiController extends Controller
                 'array',
                 'min:1',
             ],
-
             'ids.*' => [
                 'required',
                 'integer',
@@ -627,43 +489,14 @@ class ProductApiController extends Controller
             ],
         ]);
 
-        $deletedCount = 0;
-        $skippedCount = 0;
-
-        DB::transaction(function () use (
-            $validated,
-            &$deletedCount,
-            &$skippedCount
-        ) {
-            $products = Product::onlyTrashed()
-                ->whereIn('id', $validated['ids'])
-                ->get();
-
-            foreach ($products as $product) {
-                if ($product->invoiceItems()->exists()) {
-                    $skippedCount++;
-                    continue;
-                }
-
-                $image = $product->image;
-
-                $product->forceDelete();
-
-                if (
-                    $image &&
-                    !filter_var($image, FILTER_VALIDATE_URL)
-                ) {
-                    Storage::disk('public')->delete($image);
-                }
-
-                $deletedCount++;
-            }
-        });
+        $result = $this->productService->bulkForceDelete(
+            $validated['ids']
+        );
 
         return response()->json([
             'message' => 'Bulk permanent delete completed.',
-            'deleted_count' => $deletedCount,
-            'skipped_count' => $skippedCount,
+            'deleted_count' => $result['deleted_count'],
+            'skipped_count' => $result['skipped_count'],
         ]);
     }
 
@@ -715,12 +548,9 @@ class ProductApiController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($request) {
-                Excel::import(
-                    new ProductsImport(),
-                    $request->file('file')
-                );
-            });
+            $this->productService->import(
+                $request->file('file')
+            );
 
             return response()->json([
                 'message' => 'Products imported successfully.',
@@ -739,7 +569,10 @@ class ProductApiController extends Controller
                     ];
                 })
                 ->filter(fn($error) => !empty($error['messages']))
-                ->unique(fn($error) => $error['row'] . '|' . implode('|', $error['messages']))
+                ->unique(
+                    fn($error) =>
+                    $error['row'] . '|' . implode('|', $error['messages'])
+                )
                 ->values()
                 ->all();
 
@@ -753,7 +586,10 @@ class ProductApiController extends Controller
                 [
                     [
                         'row' => null,
-                        'messages' => collect($e->errors())->flatten()->values()->all(),
+                        'messages' => collect($e->errors())
+                            ->flatten()
+                            ->values()
+                            ->all(),
                     ],
                 ]
             );

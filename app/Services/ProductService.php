@@ -222,9 +222,11 @@ class ProductService implements ProductServiceInterface
 
     public function import($file): void
     {
-        Excel::import(
-            new ProductsImport(),
-            $file
-        );
+        DB::transaction(function () use ($file) {
+            Excel::import(
+                new ProductsImport(),
+                $file
+            );
+        });
     }
 }
