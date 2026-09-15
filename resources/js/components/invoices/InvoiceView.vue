@@ -134,11 +134,8 @@ async function downloadInvoice() {
             },
         };
 
-        console.log("Starting invoice PDF generation...");
 
         await html2pdf().set(options).from(element).save();
-
-        console.log("Invoice PDF downloaded successfully.");
 
         toastStore.success(
             `Invoice ${invoiceNumber} downloaded successfully.`,
