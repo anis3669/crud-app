@@ -6,8 +6,9 @@ use App\Models\Invoice;
 use App\Models\Product;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use App\Contracts\Services\InvoiceServiceInterface;
 
-class InvoiceService
+class InvoiceService implements InvoiceServiceInterface
 {
     public function create(array $validated, int $userId): array
     {
