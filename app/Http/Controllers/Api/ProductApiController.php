@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException as LaravelValidationException;
 use Maatwebsite\Excel\Validators\ValidationException as ExcelValidationException;
+use Illuminate\Support\Facades\Cache;
 
 class ProductApiController extends Controller
 {
@@ -103,30 +104,30 @@ class ProductApiController extends Controller
         $products = $query->paginate($perPage);
 
         // Complete inventory statistics
-        $stats = [
-            'total_products' => Product::count(),
-
-            'in_stock' => Product::where('quantity', '>', 5)->count(),
-
-            'low_stock' => Product::whereBetween(
-                'quantity',
-                [1, 5]
-            )->count(),
-
-            'out_of_stock' => Product::where(
-                'quantity',
-                0
-            )->count(),
-
-            'total_quantity' => Product::sum('quantity'),
-
-            'total_inventory_value' => DB::table('products')
-                ->selectRaw(
-                    'COALESCE(SUM(price * quantity), 0) as total'
-                )
-                ->value('total'),
-        ];
-
+        $stats = Cache::remember(
+            'products.stats',
+            now()->addSeconds(60),
+            function () {
+                return [
+                    'total_products' => Product::count(),
+                    'in_stock' => Product::where('quantity', '>', 5)->count(),
+                    'low_stock' => Product::whereBetween(
+                        'quantity',
+                        [1, 5]
+                    )->count(),
+                    'out_of_stock' => Product::where(
+                        'quantity',
+                        0
+                    )->count(),
+                    'total_quantity' => Product::sum('quantity'),
+                    'total_inventory_value' => DB::table('products')
+                        ->selectRaw(
+                            'COALESCE(SUM(price * quantity), 0) as total'
+                        )
+                        ->value('total'),
+                ];
+            }
+        );
         return response()->json([
             'products' => $products,
             'stats' => $stats,
