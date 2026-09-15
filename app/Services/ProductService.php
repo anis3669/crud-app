@@ -11,9 +11,14 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\ProductsImport;
+use Illuminate\Support\Facades\Cache;
 
 class ProductService implements ProductServiceInterface
 {
+    private function clearProductStatsCache(): void
+    {
+        Cache::forget('products.stats');
+    }
     public function create(array $validated, int $userId): Product
     {
         return DB::transaction(function () use ($validated, $userId) {
@@ -36,6 +41,8 @@ class ProductService implements ProductServiceInterface
                     'reason' => 'Initial stock',
                 ]);
             }
+
+            $this->clearProductStatsCache();
 
             return $product;
         });
@@ -65,6 +72,7 @@ class ProductService implements ProductServiceInterface
         }
 
         $product->save();
+        $this->clearProductStatsCache();
 
         if (($removeImage || $image !== null) && !empty($oldImage)) {
             Storage::disk('public')->delete($oldImage);
@@ -107,6 +115,7 @@ class ProductService implements ProductServiceInterface
                 }
 
                 $product->save();
+                $this->clearProductStatsCache();
 
                 if (
                     (!empty($removeImages[$index]) || isset($images[$index]))
@@ -117,26 +126,34 @@ class ProductService implements ProductServiceInterface
             }
         });
     }
-
+    // delete a product and clear the cache
     public function delete(Product $product): void
     {
         $product->delete();
-    }
 
+        $this->clearProductStatsCache();
+    }
+    // bulk delete products and clear the cache
     public function bulkDelete(array $ids): int
     {
-        return Product::whereIn('id', $ids)->delete();
-    }
+        $deletedCount = Product::whereIn('id', $ids)->delete();
 
+        $this->clearProductStatsCache();
+
+        return $deletedCount;
+    }
+    // restore
     public function restore(int $id): Product
     {
         $product = Product::withTrashed()->findOrFail($id);
 
         $product->restore();
 
+        $this->clearProductStatsCache();
+
         return $product;
     }
-
+    // bulk restore
     public function bulkRestore(array $ids): int
     {
         $restoredCount = 0;
@@ -152,9 +169,11 @@ class ProductService implements ProductServiceInterface
             }
         });
 
+        $this->clearProductStatsCache();
+
         return $restoredCount;
     }
-
+    // force delete
     public function forceDelete(int $id): void
     {
         $product = Product::onlyTrashed()->findOrFail($id);
@@ -177,6 +196,7 @@ class ProductService implements ProductServiceInterface
         ) {
             Storage::disk('public')->delete($image);
         }
+        $this->clearProductStatsCache();
     }
 
     public function bulkForceDelete(array $ids): array
@@ -213,7 +233,7 @@ class ProductService implements ProductServiceInterface
                 $deletedCount++;
             }
         });
-
+        $this->clearProductStatsCache();
         return [
             'deleted_count' => $deletedCount,
             'skipped_count' => $skippedCount,
@@ -228,5 +248,7 @@ class ProductService implements ProductServiceInterface
                 $file
             );
         });
+
+        $this->clearProductStatsCache();
     }
 }
