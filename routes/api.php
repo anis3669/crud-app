@@ -61,7 +61,7 @@ Route::get('/user', function (Request $request) {
 
 // Protected routes
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
 
     // Profile
 
@@ -125,8 +125,8 @@ Route::middleware('auth:sanctum')->group(function () {
         'destroy'
     ])->middleware('permission:products.delete');
 
-    Route::post('/products/import', [ProductApiController::class, 'import']);
-
+    Route::post('/products/import', [ProductApiController::class, 'import'])
+        ->middleware('permission:products.create');
 
     // Trash
 
