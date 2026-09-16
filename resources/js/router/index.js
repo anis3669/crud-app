@@ -1,228 +1,160 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 
-// Auth
-import Login from "../components/auth/Login.vue";
-import Register from "../components/auth/Register.vue";
-
-// Layout
-import Applayout from "../components/layout/Applayout.vue";
-
-// Products
-import ProductIndex from "../components/products/ProductIndex.vue";
-import ProductCreate from "../components/products/ProductCreate.vue";
-import ProductView from "../components/products/ProductView.vue";
-import ProductEdit from "../components/products/ProductEdit.vue";
-import BulkEdit from "../components/products/BulkEdit.vue";
-import Trash from "../components/products/Trash.vue";
-import UserIndex from "../components/users/UserIndex.vue";
-
-// Profile & Dashboard
-import Profile from "../components/profile/Profile.vue";
-import Dashboard from "../components/dashboard/Dashboard.vue";
-
-// categories
-import CategoryIndex from "../components/categories/CategoryIndex.vue";
-// suppliers
-import SupplierIndex from "../components/suppliers/SupplierIndex.vue";
-
-// Inventory
-import InventoryIndex from "../components/inventory/InventoryIndex.vue";
-import InventoryHistory from "../components/inventory/InventoryHistory.vue";
-
-// Invoices
-import InvoiceIndex from "../components/invoices/InvoiceIndex.vue";
-import InvoiceCreate from "../components/invoices/InvoiceCreate.vue";
-import InvoiceView from "../components/invoices/InvoiceView.vue";
-
 const routes = [
-    // Guest Routes
-
     {
         path: "/login",
         name: "login",
-        component: Login,
+        component: () => import("../components/auth/Login.vue"),
         meta: {
             guest: true,
         },
     },
-
     {
         path: "/register",
         name: "register",
-        component: Register,
+        component: () => import("../components/auth/Register.vue"),
         meta: {
             guest: true,
         },
     },
-
-    // Authenticated Routes
-
     {
         path: "/",
-        component: Applayout,
+        component: () => import("../components/layout/Applayout.vue"),
         meta: {
             requiresAuth: true,
         },
-
         children: [
-            // Dashboard
-
             {
                 path: "dashboard",
                 name: "dashboard",
-                component: Dashboard,
+                component: () => import("../components/dashboard/Dashboard.vue"),
             },
-
-            // Default
-
             {
                 path: "",
                 redirect: {
                     name: "products.index",
                 },
             },
-
-            // Products
-
             {
                 path: "products",
                 name: "products.index",
-                component: ProductIndex,
+                component: () => import("../components/products/ProductIndex.vue"),
                 meta: {
                     permission: "products.view",
                 },
             },
-
             {
                 path: "products/create",
                 name: "products.create",
-                component: ProductCreate,
+                component: () => import("../components/products/ProductCreate.vue"),
                 meta: {
                     permission: "products.create",
                 },
             },
-
             {
                 path: "products/bulk-edit",
                 name: "products.bulk-edit",
-                component: BulkEdit,
+                component: () => import("../components/products/BulkEdit.vue"),
                 meta: {
                     permission: "products.update",
                 },
             },
-
             {
                 path: "products/:id/edit",
                 name: "products.edit",
-                component: ProductEdit,
+                component: () => import("../components/products/ProductEdit.vue"),
                 meta: {
                     permission: "products.update",
                 },
             },
-
             {
                 path: "products/:id",
                 name: "products.view",
-                component: ProductView,
+                component: () => import("../components/products/ProductView.vue"),
                 meta: {
                     permission: "products.view",
                 },
             },
-
-            // Trash
-
             {
                 path: "trash",
                 name: "trash",
-                component: Trash,
+                component: () => import("../components/products/Trash.vue"),
                 meta: {
                     permission: "products.delete",
                 },
             },
-            // Categories
             {
                 path: "categories",
                 name: "categories.index",
-                component: CategoryIndex,
-                meta: { permission: "categories.view" },
+                component: () => import("../components/categories/CategoryIndex.vue"),
+                meta: {
+                    permission: "categories.view",
+                },
             },
-            // Suppliers
             {
                 path: "suppliers",
                 name: "suppliers.index",
-                component: SupplierIndex,
-                meta: { permission: "suppliers.view" },
+                component: () => import("../components/suppliers/SupplierIndex.vue"),
+                meta: {
+                    permission: "suppliers.view",
+                },
             },
-
-            // Inventory
-
             {
                 path: "inventory",
                 name: "inventory",
-                component: InventoryIndex,
+                component: () => import("../components/inventory/InventoryIndex.vue"),
                 meta: {
                     permission: "inventory.view",
                 },
             },
-
             {
                 path: "inventory/history",
                 name: "inventory.history",
-                component: InventoryHistory,
+                component: () => import("../components/inventory/InventoryHistory.vue"),
                 meta: {
                     permission: "inventory.history",
                 },
             },
-
-            // Invoices
-
             {
                 path: "invoices",
                 name: "invoices.index",
-                component: InvoiceIndex,
+                component: () => import("../components/invoices/InvoiceIndex.vue"),
                 meta: {
                     permission: "invoices.view",
                 },
             },
-
             {
                 path: "invoices/create",
                 name: "invoices.create",
-                component: InvoiceCreate,
+                component: () => import("../components/invoices/InvoiceCreate.vue"),
                 meta: {
                     permission: "invoices.create",
                 },
             },
-
             {
                 path: "invoices/:invoice",
                 name: "invoices.show",
-                component: InvoiceView,
+                component: () => import("../components/invoices/InvoiceView.vue"),
                 meta: {
                     permission: "invoices.view",
                 },
             },
-
-            // Profile
-
             {
                 path: "profile",
                 name: "profile",
-                component: Profile,
+                component: () => import("../components/profile/Profile.vue"),
             },
-            // users
             {
                 path: "users",
                 name: "users.index",
-                component: UserIndex,
-                meta: { permission: "users.view" },
+                component: () => import("../components/users/UserIndex.vue"),
+                meta: {
+                    permission: "users.view",
+                },
             },
         ],
     },
-
-    // Unknown Routes
-
     {
         path: "/:pathMatch(.*)*",
         redirect: {
@@ -234,7 +166,6 @@ const routes = [
 const router = createRouter({
     history: createWebHistory(),
     routes,
-
     scrollBehavior() {
         return {
             top: 0,
@@ -242,31 +173,25 @@ const router = createRouter({
     },
 });
 
-// Authentication + Permission Guard
-
 router.beforeEach(async (to) => {
     const authStore = useAuthStore();
 
-    // Check authentication once
     if (!authStore.initialized) {
         await authStore.checkAuth();
     }
 
-    // Protected route
     if (to.meta.requiresAuth && !authStore.authenticated) {
         return {
             name: "login",
         };
     }
 
-    // Guest route while already logged in
     if (to.meta.guest && authStore.authenticated) {
         return {
             name: "dashboard",
         };
     }
 
-    // Permission protected route
     const permission = to.meta.permission;
 
     if (permission && !authStore.can(permission)) {
