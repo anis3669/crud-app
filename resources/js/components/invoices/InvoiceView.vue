@@ -1,10 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-<<<<<<< HEAD
-=======
-import html2pdf from "html2pdf.js";
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
 import { useInvoiceStore } from "../../stores/invoice";
 import { useToastStore } from "../../stores/toast";
 
@@ -137,23 +133,11 @@ async function downloadInvoice() {
             },
         };
 
-<<<<<<< HEAD
         const { default: html2pdf } = await import("html2pdf.js");
 
         await html2pdf().set(options).from(element).save();
 
         toastStore.success(`Invoice ${invoiceNumber} downloaded successfully.`);
-=======
-        console.log("Starting invoice PDF generation...");
-
-        await html2pdf().set(options).from(element).save();
-
-        console.log("Invoice PDF downloaded successfully.");
-
-        toastStore.success(
-            `Invoice ${invoiceNumber} downloaded successfully.`,
-        );
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
     } catch (error) {
         console.error("Failed to download invoice:", error);
 
@@ -302,14 +286,7 @@ onMounted(async () => {
         </div>
 
         <!-- Error -->
-<<<<<<< HEAD
         <div v-if="error" class="mx-auto w-full max-w-[210mm] px-4 sm:px-0">
-=======
-        <div
-            v-if="error"
-            class="mx-auto w-full max-w-[210mm] px-4 sm:px-0"
-        >
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
             <div
                 class="rounded-lg border border-red-200 bg-red-50 p-5 text-red-700"
             >
@@ -372,13 +349,7 @@ onMounted(async () => {
                                 Programming the future...
                             </p>
 
-<<<<<<< HEAD
                             <div class="mt-3 text-xs leading-5 text-gray-500">
-=======
-                            <div
-                                class="mt-3 text-xs leading-5 text-gray-500"
-                            >
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
                                 <p>Kathmandu, Nepal</p>
                                 <p>Software & Technology Solutions</p>
                             </div>
@@ -422,13 +393,7 @@ onMounted(async () => {
                             Bill To
                         </p>
 
-<<<<<<< HEAD
                         <p class="mt-3 text-base font-semibold text-gray-900">
-=======
-                        <p
-                            class="mt-3 text-base font-semibold text-gray-900"
-                        >
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
                             {{ invoice.customer_name }}
                         </p>
 
@@ -479,13 +444,7 @@ onMounted(async () => {
                 <div class="py-7">
                     <table class="w-full border-collapse">
                         <thead>
-<<<<<<< HEAD
                             <tr class="border-b-2 border-gray-900 text-left">
-=======
-                            <tr
-                                class="border-b-2 border-gray-900 text-left"
-                            >
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
                                 <th
                                     class="pb-3 pr-3 text-xs font-semibold uppercase tracking-wider text-gray-500"
                                 >
@@ -524,13 +483,7 @@ onMounted(async () => {
                                 :key="item.id"
                                 class="border-b border-gray-100"
                             >
-<<<<<<< HEAD
                                 <td class="py-4 pr-3 text-sm text-gray-400">
-=======
-                                <td
-                                    class="py-4 pr-3 text-sm text-gray-400"
-                                >
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
                                     {{ index + 1 }}
                                 </td>
 
@@ -581,13 +534,7 @@ onMounted(async () => {
                 </div>
 
                 <!-- Totals -->
-<<<<<<< HEAD
                 <div class="flex justify-end border-t border-gray-200 pt-7">
-=======
-                <div
-                    class="flex justify-end border-t border-gray-200 pt-7"
-                >
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
                     <div class="w-full sm:w-[320px]">
                         <div
                             class="flex items-center justify-between py-1.5 text-sm"
@@ -624,23 +571,11 @@ onMounted(async () => {
                         <div
                             class="mt-3 flex items-center justify-between border-t-2 border-gray-900 pt-4"
                         >
-<<<<<<< HEAD
                             <span class="text-base font-bold text-gray-900">
                                 Total
                             </span>
 
                             <span class="text-xl font-bold text-gray-900">
-=======
-                            <span
-                                class="text-base font-bold text-gray-900"
-                            >
-                                Total
-                            </span>
-
-                            <span
-                                class="text-xl font-bold text-gray-900"
-                            >
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
                                 {{ formatCurrency(invoice.total) }}
                             </span>
                         </div>
@@ -649,23 +584,11 @@ onMounted(async () => {
 
                 <!-- Footer Note -->
                 <div class="mt-12 border-t border-gray-200 pt-6">
-<<<<<<< HEAD
                     <p class="text-center text-sm font-medium text-gray-700">
                         Thank you for your business.
                     </p>
 
                     <p class="mt-1 text-center text-xs text-gray-400">
-=======
-                    <p
-                        class="text-center text-sm font-medium text-gray-700"
-                    >
-                        Thank you for your business.
-                    </p>
-
-                    <p
-                        class="mt-1 text-center text-xs text-gray-400"
-                    >
->>>>>>> 221143f2b39ac51f31f45ba5cadb756a51ec9357
                         This is a computer-generated invoice.
                     </p>
                 </div>

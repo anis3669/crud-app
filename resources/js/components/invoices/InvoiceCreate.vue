@@ -6,7 +6,7 @@ import axios from "axios";
 import { useInvoiceStore } from "../../stores/invoice";
 import { useToastStore } from "../../stores/toast";
 import BaseButton from "../common/BaseButton.vue";
-import BaseCard from "../common/Basecard.vue";
+import BaseCard from "../common/BaseCard.vue";
 
 const router = useRouter();
 const invoiceStore = useInvoiceStore();
@@ -82,8 +82,6 @@ const subtotal = computed(() => {
     }, 0);
 });
 
-// Calculate tax amount from percentage for display only.
-// Backend remains the source of truth.
 const taxAmount = computed(() => {
     const percentage = Math.max(
         0,
@@ -93,8 +91,6 @@ const taxAmount = computed(() => {
     return (subtotal.value * percentage) / 100;
 });
 
-// Calculate discount amount from percentage for display only.
-// Backend remains the source of truth.
 const discountAmount = computed(() => {
     const percentage = Math.max(
         0,
@@ -235,7 +231,6 @@ function updateQuantity(index, event) {
     }
 
     quantity = Math.floor(quantity);
-
     quantity = Math.max(1, Math.min(quantity, item.available_quantity));
 
     item.quantity = quantity;
@@ -310,10 +305,8 @@ async function submitInvoice() {
         customer_name: customer.value.name.trim(),
         customer_email: customer.value.email.trim() || null,
         customer_phone: customer.value.phone.trim() || null,
-
         tax_percentage: tax,
         discount_percentage: discount,
-
         items: items.value.map((item) => ({
             product_id: item.product_id,
             quantity: item.quantity,
@@ -342,17 +335,15 @@ onMounted(() => {
 
 <template>
     <div
-        class="min-h-full bg-gray-50 px-4 py-6 dark:bg-gray-950 sm:px-6 lg:px-8"
+        class="min-h-full bg-gray-50 px-3 py-4 dark:bg-gray-950 sm:px-5 sm:py-6 lg:px-8"
     >
         <div class="mx-auto max-w-7xl">
-            <!-- Header -->
-
             <div
-                class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+                class="mb-5 flex flex-col gap-4 sm:mb-6 sm:flex-row sm:items-center sm:justify-between"
             >
-                <div>
+                <div class="min-w-0">
                     <h1
-                        class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white"
+                        class="text-2xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-3xl"
                     >
                         Create Invoice
                     </h1>
@@ -362,28 +353,26 @@ onMounted(() => {
                     </p>
                 </div>
 
-                <BaseButton type="button" variant="secondary" @click="cancel">
+                <BaseButton
+                    type="button"
+                    variant="secondary"
+                    class="w-full sm:w-auto"
+                    :disabled="submitting"
+                    @click="cancel"
+                >
                     Cancel
                 </BaseButton>
             </div>
 
-            <!-- Error -->
-
             <div
                 v-if="invoiceStore.error"
-                class="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+                class="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300 sm:mb-6"
             >
                 {{ invoiceStore.error }}
             </div>
 
-            <!-- Main layout -->
-
-            <div class="grid gap-6 lg:grid-cols-3">
-                <!-- Left side -->
-
-                <div class="space-y-6 lg:col-span-2">
-                    <!-- Customer Information -->
-
+            <div class="grid items-start gap-5 lg:grid-cols-3 lg:gap-6">
+                <div class="min-w-0 space-y-5 lg:col-span-2 lg:space-y-6">
                     <BaseCard>
                         <div
                             class="mb-5 border-b border-gray-100 pb-4 dark:border-gray-700"
@@ -401,7 +390,7 @@ onMounted(() => {
                             </p>
                         </div>
 
-                        <div class="grid gap-5 sm:grid-cols-2">
+                        <div class="grid gap-4 sm:grid-cols-2 sm:gap-5">
                             <div class="sm:col-span-2">
                                 <label
                                     for="customer-name"
@@ -417,7 +406,7 @@ onMounted(() => {
                                     type="text"
                                     placeholder="Enter customer name"
                                     :disabled="submitting"
-                                    class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                                    class="mt-2 block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                                 />
                             </div>
 
@@ -435,7 +424,7 @@ onMounted(() => {
                                     type="email"
                                     placeholder="customer@example.com"
                                     :disabled="submitting"
-                                    class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                                    class="mt-2 block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                                 />
                             </div>
 
@@ -453,13 +442,11 @@ onMounted(() => {
                                     type="tel"
                                     placeholder="98XXXXXXXX"
                                     :disabled="submitting"
-                                    class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                                    class="mt-2 block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                                 />
                             </div>
                         </div>
                     </BaseCard>
-
-                    <!-- Add Products -->
 
                     <BaseCard>
                         <div
@@ -478,47 +465,45 @@ onMounted(() => {
                             </p>
                         </div>
 
-                        <!-- Product loading -->
-
                         <div
                             v-if="loadingProducts"
-                            class="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center dark:border-gray-700 dark:bg-gray-800/50"
+                            class="rounded-xl border border-gray-200 bg-gray-50 px-4 py-8 text-center dark:border-gray-700 dark:bg-gray-800/50"
                         >
                             <div
-                                class="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-white"
+                                class="mx-auto h-7 w-7 animate-spin rounded-full border-2 border-gray-300 border-t-gray-900 dark:border-gray-600 dark:border-t-white"
                             ></div>
 
                             <p
-                                class="mt-2 text-sm text-gray-500 dark:text-gray-400"
+                                class="mt-3 text-sm text-gray-500 dark:text-gray-400"
                             >
                                 Loading products...
                             </p>
                         </div>
 
-                        <!-- Product error -->
-
                         <div
                             v-else-if="productError"
-                            class="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
+                            class="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-300"
                         >
-                            {{ productError }}
-
-                            <button
-                                type="button"
-                                class="ml-2 font-semibold underline"
-                                @click="loadProducts"
+                            <div
+                                class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                             >
-                                Retry
-                            </button>
+                                <span>{{ productError }}</span>
+
+                                <button
+                                    type="button"
+                                    class="font-semibold underline underline-offset-2"
+                                    @click="loadProducts"
+                                >
+                                    Retry
+                                </button>
+                            </div>
                         </div>
 
-                        <!-- Product selection -->
-
-                        <div v-else class="space-y-4">
+                        <div v-else class="space-y-5">
                             <div
-                                class="grid gap-4 md:grid-cols-[1fr_140px_auto]"
+                                class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_140px] lg:grid-cols-[minmax(0,1fr)_140px_auto]"
                             >
-                                <div>
+                                <div class="min-w-0">
                                     <label
                                         for="product-search"
                                         class="block text-sm font-semibold text-gray-700 dark:text-gray-200"
@@ -531,12 +516,12 @@ onMounted(() => {
                                         v-model="searchInput"
                                         type="text"
                                         placeholder="Search product..."
-                                        class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300"
+                                        class="mt-2 block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-gray-300 dark:focus:ring-gray-300"
                                     />
 
                                     <select
                                         v-model="selectedProductId"
-                                        class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300"
+                                        class="mt-2 block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300"
                                         @change="handleProductChange"
                                     >
                                         <option value="">
@@ -558,8 +543,7 @@ onMounted(() => {
                                                 )
                                             "
                                         >
-                                            {{ product.name }}
-                                            —
+                                            {{ product.name }} —
                                             {{ formatCurrency(product.price) }}
                                             — Stock: {{ product.quantity }}
                                         </option>
@@ -585,7 +569,7 @@ onMounted(() => {
                                                 : 1
                                         "
                                         :disabled="!selectedProduct"
-                                        class="mt-2 block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                                        class="mt-2 block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
                                     />
 
                                     <p
@@ -597,10 +581,12 @@ onMounted(() => {
                                     </p>
                                 </div>
 
-                                <div class="flex items-end">
+                                <div
+                                    class="flex items-end sm:col-span-2 lg:col-span-1"
+                                >
                                     <BaseButton
                                         type="button"
-                                        class="w-full md:w-auto"
+                                        class="min-h-11 w-full lg:w-auto"
                                         :disabled="!canAddProduct"
                                         @click="addProduct"
                                     >
@@ -611,20 +597,18 @@ onMounted(() => {
 
                             <div
                                 v-if="selectedProductAlreadyAdded"
-                                class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
+                                class="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300"
                             >
                                 This product is already in the invoice. Adjust
                                 its quantity below instead.
                             </div>
-
-                            <!-- Invoice items -->
 
                             <div
                                 class="overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700"
                             >
                                 <div
                                     v-if="items.length === 0"
-                                    class="px-5 py-10 text-center"
+                                    class="px-4 py-10 text-center sm:px-5"
                                 >
                                     <div
                                         class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800"
@@ -670,42 +654,71 @@ onMounted(() => {
                                     <div
                                         v-for="(item, index) in items"
                                         :key="item.product_id"
-                                        class="p-4"
+                                        class="p-4 sm:p-5"
                                     >
-                                        <div
-                                            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-                                        >
-                                            <div class="min-w-0">
-                                                <p
-                                                    class="truncate font-semibold text-gray-900 dark:text-white"
-                                                >
-                                                    {{ item.product_name }}
-                                                </p>
+                                        <div class="space-y-4">
+                                            <div
+                                                class="flex min-w-0 items-start justify-between gap-3"
+                                            >
+                                                <div class="min-w-0">
+                                                    <p
+                                                        class="truncate font-semibold text-gray-900 dark:text-white"
+                                                    >
+                                                        {{ item.product_name }}
+                                                    </p>
 
-                                                <p
-                                                    class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                                                    <p
+                                                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
+                                                    >
+                                                        {{
+                                                            formatCurrency(
+                                                                item.unit_price,
+                                                            )
+                                                        }}
+                                                        each
+                                                    </p>
+
+                                                    <p
+                                                        class="mt-0.5 text-xs text-gray-500 dark:text-gray-400"
+                                                    >
+                                                        Stock:
+                                                        {{
+                                                            item.available_quantity
+                                                        }}
+                                                    </p>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    class="shrink-0 rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                                                    title="Remove product"
+                                                    @click="removeItem(index)"
                                                 >
-                                                    {{
-                                                        formatCurrency(
-                                                            item.unit_price,
-                                                        )
-                                                    }}
-                                                    each · Stock:
-                                                    {{
-                                                        item.available_quantity
-                                                    }}
-                                                </p>
+                                                    <svg
+                                                        class="h-5 w-5"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="1.8"
+                                                    >
+                                                        <path
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            d="M6 7.5h12M9.75 7.5V5.25h4.5V7.5m-6.75 0l.75 11.25h6l.75-11.25M10.5 11.25v4.5m3-4.5v4.5"
+                                                        />
+                                                    </svg>
+                                                </button>
                                             </div>
 
                                             <div
-                                                class="flex flex-wrap items-center gap-3"
+                                                class="flex flex-col gap-3 border-t border-gray-100 pt-3 dark:border-gray-700 sm:flex-row sm:items-center sm:justify-between"
                                             >
                                                 <div
                                                     class="flex items-center rounded-lg border border-gray-300 dark:border-gray-600"
                                                 >
                                                     <button
                                                         type="button"
-                                                        class="px-3 py-2 text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800"
+                                                        class="flex h-10 w-10 items-center justify-center text-lg text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800"
                                                         :disabled="
                                                             item.quantity <= 1
                                                         "
@@ -725,7 +738,7 @@ onMounted(() => {
                                                         :max="
                                                             item.available_quantity
                                                         "
-                                                        class="w-16 border-x border-gray-300 bg-transparent px-2 py-2 text-center text-sm font-semibold text-gray-900 outline-none dark:border-gray-600 dark:text-white"
+                                                        class="h-10 w-14 border-x border-gray-300 bg-transparent text-center text-sm font-semibold text-gray-900 outline-none dark:border-gray-600 dark:text-white"
                                                         @input="
                                                             updateQuantity(
                                                                 index,
@@ -736,7 +749,7 @@ onMounted(() => {
 
                                                     <button
                                                         type="button"
-                                                        class="px-3 py-2 text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800"
+                                                        class="flex h-10 w-10 items-center justify-center text-lg text-gray-600 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40 dark:text-gray-300 dark:hover:bg-gray-800"
                                                         :disabled="
                                                             item.quantity >=
                                                             item.available_quantity
@@ -752,35 +765,24 @@ onMounted(() => {
                                                 </div>
 
                                                 <div
-                                                    class="w-28 text-right font-semibold text-gray-900 dark:text-white"
+                                                    class="flex items-center justify-between gap-4 sm:justify-end"
                                                 >
-                                                    {{
-                                                        formatCurrency(
-                                                            item.subtotal,
-                                                        )
-                                                    }}
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    class="rounded-lg p-2 text-gray-400 transition hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
-                                                    title="Remove product"
-                                                    @click="removeItem(index)"
-                                                >
-                                                    <svg
-                                                        class="h-5 w-5"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="1.8"
+                                                    <span
+                                                        class="text-sm text-gray-500 dark:text-gray-400"
                                                     >
-                                                        <path
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            d="M6 7.5h12M9.75 7.5V5.25h4.5V7.5m-6.75 0l.75 11.25h6l.75-11.25M10.5 11.25v4.5m3-4.5v4.5"
-                                                        />
-                                                    </svg>
-                                                </button>
+                                                        Subtotal
+                                                    </span>
+
+                                                    <span
+                                                        class="text-base font-bold text-gray-900 dark:text-white"
+                                                    >
+                                                        {{
+                                                            formatCurrency(
+                                                                item.subtotal,
+                                                            )
+                                                        }}
+                                                    </span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -790,9 +792,7 @@ onMounted(() => {
                     </BaseCard>
                 </div>
 
-                <!-- Summary -->
-
-                <div class="lg:col-span-1">
+                <div class="min-w-0 lg:col-span-1">
                     <div class="lg:sticky lg:top-6">
                         <BaseCard>
                             <div
@@ -807,9 +807,9 @@ onMounted(() => {
 
                             <div class="space-y-4">
                                 <div
-                                    class="flex justify-between text-sm text-gray-600 dark:text-gray-400"
+                                    class="flex items-center justify-between gap-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    <span> Items </span>
+                                    <span>Items</span>
 
                                     <span
                                         class="font-medium text-gray-900 dark:text-white"
@@ -819,9 +819,9 @@ onMounted(() => {
                                 </div>
 
                                 <div
-                                    class="flex justify-between text-sm text-gray-600 dark:text-gray-400"
+                                    class="flex items-center justify-between gap-4 text-sm text-gray-600 dark:text-gray-400"
                                 >
-                                    <span> Subtotal </span>
+                                    <span>Subtotal</span>
 
                                     <span
                                         class="font-medium text-gray-900 dark:text-white"
@@ -847,7 +847,7 @@ onMounted(() => {
                                             max="100"
                                             step="0.01"
                                             placeholder="0"
-                                            class="block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300"
+                                            class="block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300"
                                         />
 
                                         <span
@@ -882,7 +882,7 @@ onMounted(() => {
                                             max="100"
                                             step="0.01"
                                             placeholder="0"
-                                            class="block w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300"
+                                            class="block min-h-11 w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 pr-10 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300"
                                         />
 
                                         <span
@@ -903,7 +903,9 @@ onMounted(() => {
                                 <div
                                     class="border-t border-gray-200 pt-4 dark:border-gray-700"
                                 >
-                                    <div class="flex items-end justify-between">
+                                    <div
+                                        class="flex items-end justify-between gap-4"
+                                    >
                                         <span
                                             class="text-sm font-medium text-gray-600 dark:text-gray-400"
                                         >
@@ -911,7 +913,7 @@ onMounted(() => {
                                         </span>
 
                                         <span
-                                            class="text-2xl font-bold text-gray-900 dark:text-white"
+                                            class="text-xl font-bold text-gray-900 dark:text-white sm:text-2xl"
                                         >
                                             {{ formatCurrency(total) }}
                                         </span>
@@ -921,7 +923,7 @@ onMounted(() => {
                                 <div class="space-y-3 pt-2">
                                     <BaseButton
                                         type="button"
-                                        class="w-full"
+                                        class="min-h-11 w-full"
                                         :loading="submitting"
                                         :disabled="
                                             items.length === 0 ||
@@ -935,7 +937,7 @@ onMounted(() => {
                                     <BaseButton
                                         type="button"
                                         variant="secondary"
-                                        class="w-full"
+                                        class="min-h-11 w-full"
                                         :disabled="submitting"
                                         @click="clearForm"
                                     >
