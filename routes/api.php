@@ -19,9 +19,11 @@ use App\Http\Controllers\Api\NotificationApiController;
 
 // Authentication
 
-Route::post('/login', [AuthController::class, 'apiLogin']);
+Route::post('/login', [AuthController::class, 'apiLogin'])
+    ->middleware('throttle:5,1');
 
-Route::post('/register', [AuthController::class, 'register']);
+Route::post('/register', [AuthController::class, 'register'])
+    ->middleware('throttle:3,1');
 
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth:sanctum');

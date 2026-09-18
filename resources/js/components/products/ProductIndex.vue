@@ -400,11 +400,12 @@ async function exportProducts() {
         toastStore.error("Failed to export products.");
     }
 }
-
 onMounted(() => {
     searchInput.value = productStore.search;
 
-    loadProducts(productStore.currentPage);
+    if (!productStore.initialized) {
+        loadProducts(productStore.currentPage);
+    }
 });
 </script>
 

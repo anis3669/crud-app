@@ -10,6 +10,7 @@ export const useProductStore = defineStore("product", {
 
         loading: false,
         trashLoading: false,
+        initialized: false,
 
         error: null,
         importErrors: [],
@@ -169,6 +170,7 @@ export const useProductStore = defineStore("product", {
 
                 this.search = search;
                 this.filter = filter;
+                this.initialized = true;
 
                 return data;
             } catch (error) {
