@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Inventory;
 use App\Models\InventoryHistory;
 use App\Models\Product;
+use App\Services\ProductService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -69,7 +70,8 @@ class InventoryApiController extends Controller
     // Adjust product stock
     public function adjust(
         Request $request,
-        Product $product
+        Product $product,
+        ProductService $productService
     ): JsonResponse {
         $validated = $request->validate([
             'type' => [
@@ -88,7 +90,7 @@ class InventoryApiController extends Controller
             ],
         ]);
 
-        return DB::transaction(function () use (
+        $result = DB::transaction(function () use (
             $validated,
             $product
         ) {
@@ -164,6 +166,10 @@ class InventoryApiController extends Controller
                 'history' => $history,
             ]);
         });
+
+        $productService->clearProductStatsCache();
+
+        return $result;
     }
 
     // Get inventory history

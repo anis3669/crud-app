@@ -563,17 +563,15 @@ onMounted(async () => {
                             :for="`quantity-${product.id}`"
                             class="mb-2 block text-sm font-semibold text-gray-700 dark:text-gray-200"
                         >
-                            Quantity
+                            Current Stock
                         </label>
 
                         <input
                             :id="`quantity-${product.id}`"
-                            v-model="product.quantity"
+                            :value="product.quantity"
                             type="number"
-                            min="0"
-                            step="1"
-                            :disabled="saving"
-                            class="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-600 dark:bg-gray-900 dark:text-white dark:focus:border-gray-300 dark:focus:ring-gray-300 dark:disabled:bg-gray-800"
+                            readonly
+                            class="w-full cursor-not-allowed rounded-lg border border-gray-300 bg-gray-100 px-4 py-2.5 text-sm text-gray-700 outline-none dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300"
                         />
                     </div>
                 </div>

@@ -3,22 +3,23 @@
 namespace App\Services;
 
 use App\Contracts\Services\ProductServiceInterface;
+use App\Imports\ProductsImport;
 use App\Models\Inventory;
 use App\Models\InventoryHistory;
 use App\Models\Product;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Maatwebsite\Excel\Facades\Excel;
-use App\Imports\ProductsImport;
-use Illuminate\Support\Facades\Cache;
 
 class ProductService implements ProductServiceInterface
 {
-    private function clearProductStatsCache(): void
+    public function clearProductStatsCache(): void
     {
         Cache::forget('products.stats');
     }
+
     public function create(array $validated, int $userId): Product
     {
         return DB::transaction(function () use ($validated, $userId) {
@@ -72,6 +73,7 @@ class ProductService implements ProductServiceInterface
         }
 
         $product->save();
+
         $this->clearProductStatsCache();
 
         if (($removeImage || $image !== null) && !empty($oldImage)) {
@@ -115,6 +117,7 @@ class ProductService implements ProductServiceInterface
                 }
 
                 $product->save();
+
                 $this->clearProductStatsCache();
 
                 if (
@@ -126,14 +129,14 @@ class ProductService implements ProductServiceInterface
             }
         });
     }
-    // delete a product and clear the cache
+
     public function delete(Product $product): void
     {
         $product->delete();
 
         $this->clearProductStatsCache();
     }
-    // bulk delete products and clear the cache
+
     public function bulkDelete(array $ids): int
     {
         $deletedCount = Product::whereIn('id', $ids)->delete();
@@ -142,7 +145,7 @@ class ProductService implements ProductServiceInterface
 
         return $deletedCount;
     }
-    // restore
+
     public function restore(int $id): Product
     {
         $product = Product::withTrashed()->findOrFail($id);
@@ -153,7 +156,7 @@ class ProductService implements ProductServiceInterface
 
         return $product;
     }
-    // bulk restore
+
     public function bulkRestore(array $ids): int
     {
         $restoredCount = 0;
@@ -173,7 +176,7 @@ class ProductService implements ProductServiceInterface
 
         return $restoredCount;
     }
-    // force delete
+
     public function forceDelete(int $id): void
     {
         $product = Product::onlyTrashed()->findOrFail($id);
@@ -196,6 +199,7 @@ class ProductService implements ProductServiceInterface
         ) {
             Storage::disk('public')->delete($image);
         }
+
         $this->clearProductStatsCache();
     }
 
@@ -233,7 +237,9 @@ class ProductService implements ProductServiceInterface
                 $deletedCount++;
             }
         });
+
         $this->clearProductStatsCache();
+
         return [
             'deleted_count' => $deletedCount,
             'skipped_count' => $skippedCount,

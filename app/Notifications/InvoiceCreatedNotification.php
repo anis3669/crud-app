@@ -33,7 +33,6 @@ class InvoiceCreatedNotification extends Notification implements ShouldQueue
             ->action('View Invoice', url("/invoices/{$this->invoice->id}"))
             ->line('Thank you.');
     }
-
     public function toArray(object $notifiable): array
     {
         return [
