@@ -71,27 +71,18 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        /*
-         * Delete the old picture first.
-         */
-        if ($user->profile_picture) {
-            Storage::disk('public')->delete(
-                $user->profile_picture
-            );
-        }
+        $oldPicture = $user->profile_picture;
 
-        /*
-         * Store the new picture.
-         */
-        $path = $validated['profile_picture']
+        $newPicture = $validated['profile_picture']
             ->store('profile-pictures', 'public');
 
-        /*
-         * Save path in database.
-         */
         $user->update([
-            'profile_picture' => $path,
+            'profile_picture' => $newPicture,
         ]);
+
+        if ($oldPicture && $oldPicture !== $newPicture) {
+            Storage::disk('public')->delete($oldPicture);
+        }
 
         $user = $user->fresh();
 
@@ -101,6 +92,7 @@ class ProfileController extends Controller
             'profile_picture_url' => $user->profile_picture_url,
         ]);
     }
+
 
     /**
      * Remove profile picture.
