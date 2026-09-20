@@ -60,9 +60,8 @@ const userInitial = computed(() => {
     return user.value?.name?.charAt(0)?.toUpperCase() || "U";
 });
 
-// ==============================
+
 // MESSAGES
-// ==============================
 
 function clearMessageTimer() {
     if (messageTimer) {
@@ -89,9 +88,7 @@ function showError(message) {
     successMessage.value = "";
 }
 
-// ==============================
 // LOAD PROFILE
-// ==============================
 
 async function loadProfile() {
     loading.value = true;
@@ -114,9 +111,7 @@ async function loadProfile() {
     }
 }
 
-// ==============================
 // EDIT PROFILE
-// ==============================
 
 function startEditing() {
     name.value = user.value?.name || "";
@@ -137,9 +132,7 @@ function cancelEditing() {
     errorMessage.value = "";
 }
 
-// ==============================
 // UPDATE PROFILE
-// ==============================
 
 async function saveProfile() {
     const trimmedName = name.value.trim();
@@ -181,9 +174,7 @@ async function saveProfile() {
     }
 }
 
-// ==============================
 // PROFILE IMAGE
-// ==============================
 
 function openFilePicker() {
     if (uploading.value || deleting.value) {
