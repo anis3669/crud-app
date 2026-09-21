@@ -134,6 +134,7 @@ function cancelEditing() {
 
 // UPDATE PROFILE
 
+
 async function saveProfile() {
     const trimmedName = name.value.trim();
     const trimmedEmail = email.value.trim();
@@ -174,7 +175,9 @@ async function saveProfile() {
     }
 }
 
+// ==============================
 // PROFILE IMAGE
+// ==============================
 
 function openFilePicker() {
     if (uploading.value || deleting.value) {
