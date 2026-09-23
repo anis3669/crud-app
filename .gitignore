@@ -22,4 +22,12 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-cookies.txt 
+cookies.txt
+
+# Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
