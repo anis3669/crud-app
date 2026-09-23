@@ -20,6 +20,10 @@ const showDeleteModal = ref(false);
 const productToDelete = ref(null);
 const deleting = ref(false);
 
+const showBulkDeleteModal = ref(false);
+const productsToBulkDelete = ref([]);
+const bulkDeleting = ref(false);
+
 const searchInput = ref("");
 const priceFilter = ref("all");
 
@@ -295,6 +299,47 @@ function openDeleteModal(product) {
     showDeleteModal.value = true;
 }
 
+function openBulkDeleteModal(productsToDelete) {
+    if (!Array.isArray(productsToDelete) || productsToDelete.length === 0) {
+        return;
+    }
+
+    productsToBulkDelete.value = productsToDelete;
+    showBulkDeleteModal.value = true;
+}
+
+function closeBulkDeleteModal() {
+    if (bulkDeleting.value) {
+        return;
+    }
+
+    showBulkDeleteModal.value = false;
+    productsToBulkDelete.value = [];
+}
+
+async function confirmBulkDelete() {
+    if (bulkDeleting.value || productsToBulkDelete.value.length === 0) {
+        return;
+    }
+
+    bulkDeleting.value = true;
+
+    try {
+        await productStore.bulkDelete(productsToBulkDelete.value);
+
+        toastStore.success(
+            `${productsToBulkDelete.value.length} product(s) deleted successfully.`,
+        );
+
+        showBulkDeleteModal.value = false;
+        productsToBulkDelete.value = [];
+    } catch (err) {
+        console.error("Bulk delete error:", err);
+    } finally {
+        bulkDeleting.value = false;
+    }
+}
+
 function closeDeleteModal() {
     if (deleting.value) {
         return;
@@ -325,18 +370,8 @@ async function confirmDelete() {
     }
 }
 
-async function bulkDelete(productsToDelete) {
-    if (!Array.isArray(productsToDelete) || productsToDelete.length === 0) {
-        return;
-    }
-
-    try {
-        await productStore.bulkDelete(productsToDelete);
-
-        toastStore.success("Products deleted successfully.");
-    } catch (err) {
-        console.error("Bulk delete error:", err);
-    }
+function bulkDelete(productsToDelete) {
+    openBulkDeleteModal(productsToDelete);
 }
 
 function bulkEdit(productsToEdit) {
@@ -1436,6 +1471,84 @@ onMounted(() => {
                             </svg>
 
                             {{ deleting ? "Deleting..." : "Delete Product" }}
+                        </BaseButton>
+                    </div>
+                </template>
+            </BaseModal>
+
+            <!-- Bulk Delete Modal -->
+            <BaseModal
+                :show="showBulkDeleteModal"
+                title="Delete Products"
+                size="sm"
+                @close="closeBulkDeleteModal"
+            >
+                <div class="text-center">
+                    <div
+                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/40"
+                    >
+                        <svg
+                            class="h-7 w-7 text-red-600 dark:text-red-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
+                            />
+                        </svg>
+                    </div>
+
+                    <h3
+                        class="mt-5 text-lg font-bold text-gray-900 dark:text-white"
+                    >
+                        Delete Selected Products?
+                    </h3>
+
+                    <p
+                        class="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500 dark:text-gray-400"
+                    >
+                        Are you sure you want to delete
+                        <span
+                            class="font-semibold text-gray-800 dark:text-gray-200"
+                        >
+                            {{ productsToBulkDelete.length }} selected
+                            product(s)
+                        </span>
+                        ?
+
+                        <br />
+                        This action cannot be undone.
+                    </p>
+                </div>
+
+                <template #footer>
+                    <div
+                        class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                    >
+                        <BaseButton
+                            type="button"
+                            variant="secondary"
+                            :disabled="bulkDeleting"
+                            class="justify-center"
+                            @click="closeBulkDeleteModal"
+                        >
+                            Cancel
+                        </BaseButton>
+
+                        <BaseButton
+                            type="button"
+                            variant="danger"
+                            :disabled="bulkDeleting"
+                            class="justify-center"
+                            @click="confirmBulkDelete"
+                        >
+                            {{
+                                bulkDeleting ? "Deleting..." : "Delete Products"
+                            }}
                         </BaseButton>
                     </div>
                 </template>

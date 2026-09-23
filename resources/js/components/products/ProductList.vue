@@ -41,10 +41,7 @@ const selectedCount = computed(() => selectedProducts.value.length);
 const hasSelectedProducts = computed(() => selectedCount.value > 0);
 
 const allSelected = computed(() => {
-    return (
-        productCount.value > 0 &&
-        selectedCount.value === productCount.value
-    );
+    return productCount.value > 0 && selectedCount.value === productCount.value;
 });
 
 // Keep selection in sync
@@ -136,21 +133,11 @@ function bulkDelete() {
         return;
     }
 
-    const confirmed = window.confirm(
-        `Are you sure you want to delete ${selectedCount.value} selected product(s)?`,
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
     const productsToDelete = props.products.filter((product) =>
         selectedProducts.value.includes(Number(product.id)),
     );
 
     emit("bulk-delete", productsToDelete);
-
-    selectedProducts.value = [];
 }
 
 // Formatting
@@ -171,21 +158,25 @@ function formatPrice(price) {
 // Category
 
 function categoryName(product) {
-    return product?.category?.name ||
+    return (
+        product?.category?.name ||
         product?.category_name ||
         (typeof product?.category === "string"
             ? product.category
-            : "Uncategorized");
+            : "Uncategorized")
+    );
 }
 
 // Supplier
 
 function supplierName(product) {
-    return product?.supplier?.name ||
+    return (
+        product?.supplier?.name ||
         product?.supplier_name ||
         (typeof product?.supplier === "string"
             ? product.supplier
-            : "No supplier");
+            : "No supplier")
+    );
 }
 
 // Stock status
@@ -279,9 +270,7 @@ function productNumber(index) {
                                 Products selected
                             </p>
 
-                            <p
-                                class="text-xs text-gray-500 dark:text-gray-400"
-                            >
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
                                 Choose an action for the selected products.
                             </p>
                         </div>
@@ -488,9 +477,7 @@ function productNumber(index) {
 
                             <!-- SKU -->
 
-                            <td
-                                class="whitespace-nowrap px-4 py-4 sm:px-5"
-                            >
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <span
                                     class="font-mono text-xs font-medium text-gray-600 dark:text-gray-300"
                                 >
@@ -500,9 +487,7 @@ function productNumber(index) {
 
                             <!-- Category -->
 
-                            <td
-                                class="whitespace-nowrap px-4 py-4 sm:px-5"
-                            >
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <span
                                     class="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-300"
                                 >
@@ -534,17 +519,14 @@ function productNumber(index) {
                                     "
                                 >
                                     {{
-                                        product.description ||
-                                        "No description"
+                                        product.description || "No description"
                                     }}
                                 </p>
                             </td>
 
                             <!-- Price -->
 
-                            <td
-                                class="whitespace-nowrap px-4 py-4 sm:px-5"
-                            >
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <p
                                     class="text-sm font-semibold text-gray-900 dark:text-white"
                                 >
@@ -554,9 +536,7 @@ function productNumber(index) {
 
                             <!-- Stock -->
 
-                            <td
-                                class="whitespace-nowrap px-4 py-4 sm:px-5"
-                            >
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <span
                                     class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-semibold"
                                     :class="
@@ -576,9 +556,7 @@ function productNumber(index) {
 
                             <!-- Actions -->
 
-                            <td
-                                class="whitespace-nowrap px-4 py-4 sm:px-5"
-                            >
+                            <td class="whitespace-nowrap px-4 py-4 sm:px-5">
                                 <div
                                     class="flex items-center justify-end gap-1"
                                 >
@@ -667,10 +645,7 @@ function productNumber(index) {
                         <!-- Empty state -->
 
                         <tr v-if="productCount === 0">
-                            <td
-                                colspan="9"
-                                class="px-6 py-20 text-center"
-                            >
+                            <td colspan="9" class="px-6 py-20 text-center">
                                 <div
                                     class="mx-auto flex max-w-sm flex-col items-center"
                                 >

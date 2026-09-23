@@ -20,10 +20,11 @@ const showDeleteModal = ref(false);
 const productToDelete = ref(null);
 const deleting = ref(false);
 
+const showBulkDeleteModal = ref(false);
+const bulkDeleting = ref(false);
+
 const products = computed(() => {
-    return Array.isArray(productStore.trash)
-        ? productStore.trash
-        : [];
+    return Array.isArray(productStore.trash) ? productStore.trash : [];
 });
 
 const loading = computed(() => productStore.trashLoading);
@@ -58,10 +59,7 @@ const firstProductNumber = computed(() => {
 });
 
 const lastProductNumber = computed(() => {
-    return Math.min(
-        currentPage.value * perPage.value,
-        total.value,
-    );
+    return Math.min(currentPage.value * perPage.value, total.value);
 });
 
 // Get category name safely
@@ -177,8 +175,8 @@ function toggleAll() {
         return;
     }
 
-    selectedProducts.value = products.value.map(
-        (product) => Number(product.id),
+    selectedProducts.value = products.value.map((product) =>
+        Number(product.id),
     );
 }
 
@@ -198,17 +196,10 @@ async function restoreProduct(product) {
             (id) => Number(id) !== Number(product.id),
         );
 
-        toastStore.success(
-            "Product restored successfully.",
-        );
+        toastStore.success("Product restored successfully.");
 
-        if (
-            products.value.length === 0 &&
-            currentPage.value > 1
-        ) {
-            await productStore.fetchTrash(
-                currentPage.value - 1,
-            );
+        if (products.value.length === 0 && currentPage.value > 1) {
+            await productStore.fetchTrash(currentPage.value - 1);
         }
     } catch (err) {
         console.error("Restore product error:", err);
@@ -223,23 +214,14 @@ async function bulkRestore() {
     }
 
     try {
-        await productStore.bulkRestore(
-            selectedProducts.value,
-        );
+        await productStore.bulkRestore(selectedProducts.value);
 
         selectedProducts.value = [];
 
-        toastStore.success(
-            "Products restored successfully.",
-        );
+        toastStore.success("Products restored successfully.");
 
-        if (
-            products.value.length === 0 &&
-            currentPage.value > 1
-        ) {
-            await productStore.fetchTrash(
-                currentPage.value - 1,
-            );
+        if (products.value.length === 0 && currentPage.value > 1) {
+            await productStore.fetchTrash(currentPage.value - 1);
         }
     } catch (err) {
         console.error("Bulk restore error:", err);
@@ -276,34 +258,22 @@ async function confirmPermanentDelete() {
     const productId = productToDelete.value.id;
 
     try {
-        await productStore.permanentlyDeleteProduct(
-            productId,
-        );
+        await productStore.permanentlyDeleteProduct(productId);
 
         selectedProducts.value = selectedProducts.value.filter(
             (id) => Number(id) !== Number(productId),
         );
 
-        toastStore.success(
-            "Product permanently deleted.",
-        );
+        toastStore.success("Product permanently deleted.");
 
         showDeleteModal.value = false;
         productToDelete.value = null;
 
-        if (
-            products.value.length === 0 &&
-            currentPage.value > 1
-        ) {
-            await productStore.fetchTrash(
-                currentPage.value - 1,
-            );
+        if (products.value.length === 0 && currentPage.value > 1) {
+            await productStore.fetchTrash(currentPage.value - 1);
         }
     } catch (err) {
-        console.error(
-            "Permanent delete error:",
-            err,
-        );
+        console.error("Permanent delete error:", err);
     } finally {
         deleting.value = false;
     }
@@ -311,46 +281,51 @@ async function confirmPermanentDelete() {
 
 // Permanently delete selected products
 
-async function bulkPermanentDelete() {
-    if (selectedProducts.value.length === 0) {
+function openBulkDeleteModal() {
+    if (selectedProducts.value.length === 0 || deleting.value) {
         return;
     }
 
+    showBulkDeleteModal.value = true;
+}
+
+function closeBulkDeleteModal() {
+    if (bulkDeleting.value) {
+        return;
+    }
+
+    showBulkDeleteModal.value = false;
+}
+
+async function confirmBulkPermanentDelete() {
+    if (bulkDeleting.value || selectedProducts.value.length === 0) {
+        return;
+    }
+
+    bulkDeleting.value = true;
+
     try {
-        await productStore.bulkPermanentDelete(
-            selectedProducts.value,
-        );
+        await productStore.bulkPermanentDelete(selectedProducts.value);
 
         selectedProducts.value = [];
+        showBulkDeleteModal.value = false;
 
-        toastStore.success(
-            "Products permanently deleted.",
-        );
+        toastStore.success("Products permanently deleted.");
 
-        if (
-            products.value.length === 0 &&
-            currentPage.value > 1
-        ) {
-            await productStore.fetchTrash(
-                currentPage.value - 1,
-            );
+        if (products.value.length === 0 && currentPage.value > 1) {
+            await productStore.fetchTrash(currentPage.value - 1);
         }
     } catch (err) {
-        console.error(
-            "Bulk permanent delete error:",
-            err,
-        );
+        console.error("Bulk permanent delete error:", err);
+    } finally {
+        bulkDeleting.value = false;
     }
 }
 
 // Change trash page
 
 async function goToPage(page) {
-    if (
-        page < 1 ||
-        page > lastPage.value ||
-        page === currentPage.value
-    ) {
+    if (page < 1 || page > lastPage.value || page === currentPage.value) {
         return;
     }
 
@@ -364,9 +339,7 @@ async function goToPage(page) {
 async function refreshTrash() {
     selectedProducts.value = [];
 
-    await productStore.fetchTrash(
-        currentPage.value,
-    );
+    await productStore.fetchTrash(currentPage.value);
 }
 
 // Go back to products
@@ -388,9 +361,7 @@ onMounted(async () => {
     <div
         class="min-h-[calc(100vh-4rem)] bg-gray-50 transition-colors duration-300 dark:bg-gray-950"
     >
-        <div
-            class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6"
-        >
+        <div class="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
             <!-- Header -->
 
             <div class="mb-6">
@@ -466,11 +437,7 @@ onMounted(async () => {
                             </svg>
 
                             <span>
-                                {{
-                                    loading
-                                        ? "Refreshing..."
-                                        : "Refresh"
-                                }}
+                                {{ loading ? "Refreshing..." : "Refresh" }}
                             </span>
                         </BaseButton>
                     </div>
@@ -483,12 +450,8 @@ onMounted(async () => {
                 v-if="error"
                 class="mb-6 border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/30"
             >
-                <div
-                    class="flex items-center justify-between gap-4"
-                >
-                    <p
-                        class="text-sm text-red-700 dark:text-red-400"
-                    >
+                <div class="flex items-center justify-between gap-4">
+                    <p class="text-sm text-red-700 dark:text-red-400">
                         {{ error }}
                     </p>
 
@@ -508,15 +471,9 @@ onMounted(async () => {
                 v-if="someSelected"
                 class="mb-4 flex flex-col gap-3 rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:flex-row sm:items-center sm:justify-between"
             >
-                <p
-                    class="text-sm font-medium text-gray-700 dark:text-gray-300"
-                >
+                <p class="text-sm font-medium text-gray-700 dark:text-gray-300">
                     {{ selectedProducts.length }}
-                    product<span
-                        v-if="selectedProducts.length !== 1"
-                    >
-                        s</span
-                    >
+                    product<span v-if="selectedProducts.length !== 1"> s</span>
                     selected
                 </p>
 
@@ -535,7 +492,7 @@ onMounted(async () => {
                         variant="danger"
                         :disabled="loading"
                         class="justify-center"
-                        @click="bulkPermanentDelete"
+                        @click="openBulkDeleteModal"
                     >
                         Delete Forever
                     </BaseButton>
@@ -620,29 +577,20 @@ onMounted(async () => {
                         Trash is empty
                     </h3>
 
-                    <p
-                        class="mt-1 text-sm text-gray-500 dark:text-gray-400"
-                    >
+                    <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         Deleted products will appear here.
                     </p>
                 </div>
 
                 <!-- Products -->
 
-                <div
-                    v-else
-                    class="overflow-x-auto"
-                >
+                <div v-else class="overflow-x-auto">
                     <table
                         class="min-w-full divide-y divide-gray-200 dark:divide-gray-800"
                     >
-                        <thead
-                            class="bg-gray-50 dark:bg-gray-800/50"
-                        >
+                        <thead class="bg-gray-50 dark:bg-gray-800/50">
                             <tr>
-                                <th
-                                    class="w-12 px-4 py-3"
-                                >
+                                <th class="w-12 px-4 py-3">
                                     <input
                                         type="checkbox"
                                         :checked="allSelected"
@@ -714,43 +662,23 @@ onMounted(async () => {
                                 <td class="px-4 py-4">
                                     <input
                                         type="checkbox"
-                                        :checked="
-                                            isSelected(
-                                                product.id,
-                                            )
-                                        "
+                                        :checked="isSelected(product.id)"
                                         class="h-4 w-4 rounded border-gray-300 text-gray-900 focus:ring-gray-400 dark:border-gray-600"
-                                        @change="
-                                            toggleProduct(
-                                                product.id,
-                                            )
-                                        "
+                                        @change="toggleProduct(product.id)"
                                     />
                                 </td>
 
                                 <!-- Product -->
 
                                 <td class="px-4 py-4">
-                                    <div
-                                        class="flex items-center gap-3"
-                                    >
+                                    <div class="flex items-center gap-3">
                                         <div
                                             class="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gray-100 dark:bg-gray-800"
                                         >
                                             <img
-                                                v-if="
-                                                    imageUrl(
-                                                        product.image,
-                                                    )
-                                                "
-                                                :src="
-                                                    imageUrl(
-                                                        product.image,
-                                                    )
-                                                "
-                                                :alt="
-                                                    product.name
-                                                "
+                                                v-if="imageUrl(product.image)"
+                                                :src="imageUrl(product.image)"
+                                                :alt="product.name"
                                                 class="h-full w-full object-cover"
                                             />
 
@@ -762,15 +690,11 @@ onMounted(async () => {
                                             </div>
                                         </div>
 
-                                        <div
-                                            class="min-w-0"
-                                        >
+                                        <div class="min-w-0">
                                             <p
                                                 class="truncate text-sm font-semibold text-gray-900 dark:text-white"
                                             >
-                                                {{
-                                                    product.name
-                                                }}
+                                                {{ product.name }}
                                             </p>
 
                                             <p
@@ -787,10 +711,7 @@ onMounted(async () => {
                                 <td
                                     class="px-4 py-4 text-sm font-mono text-gray-600 dark:text-gray-300"
                                 >
-                                    {{
-                                        product.sku ||
-                                        "—"
-                                    }}
+                                    {{ product.sku || "—" }}
                                 </td>
 
                                 <!-- Category -->
@@ -798,11 +719,7 @@ onMounted(async () => {
                                 <td
                                     class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300"
                                 >
-                                    {{
-                                        categoryName(
-                                            product,
-                                        )
-                                    }}
+                                    {{ categoryName(product) }}
                                 </td>
 
                                 <!-- Supplier -->
@@ -810,11 +727,7 @@ onMounted(async () => {
                                 <td
                                     class="px-4 py-4 text-sm text-gray-600 dark:text-gray-300"
                                 >
-                                    {{
-                                        supplierName(
-                                            product,
-                                        )
-                                    }}
+                                    {{ supplierName(product) }}
                                 </td>
 
                                 <!-- Price -->
@@ -823,11 +736,7 @@ onMounted(async () => {
                                     class="whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-900 dark:text-white"
                                 >
                                     Rs.
-                                    {{
-                                        formatPrice(
-                                            product.price,
-                                        )
-                                    }}
+                                    {{ formatPrice(product.price) }}
                                 </td>
 
                                 <!-- Quantity -->
@@ -843,30 +752,18 @@ onMounted(async () => {
                                 <td
                                     class="whitespace-nowrap px-4 py-4 text-sm text-gray-500 dark:text-gray-400"
                                 >
-                                    {{
-                                        formatDeletedDate(
-                                            product.deleted_at,
-                                        )
-                                    }}
+                                    {{ formatDeletedDate(product.deleted_at) }}
                                 </td>
 
                                 <!-- Actions -->
 
                                 <td class="px-4 py-4">
-                                    <div
-                                        class="flex justify-end gap-2"
-                                    >
+                                    <div class="flex justify-end gap-2">
                                         <BaseButton
                                             type="button"
-                                            :disabled="
-                                                loading
-                                            "
+                                            :disabled="loading"
                                             class="justify-center"
-                                            @click="
-                                                restoreProduct(
-                                                    product,
-                                                )
-                                            "
+                                            @click="restoreProduct(product)"
                                         >
                                             Restore
                                         </BaseButton>
@@ -874,16 +771,9 @@ onMounted(async () => {
                                         <BaseButton
                                             type="button"
                                             variant="danger"
-                                            :disabled="
-                                                loading ||
-                                                deleting
-                                            "
+                                            :disabled="loading || deleting"
                                             class="justify-center"
-                                            @click="
-                                                openDeleteModal(
-                                                    product,
-                                                )
-                                            "
+                                            @click="openDeleteModal(product)"
                                         >
                                             Delete
                                         </BaseButton>
@@ -897,15 +787,10 @@ onMounted(async () => {
                 <!-- Loading overlay -->
 
                 <div
-                    v-if="
-                        loading &&
-                        products.length > 0
-                    "
+                    v-if="loading && products.length > 0"
                     class="border-t border-gray-200 bg-white/70 px-4 py-3 text-center dark:border-gray-800 dark:bg-gray-900/70"
                 >
-                    <span
-                        class="text-sm text-gray-500 dark:text-gray-400"
-                    >
+                    <span class="text-sm text-gray-500 dark:text-gray-400">
                         Loading...
                     </span>
                 </div>
@@ -926,14 +811,10 @@ onMounted(async () => {
                         <span
                             class="font-semibold text-gray-900 dark:text-white"
                         >
-                            {{ firstProductNumber }}–{{
-                                lastProductNumber
-                            }}
+                            {{ firstProductNumber }}–{{ lastProductNumber }}
                         </span>
 
-                        <span class="text-gray-400">
-                            of
-                        </span>
+                        <span class="text-gray-400"> of </span>
 
                         <span
                             class="font-semibold text-gray-900 dark:text-white"
@@ -941,9 +822,7 @@ onMounted(async () => {
                             {{ total }}
                         </span>
 
-                        <span
-                            class="text-gray-500 dark:text-gray-400"
-                        >
+                        <span class="text-gray-500 dark:text-gray-400">
                             deleted products
                         </span>
                     </p>
@@ -952,15 +831,8 @@ onMounted(async () => {
                         <BaseButton
                             type="button"
                             variant="secondary"
-                            :disabled="
-                                currentPage <= 1 ||
-                                loading
-                            "
-                            @click="
-                                goToPage(
-                                    currentPage - 1,
-                                )
-                            "
+                            :disabled="currentPage <= 1 || loading"
+                            @click="goToPage(currentPage - 1)"
                         >
                             Previous
                         </BaseButton>
@@ -970,11 +842,7 @@ onMounted(async () => {
                         >
                             {{ currentPage }}
 
-                            <span
-                                class="mx-1 text-gray-400"
-                            >
-                                /
-                            </span>
+                            <span class="mx-1 text-gray-400"> / </span>
 
                             {{ lastPage }}
                         </div>
@@ -982,16 +850,8 @@ onMounted(async () => {
                         <BaseButton
                             type="button"
                             variant="secondary"
-                            :disabled="
-                                currentPage >=
-                                    lastPage ||
-                                loading
-                            "
-                            @click="
-                                goToPage(
-                                    currentPage + 1,
-                                )
-                            "
+                            :disabled="currentPage >= lastPage || loading"
+                            @click="goToPage(currentPage + 1)"
                         >
                             Next
                         </BaseButton>
@@ -1035,8 +895,7 @@ onMounted(async () => {
                     <p
                         class="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500 dark:text-gray-400"
                     >
-                        Are you sure you want to permanently
-                        delete
+                        Are you sure you want to permanently delete
 
                         <span
                             class="font-semibold text-gray-800 dark:text-gray-200"
@@ -1071,14 +930,85 @@ onMounted(async () => {
                             variant="danger"
                             :disabled="deleting"
                             class="justify-center"
-                            @click="
-                                confirmPermanentDelete
-                            "
+                            @click="confirmPermanentDelete"
+                        >
+                            {{ deleting ? "Deleting..." : "Delete Forever" }}
+                        </BaseButton>
+                    </div>
+                </template>
+            </BaseModal>
+
+            <!-- Bulk Permanent Delete Modal -->
+            <BaseModal
+                :show="showBulkDeleteModal"
+                title="Delete Forever"
+                size="sm"
+                @close="closeBulkDeleteModal"
+            >
+                <div class="text-center">
+                    <div
+                        class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/40"
+                    >
+                        <svg
+                            class="h-7 w-7 text-red-600 dark:text-red-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                                d="M12 9v4m0 4h.01M10.29 3.86l-7.82 13.5A2 2 0 004.2 20.5h15.6a2 2 0 001.73-3.14l-7.82-13.5a2 2 0 00-3.42 0z"
+                            />
+                        </svg>
+                    </div>
+
+                    <h3
+                        class="mt-5 text-lg font-bold text-gray-900 dark:text-white"
+                    >
+                        Delete Selected Products Forever?
+                    </h3>
+
+                    <p
+                        class="mx-auto mt-2 max-w-sm text-sm leading-6 text-gray-500 dark:text-gray-400"
+                    >
+                        Are you sure you want to permanently delete
+                        <span
+                            class="font-semibold text-gray-800 dark:text-gray-200"
+                        >
+                            {{ selectedProducts.length }} selected product(s)
+                        </span>
+                        ?
+
+                        <br />
+                        This action cannot be undone.
+                    </p>
+                </div>
+
+                <template #footer>
+                    <div
+                        class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+                    >
+                        <BaseButton
+                            type="button"
+                            variant="secondary"
+                            :disabled="bulkDeleting"
+                            class="justify-center"
+                            @click="closeBulkDeleteModal"
+                        >
+                            Cancel
+                        </BaseButton>
+
+                        <BaseButton
+                            type="button"
+                            variant="danger"
+                            :disabled="bulkDeleting"
+                            class="justify-center"
+                            @click="confirmBulkPermanentDelete"
                         >
                             {{
-                                deleting
-                                    ? "Deleting..."
-                                    : "Delete Forever"
+                                bulkDeleting ? "Deleting..." : "Delete Forever"
                             }}
                         </BaseButton>
                     </div>
