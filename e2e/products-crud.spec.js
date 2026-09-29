@@ -3,134 +3,248 @@ import { test, expect } from "@playwright/test";
 
 const BASE_URL = "http://127.0.0.1:8000";
 
-test("admin can view products", async ({ page }) => {
-    // Login
-    await page.goto(`${BASE_URL}/login`);
+test.use({ baseURL: BASE_URL });
 
-    await page.getByLabel("Email").fill("admin@gmail.com");
-    await page.getByLabel("Password").fill("password");
+const ADMIN = {
+    email: "admin@gmail.com",
+    password: "password",
+};
+
+const IMAGE = "e2e/fixtures/mahadevv.png";
+
+const T = 20000;
+
+// LOGIN HELPER
+
+async function login(page) {
+    await page.goto("/login");
+
+    await page.getByLabel("Email").fill(ADMIN.email);
+    await page.getByLabel("Password").fill(ADMIN.password);
+
     await page.getByRole("button", { name: "Sign In" }).click();
 
-    // Verify successful login
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
+    await expect(page).toHaveURL(/\/products$/, {
         timeout: 15000,
     });
 
-    // Verify Products page
-    await expect(page.getByRole("heading", { name: "Products" })).toBeVisible();
-
-    // Verify product search
     await expect(
-        page.getByRole("textbox", { name: "Search products..." }),
-    ).toBeVisible();
-
-    // Verify Add Product button
-    await expect(
-        page.getByRole("button", { name: "Add Product" }),
-    ).toBeVisible();
-});
-
-test("admin can edit a product", async ({ page }) => {
-    test.setTimeout(60000);
-
-    // Login
-    await page.goto(`${BASE_URL}/login`);
-
-    await page.getByLabel("Email").fill("admin@gmail.com");
-    await page.getByLabel("Password").fill("password");
-    await page.getByRole("button", { name: "Sign In" }).click();
-
-    // Verify successful login
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
-        timeout: 15000,
-    });
-
-    // Open Create Product page
-    await page.goto(`${BASE_URL}/products/create`);
-
-    await expect(
-        page.getByRole("heading", { name: "Add Product" }),
+        page.getByRole("heading", {
+            name: "Products",
+            exact: true,
+        }),
     ).toBeVisible({
-        timeout: 15000,
+        timeout: T,
+    });
+}
+
+// CREATE PRODUCT HELPER
+
+async function createProduct(
+    page,
+    {
+        name,
+        sku,
+        price = "99.99",
+        quantity = "10",
+        category = "Electronics",
+        supplier = "Rajesh Sharma",
+    },
+) {
+    await page.goto("/products/create");
+
+    await expect(
+        page.getByRole("heading", {
+            name: "Add Product",
+        }),
+    ).toBeVisible({
+        timeout: T,
     });
 
-    // Generate unique test data
-    const timestamp = Date.now();
-    const sku = `PW-EDIT-${timestamp}`;
-    const originalName = `Playwright Edit Test ${timestamp}`;
-    const updatedName = `Playwright Edit Test Updated ${timestamp}`;
-
-    // Fill product details
-    await page.getByLabel("Product Name").fill(originalName);
+    await page.getByLabel("Product Name").fill(name);
 
     await page.getByLabel("SKU").fill(sku);
 
     await page.getByLabel("Category").selectOption({
-        label: "Electronics",
+        label: category,
     });
 
     await page.getByLabel("Supplier").selectOption({
-        label: "Rajesh Sharma",
+        label: supplier,
     });
 
     await page
         .getByLabel("Description")
-        .fill("Product created for Playwright edit testing.");
+        .fill(`Product created for Playwright testing - ${sku}`);
 
-    await page.getByLabel("Price").fill("99.99");
+    await page.getByLabel("Price").fill(price);
 
-    await page.getByLabel("Quantity").fill("10");
+    await page.getByLabel("Quantity").fill(quantity);
 
-    // Upload product image
-    await page
-        .getByLabel("Click to upload an image JPG")
-        .setInputFiles("e2e/fixtures/mahadevv.png");
+    await page.getByLabel("Click to upload an image JPG").setInputFiles(IMAGE);
 
-    // Create product
-    const createProductButton = page.getByRole("button", {
+    const createButton = page.getByRole("button", {
         name: "Create Product",
     });
 
-    await expect(createProductButton).toBeEnabled();
+    await expect(createButton).toBeEnabled();
 
-    await createProductButton.click();
+    await createButton.click();
 
-    // Verify product was created successfully
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
+    await expect(page).toHaveURL(/\/products$/, {
         timeout: 30000,
     });
 
     await expect(page.getByText(sku)).toBeVisible({
-        timeout: 15000,
+        timeout: T,
+    });
+}
+
+// 1. VIEW PRODUCTS
+
+test("admin can view products", async ({ page }) => {
+    await login(page);
+
+    // Verify Products heading
+    await expect(
+        page.getByRole("heading", {
+            name: "Products",
+            exact: true,
+        }),
+    ).toBeVisible();
+
+    // Verify search
+    await expect(page.getByPlaceholder("Search products...")).toBeVisible();
+
+    // Verify Add Product button
+    await expect(
+        page.getByRole("button", {
+            name: "Add Product",
+        }),
+    ).toBeVisible();
+});
+
+// 2. CREATE PRODUCT
+
+test("admin can create a product", async ({ page }) => {
+    test.setTimeout(60000);
+
+    await login(page);
+
+    const timestamp = Date.now();
+
+    const productName = `Playwright Create Test ${timestamp}`;
+    const sku = `PW-CREATE-${timestamp}`;
+
+    await createProduct(page, {
+        name: productName,
+        sku,
+        price: "99.99",
+        quantity: "10",
+        category: "Electronics",
+        supplier: "Rajesh Sharma",
     });
 
-    // Locate the newly created product
+    // Verify product is visible
     const productRow = page.getByRole("row", {
-        name: new RegExp(originalName),
+        name: new RegExp(productName),
     });
 
     await expect(productRow).toBeVisible({
-        timeout: 15000,
+        timeout: T,
+    });
+
+    await expect(productRow).toContainText(productName);
+    await expect(productRow).toContainText(sku);
+});
+
+// 3. SEARCH PRODUCT
+
+test("admin can search for a product", async ({ page }) => {
+    test.setTimeout(60000);
+
+    await login(page);
+
+    const timestamp = Date.now();
+
+    const productName = `Playwright Search Test ${timestamp}`;
+    const sku = `PW-SEARCH-${timestamp}`;
+
+    await createProduct(page, {
+        name: productName,
+        sku,
+    });
+
+    // Search by SKU
+    const search = page.getByPlaceholder("Search products...");
+
+    await search.fill(sku);
+
+    // Locate product row
+    const productRow = page.getByRole("row", {
+        name: new RegExp(sku),
+    });
+
+    await expect(productRow).toBeVisible({
+        timeout: T,
+    });
+
+    await expect(productRow).toContainText(productName);
+    await expect(productRow).toContainText(sku);
+});
+
+// 4. EDIT PRODUCT
+
+test("admin can edit a product", async ({ page }) => {
+    test.setTimeout(60000);
+
+    await login(page);
+
+    const timestamp = Date.now();
+
+    const sku = `PW-EDIT-${timestamp}`;
+
+    const originalName = `Playwright Edit Test ${timestamp}`;
+
+    const updatedName = `Playwright Edit Test Updated ${timestamp}`;
+
+    // Create product
+    await createProduct(page, {
+        name: originalName,
+        sku,
+        price: "99.99",
+        quantity: "10",
+        category: "Electronics",
+        supplier: "Rajesh Sharma",
+    });
+
+    // Search product
+    await page.getByPlaceholder("Search products...").fill(sku);
+
+    const productRow = page.getByRole("row", {
+        name: new RegExp(sku),
+    });
+
+    await expect(productRow).toBeVisible({
+        timeout: T,
     });
 
     // Open Edit Product
     await productRow.getByLabel("Edit product").click();
 
-    // Verify Edit Product page
     await expect(
-        page.getByRole("heading", { name: "Edit Product" }),
+        page.getByRole("heading", {
+            name: "Edit Product",
+        }),
     ).toBeVisible({
-        timeout: 15000,
+        timeout: T,
     });
 
-    // Update product name
+    // Update name
     await page.getByLabel("Product Name").fill(updatedName);
 
     // Update price
     await page.getByLabel("Price").fill("100.07");
-
-    // Current Stock is readonly on the Edit Product page,
-    // so quantity is intentionally not modified here.
 
     // Update category
     await page.getByLabel("Category").selectOption({
@@ -142,118 +256,94 @@ test("admin can edit a product", async ({ page }) => {
         label: "Suman Thapa",
     });
 
-    // Update product
-    const updateProductButton = page.getByRole("button", {
+    // Submit update
+    const updateButton = page.getByRole("button", {
         name: "Update Product",
     });
 
-    await expect(updateProductButton).toBeEnabled();
+    await expect(updateButton).toBeEnabled();
 
-    await updateProductButton.click();
+    await updateButton.click();
 
-    // Verify returned to Products page
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
+    // Verify returned to Products
+    await expect(page).toHaveURL(/\/products$/, {
         timeout: 30000,
     });
 
-    // Verify updated product is visible
-    await expect(page.getByText(updatedName)).toBeVisible({
-        timeout: 15000,
+    // Search updated product
+    await page.getByPlaceholder("Search products...").fill(sku);
+
+    const updatedRow = page.getByRole("row", {
+        name: new RegExp(sku),
     });
 
-    // Verify original product name is no longer visible
-    await expect(page.getByText(originalName)).not.toBeVisible();
+    await expect(updatedRow).toBeVisible({
+        timeout: T,
+    });
+
+    // Verify updated name
+    await expect(updatedRow).toContainText(updatedName);
+
+    // Verify old name is gone
+    await expect(updatedRow).not.toContainText(originalName);
 });
+
+// 5. SINGLE DELETE PRODUCT
+
 test("admin can delete a product", async ({ page }) => {
     test.setTimeout(60000);
 
-    // Login
-    await page.goto(`${BASE_URL}/login`);
-
-    await page.getByLabel("Email").fill("admin@gmail.com");
-    await page.getByLabel("Password").fill("password");
-    await page.getByRole("button", { name: "Sign In" }).click();
-
-    // Verify successful login
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
-        timeout: 15000,
-    });
-
-    // Create a product specifically for deletion
-    await page.goto(`${BASE_URL}/products/create`);
-
-    await expect(
-        page.getByRole("heading", { name: "Add Product" }),
-    ).toBeVisible({
-        timeout: 15000,
-    });
+    await login(page);
 
     const timestamp = Date.now();
+
     const sku = `PW-DELETE-${timestamp}`;
+
     const productName = `Playwright Delete Test ${timestamp}`;
 
-    await page.getByLabel("Product Name").fill(productName);
-
-    await page.getByLabel("SKU").fill(sku);
-
-    await page.getByLabel("Category").selectOption({
-        label: "Electronics",
+    // Create product
+    await createProduct(page, {
+        name: productName,
+        sku,
+        price: "99.99",
+        quantity: "10",
+        category: "Electronics",
+        supplier: "Rajesh Sharma",
     });
 
-    await page.getByLabel("Supplier").selectOption({
-        label: "Rajesh Sharma",
-    });
+    // Search product
+    await page.getByPlaceholder("Search products...").fill(sku);
 
-    await page
-        .getByLabel("Description")
-        .fill("Product created for Playwright delete testing.");
-
-    await page.getByLabel("Price").fill("99.99");
-
-    await page.getByLabel("Quantity").fill("10");
-
-    await page
-        .getByLabel("Click to upload an image JPG")
-        .setInputFiles("e2e/fixtures/mahadevv.png");
-
-    await page
-        .getByRole("button", {
-            name: "Create Product",
-        })
-        .click();
-
-    // Verify product was created
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
-        timeout: 30000,
-    });
-
-    await expect(page.getByText(sku)).toBeVisible({
-        timeout: 15000,
-    });
-
-    // Locate the product row
     const productRow = page.getByRole("row", {
-        name: new RegExp(productName),
+        name: new RegExp(sku),
     });
 
     await expect(productRow).toBeVisible({
-        timeout: 15000,
+        timeout: T,
     });
 
     // Click Delete
     await productRow.getByLabel("Delete product").click();
-    // Verify delete confirmation modal
+
+    // Verify confirmation modal
     await expect(
-        page.getByRole("heading", { name: "Delete Product?" }),
+        page.getByRole("heading", {
+            name: "Delete Product?",
+        }),
     ).toBeVisible({
         timeout: 10000,
     });
 
+    // Verify confirmation button
     await expect(
-        page.getByRole("button", { name: "Delete Product", exact: true }),
+        page.getByRole("button", {
+            name: "Delete Product",
+            exact: true,
+        }),
     ).toBeVisible({
         timeout: 10000,
     });
+
     // Confirm deletion
     await page
         .getByRole("button", {
@@ -262,45 +352,35 @@ test("admin can delete a product", async ({ page }) => {
         })
         .click();
 
-    // Verify returned to Products page
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
-        timeout: 30000,
-    });
-
-    // Verify delete confirmation modal is closed
+    // Verify modal closed
     await expect(
-        page.getByRole("heading", { name: "Delete Product?" }),
-    ).not.toBeVisible({
-        timeout: 15000,
-    });
-
-    // Verify deleted product is no longer visible in the products table
-    await expect(
-        page.getByRole("row", {
-            name: new RegExp(productName),
+        page.getByRole("heading", {
+            name: "Delete Product?",
         }),
     ).not.toBeVisible({
-        timeout: 15000,
+        timeout: T,
+    });
+
+    // Search again
+    await page.getByPlaceholder("Search products...").fill(sku);
+
+    // Verify product is gone from Products
+    await expect(
+        page.getByRole("row", {
+            name: new RegExp(sku),
+        }),
+    ).toHaveCount(0, {
+        timeout: T,
     });
 });
 
-// bulk delete
+// 6. BULK DELETE PRODUCTS
+
 test("admin can bulk delete products", async ({ page }) => {
     test.setTimeout(90000);
 
-    // Login
-    await page.goto(`${BASE_URL}/login`);
+    await login(page);
 
-    await page.getByLabel("Email").fill("admin@gmail.com");
-    await page.getByLabel("Password").fill("password");
-    await page.getByRole("button", { name: "Sign In" }).click();
-
-    // Verify successful login
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
-        timeout: 15000,
-    });
-
-    // Create two products specifically for bulk deletion
     const timestamp = Date.now();
 
     const products = [
@@ -312,68 +392,33 @@ test("admin can bulk delete products", async ({ page }) => {
             name: `Playwright Bulk Delete Test 2 ${timestamp}`,
             sku: `PW-BULK-DELETE-2-${timestamp}`,
         },
-    ];
 
-    // Create both products
+    // Create both produ
+
     for (const product of products) {
-        await page.goto(`${BASE_URL}/products/create`);
-
-        await expect(
-            page.getByRole("heading", { name: "Add Product" }),
-        ).toBeVisible({
-            timeout: 15000,
+        await createProduct(page, {
+            name: product.name,
+            sku: product.sku,
+            price: "99.99",
+            quantity: "10",
+            category: "Electronics",
+            supplier: "Rajesh Sharma",
         });
 
-        await page.getByLabel("Product Name").fill(product.name);
+    // Return to Products p
 
-        await page.getByLabel("SKU").fill(product.sku);
+    await page.goto("/products");
 
-        await page.getByLabel("Category").selectOption({
-            label: "Electronics",
-        });
-
-        await page.getByLabel("Supplier").selectOption({
-            label: "Rajesh Sharma",
-        });
-
-        await page
-            .getByLabel("Description")
-            .fill("Product created for Playwright bulk delete testing.");
-
-        await page.getByLabel("Price").fill("99.99");
-
-        await page.getByLabel("Quantity").fill("10");
-
-        await page
-            .getByLabel("Click to upload an image JPG")
-            .setInputFiles("e2e/fixtures/mahadevv.png");
-
-        const createProductButton = page.getByRole("button", {
-            name: "Create Product",
-        });
-
-        await expect(createProductButton).toBeEnabled();
-
-        await createProductButton.click();
-
-        // Verify product was created
-        await expect(page).toHaveURL(`${BASE_URL}/products`, {
-            timeout: 30000,
-        });
-
-        await expect(page.getByText(product.sku)).toBeVisible({
-            timeout: 15000,
-        });
+    await expect(
+        page.getByRole("heading", {
+            name: "Products",
+            exact: true,
+        }),
+    ).toBeVisible({
+        timeout: T,
     }
+    // Locate both produ
 
-    // Make sure both products are visible on the Products page
-    await page.goto(`${BASE_URL}/products`);
-
-    await expect(page.getByRole("heading", { name: "Products" })).toBeVisible({
-        timeout: 15000,
-    });
-
-    // Locate both product rows
     const productRow1 = page.getByRole("row", {
         name: new RegExp(products[0].name),
     });
@@ -383,72 +428,90 @@ test("admin can bulk delete products", async ({ page }) => {
     });
 
     await expect(productRow1).toBeVisible({
-        timeout: 15000,
+        timeout: T,
     });
 
     await expect(productRow2).toBeVisible({
-        timeout: 15000,
+        timeout: T,
+    }
+    // Select first prod
+
+    const checkbox1 = productRow1.getByRole("checkbox", {
+        name: `Select ${products[0].name}`,
     });
 
-    // Select both products
-    await productRow1.getByRole("checkbox").check();
+    await checkbox1.check();
 
-    await productRow2.getByRole("checkbox").check();
+    await expect(checkbox1).toBeChecked(
+    // Select second prod
 
-    // Verify both checkboxes are selected
-    await expect(productRow1.getByRole("checkbox")).toBeChecked();
-
-    await expect(productRow2.getByRole("checkbox")).toBeChecked();
-
-    // Click Trash / bulk delete button
-    await page.getByRole("button", { name: "Trash" }).click();
-
-    // Debug bulk delete modal
-    await page.waitForTimeout(1000);
-
-    console.log("Current URL:", page.url());
-    console.log("Page text after clicking Trash:");
-    console.log(await page.locator("body").innerText());
-
-    await page.screenshot({
-        path: "test-results/bulk-delete-modal.png",
-        fullPage: true,
+    const checkbox2 = productRow2.getByRole("checkbox", {
+        name: `Select ${products[1].name}`,
     });
 
-    // Confirm bulk deletion
+    await checkbox2.check();
+
+    await expect(checkbox2).toBeChecked(
+    // Verify bulk actions
+
+    await expect(page.getByText("Products selected")).toBeVisible({
+        timeout: T,
+    });
+
+    // Verify selected count
+    await expect(
+        page
+            .locator("div")
+            .filter({
+                hasText: "Products selected",
+            })
+            .first(),
+    ).toContainText("2"
+    // Click bulk Del
+
+    await page
+        .getByRole("button", {
+            name: "Delete",
+            exact: true,
+        })
+        .click(
+    // Verify bulk delete confirmat
+
+    await expect(
+        page.getByRole("button", {
+            name: "Delete Products",
+            exact: true,
+        }),
+    ).toBeVisible({
+        timeout: 10000,
+    }
+    // Confirm bulk delet
+
     await page
         .getByRole("button", {
             name: "Delete Products",
             exact: true,
         })
-        .click();
+        .click(
+    // Verify products are removed from Products p
 
-    // Verify returned to Products page
-    await expect(page).toHaveURL(`${BASE_URL}/products`, {
+    await expect(page).toHaveURL(/\/products$/, {
         timeout: 30000,
     });
 
-    // Verify delete modal is closed
-    await expect(
-        page.getByRole("heading", { name: /Delete.*Products?/i }),
-    ).not.toBeVisible({
-        timeout: 15000,
-    });
-
-    // Verify both products were deleted
     await expect(
         page.getByRole("row", {
-            name: new RegExp(products[0].name),
+            name: new RegExp(products[0].sku),
         }),
-    ).not.toBeVisible({
-        timeout: 15000,
+    ).toHaveCount(0, {
+        timeout: T,
     });
 
     await expect(
         page.getByRole("row", {
-            name: new RegExp(products[1].name),
+            name: new RegExp(products[1].sku),
         }),
-    ).not.toBeVisible({
-        timeout: 15000,
+    ).toHaveCount(0, {
+        timeout: T,
     });
 });
